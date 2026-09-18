@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Focus Practice</title>
+  <meta name="description" content="A simple practice for choosing one thing, making it real, and actually finishing it." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="#" data-home>THE FOCUS PRACTICE</a>
+    <button class="text-button" id="resetBtn" type="button">Start over</button>
+  </header>
+
+  <main>
+    <section id="home" class="screen active">
+      <div class="hero">
+        <p class="eyebrow">A practice for people with a million things to do</p>
+        <h1>You don't need<br><em>more time.</em><br>You need focus.</h1>
+        <p class="hero-copy">Give one thing a chance to become real.</p>
+        <button class="primary-button large" data-start>Start a focus <span>→</span></button>
+      </div>
+      <div class="home-note">
+        <span>Choose.</span><span>Focus.</span><span>Learn.</span><span>Push through.</span><span>Complete.</span><span>Share.</span><span>Recover.</span>
+      </div>
+    </section>
+
+    <section id="dump" class="screen">
+      <div class="content narrow">
+        <div class="progress">01 / 05</div>
+        <p class="eyebrow">Idea dump</p>
+        <h2>What do you want to do?</h2>
+        <p class="lede">You probably have a lot of things. That's okay. Don't choose yet. Just get them out.</p>
+        <div id="ideas" class="idea-list"></div>
+        <button class="secondary-button add-idea" id="addIdea">+ Add another idea</button>
+        <button class="primary-button" id="doneDump">I'm done dumping <span>→</span></button>
+      </div>
+    </section>
+
+    <section id="choose" class="screen">
+      <div class="content narrow">
+        <div class="progress">02 / 05</div>
+        <p class="eyebrow">Choose</p>
+        <h2>Now choose one.</h2>
+        <p class="lede">You don't need to choose perfectly. You just need to choose.</p>
+        <div id="choiceList" class="choice-list"></div>
+        <div class="choose-technique">
+          <p class="small-label">Need a way to choose?</p>
+          <div class="techniques">
+            <button data-technique="results">What result do I want?</button>
+            <button data-technique="feel">What feels good?</button>
+            <button data-technique="visual">What looks exciting?</button>
+            <button data-technique="easy">What's easiest?</button>
+            <button data-technique="random">Just choose something.</button>
+          </div>
+          <p id="techniqueMessage" class="technique-message"></p>
+        </div>
+        <button class="primary-button" id="confirmChoice" disabled>This is my focus <span>→</span></button>
+      </div>
+    </section>
+
+    <section id="define" class="screen">
+      <div class="content narrow">
+        <div class="progress">03 / 05</div>
+        <p class="eyebrow">Define it</p>
+        <h2>Let's make it smaller.</h2>
+        <p class="lede">A good focus has a clear, doable finish line. Big enough to matter, small enough to accomplish.</p>
+        <div class="selected-idea">
+          <span class="small-label">Your starting idea</span>
+          <strong id="startingIdea"></strong>
+        </div>
+        <label for="focusInput">What would “done” actually look like?</label>
+        <input id="focusInput" class="focus-input" type="text" placeholder="e.g. Publish the homepage" />
+        <div class="definition-checks">
+          <div><span>✓</span><b>Finite</b><small>There is a clear finish line.</small></div>
+          <div><span>✓</span><b>Motivating</b><small>It moves something you care about forward.</small></div>
+        </div>
+        <button class="primary-button" id="beginFocus" disabled>Give it a chance <span>→</span></button>
+      </div>
+    </section>
+
+    <section id="focus" class="screen">
+      <div class="content">
+        <div class="progress">04 / 05</div>
+        <p class="eyebrow">Your current focus</p>
+        <div class="focus-card">
+          <div class="focus-card-top">MY FOCUS</div>
+          <h2 id="focusTitle"></h2>
+          <div class="focus-rule"></div>
+          <p class="focus-prompt">What can you do toward this today?</p>
+          <textarea id="journal" placeholder="Log a step, thought, or tiny win…"></textarea>
+          <div class="focus-actions">
+            <button class="primary-button" id="logStep">Log this step</button>
+            <button class="secondary-button" id="stuckBtn">I'm stuck</button>
+          </div>
+        </div>
+        <div id="dipPanel" class="dip-panel hidden">
+          <p class="eyebrow">You hit the dip.</p>
+          <h3>This is normal.</h3>
+          <p>Which one sounds like you?</p>
+          <div class="dip-options">
+            <button data-dip="big">This is too big.</button>
+            <button data-dip="next">I don't know what to do next.</button>
+            <button data-dip="help">I need support.</button>
+            <button data-dip="quit">I want to quit.</button>
+          </div>
+          <p id="dipResponse" class="dip-response"></p>
+        </div>
+        <button class="text-link" id="completeBtn">I've completed my focus →</button>
+      </div>
+    </section>
+
+    <section id="complete" class="screen">
+      <div class="content narrow center">
+        <div class="celebration">✦</div>
+        <p class="eyebrow">Focus complete</p>
+        <h2>You did it.</h2>
+        <p class="lede">You chose one thing. You gave it your attention. And now it exists.</p>
+        <div class="completed-focus" id="completedFocus"></div>
+        <button class="primary-button" id="shareBtn">Share it <span>→</span></button>
+        <button class="secondary-button" id="recoverBtn">Recover & reset</button>
+      </div>
+    </section>
+
+    <section id="recover" class="screen">
+      <div class="content narrow center">
+        <p class="eyebrow">Recover</p>
+        <h2>Don't immediately<br>pick another thing.</h2>
+        <p class="lede">Read. Walk. Clean. Eat. Party. Stare out the window. Be alive.</p>
+        <p class="recovery-note">You don't have to optimize this part.</p>
+        <button class="primary-button" data-start>I'm ready to choose again <span>→</span></button>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <script src="script.js"></script>
+</body>
+</html>
