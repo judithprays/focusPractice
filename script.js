@@ -6,20 +6,12 @@ const state = {
 };
 
 const screens = [...document.querySelectorAll(".screen")];
-const techniques = [
-  { title: "What result do I want?", message: "Look at your options. Which one would create the result you most want right now?" },
-  { title: "What feels good?", message: "Imagine making each option your focus. Notice which one feels best in your body." },
-  { title: "What looks exciting?", message: "Which option makes you want to lean forward a little? Follow the spark." },
-  { title: "What's easiest?", message: "When you're overwhelmed, momentum is a strategy. Which option gives you the easiest win?" },
-  { title: "Just choose something.", message: "You do not need certainty. Pick one and give it a chance." }
-];
-let currentTechnique = null;
+
 
 function show(id, { push = true } = {}) {
   screens.forEach(screen => screen.classList.toggle("active", screen.id === id));
   if (push && state.history[state.history.length - 1] !== id) state.history.push(id);
   window.scrollTo({ top: 0, behavior: "smooth" });
-  updateCurrentFocusButton();
   if (id === "celebrate") launchFireworks();
 }
 
@@ -58,9 +50,10 @@ function renderIdeas() {
 }
 
 function renderChoices() {
+  const ideas = state.ideas.filter(Boolean);
   const container = document.getElementById("choiceList");
   container.innerHTML = "";
-  state.ideas.filter(Boolean).forEach(idea => {
+  ideas.forEach(idea => {
     const button = document.createElement("button");
     button.className = "choice" + (state.selected === idea ? " selected" : "");
     button.type = "button";
@@ -75,15 +68,11 @@ function renderChoices() {
 }
 
 function useSelection() {
-  document.getElementById("techniqueBody").classList.add("hidden");
-  document.getElementById("choicePrompt").classList.add("selected-state");
-  setTimeout(() => {
-    document.getElementById("startingIdea").textContent = state.selected;
-    document.getElementById("focusInput").value = "";
-    document.getElementById("beginFocus").disabled = true;
-    show("define");
-    setTimeout(() => document.getElementById("focusInput").focus(), 350);
-  }, 150);
+  document.getElementById("startingIdea").textContent = state.selected;
+  document.getElementById("focusInput").value = "";
+  document.getElementById("beginFocus").disabled = true;
+  show("define");
+  setTimeout(() => document.getElementById("focusInput").focus(), 350);
 }
 
 function resetForNewFocus() {
@@ -93,16 +82,26 @@ function resetForNewFocus() {
   renderIdeas();
 }
 
-function updateCurrentFocusButton() {
-  const btn = document.getElementById("currentFocusBtn");
-  btn.classList.toggle("hidden", !state.focus || document.querySelector("#focus.active"));
+function updateCoachingLink() {
+  const link = document.getElementById("coachingLink");
+  if (!link) return;
+  const projects = state.ideas.filter(Boolean).map(x => x.trim());
+  const list = projects.length ? projects.join(", ") : "a few different projects";
+  const body = `Hey Judith! I was on your site and I'm trying to decide between ${list}. I'd love to discuss this more with you - talk to me about focus coaching`;
+  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent("Focus coaching")}&body=${encodeURIComponent(body)}`;
+}
+
+function updateShareLink() {
+  const link = document.getElementById("shareFocus");
+  if (!link) return;
+  const subject = "My current focus";
+  const body = `Hey Judith! My current focus is: ${state.focus}`;
+  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 document.querySelectorAll("[data-start]").forEach(btn => btn.addEventListener("click", () => { resetForNewFocus(); show("dump"); }));
 document.querySelectorAll("[data-home]").forEach(btn => btn.addEventListener("click", e => { e.preventDefault(); state.history = ["home"]; show("home", { push: false }); }));
 document.querySelectorAll("[data-back]").forEach(btn => btn.addEventListener("click", back));
-document.getElementById("currentFocusBtn").addEventListener("click", () => show("focus"));
-
 document.getElementById("addIdea").addEventListener("click", () => {
   state.ideas.push("");
   renderIdeas();
@@ -110,10 +109,14 @@ document.getElementById("addIdea").addEventListener("click", () => {
   inputs[inputs.length - 1].focus();
 });
 
-document.getElementById("stuckChoose").addEventListener("click", () => {
-  document.getElementById("helpReveal").classList.remove("hidden");
-  document.getElementById("stuckChoose").classList.add("hidden");
-  toast("Let's find a way to make choosing easier.");
+document.getElementById("stuckDump").addEventListener("click", () => {
+  state.ideas = state.ideas.map(x => x.trim()).filter(Boolean);
+  if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
+  state.selected = "";
+  renderChoices();
+  updateCoachingLink();
+  show("choose");
+  document.getElementById("chooseCoaching").classList.remove("hidden");
 });
 
 document.getElementById("doneDump").addEventListener("click", () => {
@@ -121,27 +124,14 @@ document.getElementById("doneDump").addEventListener("click", () => {
   if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
   state.selected = "";
   renderChoices();
+  updateCoachingLink();
   show("choose");
 });
 
-document.getElementById("showTechnique").addEventListener("click", showTechnique);
-document.getElementById("newTechnique").addEventListener("click", showTechnique);
-document.getElementById("techniqueWorks").addEventListener("click", () => {
-  if (!currentTechnique) return;
-  const options = state.ideas.filter(Boolean);
-  state.selected = options[Math.floor(Math.random() * options.length)];
-  renderChoices();
-  useSelection();
+document.getElementById("stuckChoose").addEventListener("click", () => {
+  document.getElementById("chooseCoaching").classList.remove("hidden");
+  updateCoachingLink();
 });
-
-function showTechnique() {
-  const available = techniques.filter((_, i) => i !== currentTechnique);
-  const picked = available[Math.floor(Math.random() * available.length)];
-  currentTechnique = techniques.indexOf(picked);
-  document.getElementById("techniqueTitle").textContent = picked.title;
-  document.getElementById("techniqueMessage").textContent = picked.message;
-  document.getElementById("techniqueBody").classList.remove("hidden");
-}
 
 document.getElementById("focusInput").addEventListener("input", e => {
   document.getElementById("beginFocus").disabled = !e.target.value.trim();
@@ -152,6 +142,7 @@ document.getElementById("beginFocus").addEventListener("click", () => {
   localStorage.setItem("focusPractice.currentFocus", state.focus);
   document.getElementById("focusTitle").textContent = state.focus;
   document.getElementById("celebrationFocus").textContent = state.focus;
+  updateShareLink();
   show("celebrate");
 });
 
@@ -256,6 +247,6 @@ function launchFireworks() {
 if (state.focus) {
   document.getElementById("focusTitle").textContent = state.focus;
   document.getElementById("celebrationFocus").textContent = state.focus;
+  updateShareLink();
 }
 renderIdeas();
-updateCurrentFocusButton();
