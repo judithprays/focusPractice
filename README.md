@@ -1,8 +1,8 @@
 # A Focus Practice
-a time management technique that has little to do with time 
+A time management technique that has little to do with time 
 
 ## Product thesis
-We actually have enough time. What we need is focus.
+We actually have enough time. What we need is to work on our focus muscle.
 
 The practice:
 Choose → Focus → Learn → Push Through → Complete → Share → Recover → Choose again
