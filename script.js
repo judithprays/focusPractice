@@ -1,252 +1,1289 @@
-const state = {
-  ideas: ["", "", ""],
-  selected: "",
-  focus: localStorage.getItem("focusPractice.currentFocus") || "",
-  history: ["home"]
-};
+const SUPABASE_URL =
+  "https://gsfuumnfnclufrjibmiw.supabase.co";
 
-const screens = [...document.querySelectorAll(".screen")];
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_jNLDH1M8SEDhGiOo4k3-wA_Zzzy93YJ";
+
+const focusSupabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
 
 
-function show(id, { push = true } = {}) {
-  screens.forEach(screen => screen.classList.toggle("active", screen.id === id));
-  if (push && state.history[state.history.length - 1] !== id) state.history.push(id);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  if (id === "celebrate") launchFireworks();
+let currentFocusId = null;
+let currentFocus = null;
+let currentSessions = [];
+
+
+/* --------------------------------
+   BASIC HELPERS
+-------------------------------- */
+
+function $(id) {
+  return document.getElementById(id);
 }
 
-function back() {
-  if (state.history.length > 1) {
-    state.history.pop();
-    show(state.history[state.history.length - 1], { push: false });
-  } else show("home", { push: false });
+
+function todayString() {
+  return new Date().toISOString().split("T")[0];
 }
 
-function toast(message) {
-  const el = document.getElementById("toast");
-  el.textContent = message;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2600);
-}
 
-function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
-}
+function formatDate(dateString) {
+  if (!dateString) return "";
 
-function renderIdeas() {
-  const container = document.getElementById("ideas");
-  container.innerHTML = "";
-  state.ideas.forEach((idea, index) => {
-    const row = document.createElement("div");
-    row.className = "idea-row";
-    row.innerHTML = `<input type="text" value="${escapeHtml(idea)}" placeholder="Something you want to do…" aria-label="Idea ${index + 1}">
-      ${state.ideas.length > 1 ? '<button class="remove-idea" type="button" aria-label="Remove idea">×</button>' : ""}`;
-    const input = row.querySelector("input");
-    input.addEventListener("input", e => state.ideas[index] = e.target.value);
-    const remove = row.querySelector(".remove-idea");
-    if (remove) remove.addEventListener("click", () => { state.ideas.splice(index, 1); renderIdeas(); });
-    container.appendChild(row);
+  const date = new Date(dateString + "T12:00:00");
+
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric"
   });
 }
 
-function renderChoices() {
-  const ideas = state.ideas.filter(Boolean);
-  const container = document.getElementById("choiceList");
-  container.innerHTML = "";
-  ideas.forEach(idea => {
-    const button = document.createElement("button");
-    button.className = "choice" + (state.selected === idea ? " selected" : "");
-    button.type = "button";
-    button.textContent = idea;
-    button.addEventListener("click", () => {
-      state.selected = idea;
-      renderChoices();
-      useSelection();
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+
+function showOnly(screenId) {
+
+  document.querySelectorAll(".screen").forEach((screen) => {
+    screen.classList.add("hidden");
+  });
+
+  const screen = $(screenId);
+
+  if (screen) {
+    screen.classList.remove("hidden");
+  }
+
+  window.scrollTo({
+    top: 0,
+    behavior: "instant"
+  });
+}
+
+
+function setLoading(isLoading) {
+  document.body.classList.toggle("is-loading", isLoading);
+}
+
+
+/* --------------------------------
+   URL / ROUTING
+-------------------------------- */
+
+function getFocusIdFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+
+  return params.get("focus");
+}
+
+
+function setFocusUrl(focusId) {
+
+  const url = new URL(window.location.href);
+
+  if (focusId) {
+    url.searchParams.set("focus", focusId);
+  } else {
+    url.searchParams.delete("focus");
+  }
+
+  window.history.pushState(
+    {},
+    "",
+    url
+  );
+}
+
+
+function clearFocusUrl() {
+
+  const url = new URL(window.location.href);
+
+  url.searchParams.delete("focus");
+
+  window.history.pushState(
+    {},
+    "",
+    url
+  );
+}
+
+
+/* --------------------------------
+   NAVIGATION
+-------------------------------- */
+
+function updateNavigation() {
+
+  const currentFocusNav = $("currentFocusNav");
+
+  if (!currentFocusNav) return;
+
+  if (
+    currentFocus &&
+    currentFocus.status === "active"
+  ) {
+
+    currentFocusNav.classList.remove("hidden");
+
+  } else {
+
+    currentFocusNav.classList.add("hidden");
+
+  }
+}
+
+
+function goToCurrentFocus() {
+
+  if (
+    currentFocus &&
+    currentFocus.status === "active"
+  ) {
+
+    currentFocusId = currentFocus.id;
+
+    setFocusUrl(currentFocus.id);
+
+    showFocus();
+
+  }
+}
+
+
+function showHome() {
+
+  clearFocusUrl();
+
+  showOnly("homeScreen");
+
+  loadHomeFocuses();
+
+}
+
+
+async function showCollection() {
+
+  clearFocusUrl();
+
+  showOnly("collectionScreen");
+
+  await loadCollection();
+
+}
+
+
+function showAbout() {
+
+  clearFocusUrl();
+
+  showOnly("aboutScreen");
+
+}
+
+
+/* --------------------------------
+   HOME
+-------------------------------- */
+
+async function loadHomeFocuses() {
+
+  const list = $("publicFocusesList");
+
+  if (!list) return;
+
+  list.innerHTML =
+    `<p class="empty-state">Loading...</p>`;
+
+
+  /*
+    For now, all started focuses are visible.
+    We intentionally do NOT filter by is_public.
+  */
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .order("created_at", {
+      ascending: false
     });
-    container.appendChild(button);
+
+
+  if (error) {
+
+    console.error(error);
+
+    list.innerHTML =
+      `<p class="empty-state">
+        Couldn't load Focuses.
+      </p>`;
+
+    return;
+  }
+
+
+  if (!data || data.length === 0) {
+
+    list.innerHTML =
+      `<p class="empty-state">
+        No Focuses yet. Start one.
+      </p>`;
+
+    return;
+  }
+
+
+  list.innerHTML = data
+    .map(renderFocusCard)
+    .join("");
+}
+
+
+function renderFocusCard(focus) {
+
+  const statusLabel =
+    focus.status === "completed"
+      ? "COMPLETED"
+      : focus.status === "abandoned"
+        ? "ABANDONED"
+        : "ACTIVE";
+
+
+  const completionText =
+    focus.completion_text
+      ? `
+        <p>
+          ${escapeHtml(focus.completion_text)}
+        </p>
+      `
+      : "";
+
+
+  const learning =
+    focus.learning
+      ? `
+        <p class="public-focus-learning">
+          ${escapeHtml(focus.learning)}
+        </p>
+      `
+      : "";
+
+
+  return `
+    <button
+      class="public-focus-card"
+      onclick="openFocus('${focus.id}')"
+    >
+
+      <p class="focus-status ${focus.status}">
+        ${statusLabel}
+      </p>
+
+      <h3>
+        ${escapeHtml(focus.title)}
+      </h3>
+
+      <p class="public-focus-meta">
+        Started ${formatDate(
+          focus.started_at
+            ? focus.started_at.split("T")[0]
+            : ""
+        )}
+      </p>
+
+      ${completionText}
+
+      ${learning}
+
+    </button>
+  `;
+}
+
+
+/* --------------------------------
+   FOCUS COLLECTION
+-------------------------------- */
+
+async function loadCollection() {
+
+  const list = $("collectionList");
+
+  if (!list) return;
+
+  list.innerHTML =
+    `<p class="empty-state">Loading...</p>`;
+
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .order("created_at", {
+      ascending: false
+    });
+
+
+  if (error) {
+
+    console.error(error);
+
+    list.innerHTML =
+      `<p class="empty-state">
+        Couldn't load the Focus Collection.
+      </p>`;
+
+    return;
+  }
+
+
+  if (!data || data.length === 0) {
+
+    list.innerHTML =
+      `<p class="empty-state">
+        Your Focus Collection is empty.
+      </p>`;
+
+    return;
+  }
+
+
+  list.innerHTML = data
+    .map((focus) => {
+
+      const statusLabel =
+        focus.status === "completed"
+          ? "COMPLETED"
+          : focus.status === "abandoned"
+            ? "ABANDONED"
+            : "ACTIVE";
+
+
+      return `
+        <button
+          class="collection-card"
+          onclick="openFocus('${focus.id}')"
+        >
+
+          <p class="focus-status ${focus.status}">
+            ${statusLabel}
+          </p>
+
+          <h3>
+            ${escapeHtml(focus.title)}
+          </h3>
+
+          <p class="collection-meta">
+            Started ${formatDate(
+              focus.started_at
+                ? focus.started_at.split("T")[0]
+                : ""
+            )}
+          </p>
+
+          ${
+            focus.completion_text
+              ? `
+                <p>
+                  ${escapeHtml(focus.completion_text)}
+                </p>
+              `
+              : ""
+          }
+
+        </button>
+      `;
+    })
+    .join("");
+}
+
+
+/* --------------------------------
+   CREATE FOCUS
+-------------------------------- */
+
+function showCreateFocus() {
+
+  clearFocusUrl();
+
+  showOnly("createFocusScreen");
+
+  $("focusTitle").value = "";
+
+  setTimeout(() => {
+    $("focusTitle").focus();
+  }, 50);
+}
+
+
+async function startNewFocus() {
+
+  const title =
+    $("focusTitle").value.trim();
+
+
+  if (!title) {
+
+    $("focusTitle").focus();
+
+    return;
+  }
+
+
+  setLoading(true);
+
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .insert({
+
+      title,
+
+      status: "active",
+
+      started_at:
+        new Date().toISOString()
+
+    })
+    .select()
+    .single();
+
+
+  setLoading(false);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Couldn't start this Focus. Please try again."
+    );
+
+    return;
+  }
+
+
+  currentFocusId = data.id;
+
+  currentFocus = data;
+
+  setFocusUrl(data.id);
+
+  updateNavigation();
+
+  await showFocus();
+}
+
+
+/* --------------------------------
+   OPEN FOCUS
+-------------------------------- */
+
+async function openFocus(focusId) {
+
+  currentFocusId = focusId;
+
+  setFocusUrl(focusId);
+
+  await showFocus();
+
+}
+
+
+async function showFocus() {
+
+  if (!currentFocusId) {
+
+    showHome();
+
+    return;
+  }
+
+
+  showOnly("focusScreen");
+
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("id", currentFocusId)
+    .single();
+
+
+  if (error || !data) {
+
+    console.error(error);
+
+    clearFocusUrl();
+
+    showOnly("homeScreen");
+
+    await loadHomeFocuses();
+
+    return;
+  }
+
+
+  currentFocus = data;
+
+
+  updateNavigation();
+
+  renderFocusState();
+
+  await loadSessions();
+}
+
+
+/* --------------------------------
+   FOCUS STATE
+-------------------------------- */
+
+function renderFocusState() {
+
+  if (!currentFocus) return;
+
+
+  $("focusTitleDisplay").textContent =
+    currentFocus.title;
+
+
+  $("focusStarted").textContent =
+    currentFocus.started_at
+      ? `Started ${formatDate(
+          currentFocus.started_at.split("T")[0]
+        )}`
+      : "";
+
+
+  const statusLabel =
+    currentFocus.status === "completed"
+      ? "COMPLETED"
+      : currentFocus.status === "abandoned"
+        ? "ABANDONED"
+        : "MY CURRENT FOCUS";
+
+
+  $("focusStatusLabel").textContent =
+    statusLabel;
+
+
+  /*
+    Only active focuses can be worked on.
+  */
+
+  const isActive =
+    currentFocus.status === "active";
+
+
+  if (isActive) {
+
+    $("addSessionButton")
+      .classList.remove("hidden");
+
+    $("focusEndingSection")
+      .classList.remove("hidden");
+
+  } else {
+
+    $("addSessionButton")
+      .classList.add("hidden");
+
+    $("focusEndingSection")
+      .classList.add("hidden");
+
+  }
+
+
+  $("newSessionForm")
+    .classList.add("hidden");
+
+  $("abandonFocusSection")
+    .classList.add("hidden");
+}
+
+
+/* --------------------------------
+   DELETE FOCUS
+-------------------------------- */
+
+async function deleteCurrentFocus() {
+  if (!currentFocusId) return;
+
+  const title = currentFocus?.title || "this Focus";
+
+  const confirmed = window.confirm(
+    `Delete "${title}"?\n\nThis will permanently delete the Focus and its session log.`
+  );
+
+  if (!confirmed) return;
+
+  setLoading(true);
+
+  /*
+    First delete the sessions belonging to this Focus.
+  */
+  const { error: sessionsError } = await focusSupabase
+    .from("sessions")
+    .delete()
+    .eq("focus_id", currentFocusId);
+
+  if (sessionsError) {
+    console.error("Session delete error:", sessionsError);
+
+    setLoading(false);
+
+    alert(
+      "Couldn't delete the session log. The Focus was not deleted."
+    );
+
+    return;
+  }
+
+  /*
+    Delete the Focus itself.
+
+    .select("id") makes Supabase return the deleted row.
+    If RLS prevents the delete, this will reveal that
+    nothing was actually deleted.
+  */
+  const { data: deletedFocus, error: focusError } =
+    await focusSupabase
+      .from("focuses")
+      .delete()
+      .eq("id", currentFocusId)
+      .select("id")
+      .maybeSingle();
+
+  setLoading(false);
+
+  if (focusError) {
+    console.error("Focus delete error:", focusError);
+
+    alert(
+      "Couldn't delete this Focus. Please try again."
+    );
+
+    return;
+  }
+
+  /*
+    If Supabase returns no deleted row, the DELETE was
+    blocked by RLS or another database rule.
+  */
+  if (!deletedFocus) {
+    console.error(
+      "Focus was not deleted. Supabase returned no deleted row."
+    );
+
+    alert(
+      "The Focus wasn't actually deleted. This is probably a Supabase permission (RLS) issue."
+    );
+
+    return;
+  }
+
+  /*
+    Clear local state.
+  */
+  currentFocusId = null;
+  currentFocus = null;
+  currentSessions = [];
+
+  clearFocusUrl();
+
+  updateNavigation();
+
+  /*
+    Go home and reload directly from Supabase.
+  */
+  await showHome();
+}
+
+
+/* --------------------------------
+   SESSIONS
+-------------------------------- */
+
+async function loadSessions() {
+
+  if (!currentFocusId) return;
+
+
+  const { data, error } = await focusSupabase
+    .from("sessions")
+    .select("*")
+    .eq("focus_id", currentFocusId)
+    .order("session_date", {
+      ascending: true
+    })
+    .order("created_at", {
+      ascending: true
+    });
+
+
+  if (error) {
+
+    console.error(error);
+
+    return;
+  }
+
+
+  currentSessions = data || [];
+
+  renderSessions();
+}
+
+
+function renderSessions() {
+
+  const section =
+    $("sessionLogSection");
+
+  const list =
+    $("sessionsList");
+
+
+  if (!section || !list) return;
+
+
+  if (currentSessions.length === 0) {
+
+    section.classList.add("hidden");
+
+    list.innerHTML = "";
+
+    return;
+  }
+
+
+  section.classList.remove("hidden");
+
+
+  list.innerHTML =
+    currentSessions
+      .map((session, index) => {
+
+        return `
+          <article class="session-card">
+
+            <div class="session-card-header">
+
+              <p class="eyebrow">
+                SESSION ${index + 1}
+              </p>
+
+              <p class="session-date">
+                ${formatDate(session.session_date)}
+              </p>
+
+            </div>
+
+
+            <div class="session-main">
+
+              <p>
+                ${escapeHtml(session.body)}
+              </p>
+
+            </div>
+
+
+            <div class="session-details">
+
+              ${renderSessionDetail(
+                "Things accomplished",
+                session.accomplished
+              )}
+
+              ${renderSessionDetail(
+                "Funny things that happened",
+                session.funny
+              )}
+
+              ${renderSessionDetail(
+                "Excitements",
+                session.excitements
+              )}
+
+              ${renderSessionDetail(
+                "Mistakes",
+                session.mistakes
+              )}
+
+              ${renderSessionDetail(
+                "Things I learned",
+                session.learned
+              )}
+
+              ${renderSessionDetail(
+                "For next time",
+                session.next_time
+              )}
+
+              ${renderSessionDetail(
+                "Time spent",
+                session.time_spent
+              )}
+
+            </div>
+
+          </article>
+        `;
+      })
+      .join("");
+}
+
+
+function renderSessionDetail(
+  label,
+  value
+) {
+
+  if (!value) return "";
+
+
+  return `
+    <div class="session-detail">
+
+      <div class="session-detail-label">
+        ${escapeHtml(label)}
+      </div>
+
+      <div class="session-detail-text">
+        ${escapeHtml(value)}
+      </div>
+
+    </div>
+  `;
+}
+
+
+/* --------------------------------
+   SESSION FORM
+-------------------------------- */
+
+function openSessionForm() {
+
+  $("newSessionForm")
+    .classList.remove("hidden");
+
+
+  $("sessionDate").value =
+    todayString();
+
+
+  setTimeout(() => {
+    $("sessionText").focus();
+  }, 50);
+
+
+  window.scrollTo({
+    top:
+      $("newSessionForm").offsetTop - 30,
+    behavior: "smooth"
   });
 }
 
-function useSelection() {
-  document.getElementById("startingIdea").textContent = state.selected;
-  document.getElementById("focusInput").value = "";
-  document.getElementById("beginFocus").disabled = true;
-  show("define");
-  setTimeout(() => document.getElementById("focusInput").focus(), 350);
+
+function closeSessionForm() {
+
+  $("newSessionForm")
+    .classList.add("hidden");
+
+
+  $("sessionText").value = "";
+
+  $("sessionAccomplished").value = "";
+
+  $("sessionFunny").value = "";
+
+  $("sessionExcitements").value = "";
+
+  $("sessionMistakes").value = "";
+
+  $("sessionLearned").value = "";
+
+  $("sessionNextTime").value = "";
+
+  $("sessionTimeSpent").value = "";
+
+  $("sessionDate").value =
+    todayString();
 }
 
-function resetForNewFocus() {
-  state.ideas = ["", "", ""];
-  state.selected = "";
-  state.history = ["home"];
-  renderIdeas();
-}
 
-function updateCoachingLink() {
-  const link = document.getElementById("coachingLink");
-  if (!link) return;
-  const projects = state.ideas.filter(Boolean).map(x => x.trim());
-  const list = projects.length ? projects.join(", ") : "a few different projects";
-  const body = `Hey Judith! I was on your site and I'm trying to decide between ${list}. I'd love to discuss this more with you - talk to me about focus coaching`;
-  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent("Focus coaching")}&body=${encodeURIComponent(body)}`;
-}
+async function saveSession() {
 
-function updateShareLink() {
-  const link = document.getElementById("shareFocus");
-  if (!link) return;
-  const subject = "My current focus";
-  const body = `Hey Judith! My current focus is: ${state.focus}`;
-  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
+  const date =
+    $("sessionDate").value;
 
-document.querySelectorAll("[data-start]").forEach(btn => btn.addEventListener("click", () => { resetForNewFocus(); show("dump"); }));
-document.querySelectorAll("[data-home]").forEach(btn => btn.addEventListener("click", e => { e.preventDefault(); state.history = ["home"]; show("home", { push: false }); }));
-document.querySelectorAll("[data-back]").forEach(btn => btn.addEventListener("click", back));
-document.getElementById("addIdea").addEventListener("click", () => {
-  state.ideas.push("");
-  renderIdeas();
-  const inputs = document.querySelectorAll("#ideas input");
-  inputs[inputs.length - 1].focus();
-});
+  const body =
+    $("sessionText").value.trim();
 
-document.getElementById("stuckDump").addEventListener("click", () => {
-  state.ideas = state.ideas.map(x => x.trim()).filter(Boolean);
-  if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
-  state.selected = "";
-  renderChoices();
-  updateCoachingLink();
-  show("choose");
-  document.getElementById("chooseCoaching").classList.remove("hidden");
-});
 
-document.getElementById("doneDump").addEventListener("click", () => {
-  state.ideas = state.ideas.map(x => x.trim()).filter(Boolean);
-  if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
-  state.selected = "";
-  renderChoices();
-  updateCoachingLink();
-  show("choose");
-});
+  if (!date) {
 
-document.getElementById("stuckChoose").addEventListener("click", () => {
-  document.getElementById("chooseCoaching").classList.remove("hidden");
-  updateCoachingLink();
-});
+    $("sessionDate").focus();
 
-document.getElementById("focusInput").addEventListener("input", e => {
-  document.getElementById("beginFocus").disabled = !e.target.value.trim();
-});
-
-document.getElementById("beginFocus").addEventListener("click", () => {
-  state.focus = document.getElementById("focusInput").value.trim();
-  localStorage.setItem("focusPractice.currentFocus", state.focus);
-  document.getElementById("focusTitle").textContent = state.focus;
-  document.getElementById("celebrationFocus").textContent = state.focus;
-  updateShareLink();
-  show("celebrate");
-});
-
-document.getElementById("celebrationNext").addEventListener("click", () => show("focus"));
-
-function roundedRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(" ");
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, y);
-      line = word;
-      y += lineHeight;
-    } else line = test;
+    return;
   }
-  if (line) ctx.fillText(line, x, y);
-  return y;
+
+
+  if (!body) {
+
+    $("sessionText").focus();
+
+    return;
+  }
+
+
+  const session = {
+
+    focus_id: currentFocusId,
+
+    session_date: date,
+
+    body,
+
+    accomplished:
+      $("sessionAccomplished")
+        .value.trim() || null,
+
+    funny:
+      $("sessionFunny")
+        .value.trim() || null,
+
+    excitements:
+      $("sessionExcitements")
+        .value.trim() || null,
+
+    mistakes:
+      $("sessionMistakes")
+        .value.trim() || null,
+
+    learned:
+      $("sessionLearned")
+        .value.trim() || null,
+
+    next_time:
+      $("sessionNextTime")
+        .value.trim() || null,
+
+    time_spent:
+      $("sessionTimeSpent")
+        .value.trim() || null
+  };
+
+
+  setLoading(true);
+
+
+  const { error } =
+    await focusSupabase
+      .from("sessions")
+      .insert(session);
+
+
+  setLoading(false);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Couldn't save this session. Please try again."
+    );
+
+    return;
+  }
+
+
+  closeSessionForm();
+
+  await loadSessions();
 }
 
-async function makeFocusImage() {
-  const canvas = document.createElement("canvas");
-  const scale = 2;
-  canvas.width = 1200 * scale;
-  canvas.height = 760 * scale;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(scale, scale);
 
-  ctx.fillStyle = "#f7f3ea";
-  ctx.fillRect(0, 0, 1200, 760);
-  ctx.fillStyle = "#1e1e1b";
-  ctx.font = "700 18px Helvetica, Arial, sans-serif";
-  ctx.fillText("THE FOCUS PRACTICE", 70, 70);
-  ctx.fillStyle = "#c65f4d";
-  ctx.font = "700 15px Helvetica, Arial, sans-serif";
-  ctx.fillText("YOUR CURRENT FOCUS", 70, 150);
+/* --------------------------------
+   COMPLETE
+-------------------------------- */
 
-  ctx.fillStyle = "#fffdf8";
-  ctx.strokeStyle = "#1e1e1b";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, 70, 180, 1060, 400, 4);
-  ctx.fill(); ctx.stroke();
+async function completeFocus() {
 
-  ctx.fillStyle = "#1e1e1b";
-  ctx.font = "400 52px Georgia, serif";
-  const endY = wrapText(ctx, state.focus, 115, 280, 970, 68);
-  ctx.strokeStyle = "#d9d0c0";
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(115, endY + 45); ctx.lineTo(1085, endY + 45); ctx.stroke();
-  ctx.fillStyle = "#777269";
-  ctx.font = "400 22px Helvetica, Arial, sans-serif";
-  wrapText(ctx, "This is the one thing you're giving your attention to right now.", 115, endY + 95, 900, 32);
-  ctx.font = "400 18px Helvetica, Arial, sans-serif";
-  ctx.fillText("You chose it. Now give it a chance to become real.", 70, 680);
-  ctx.fillStyle = "#c65f4d";
-  ctx.font = "700 15px Helvetica, Arial, sans-serif";
-  ctx.fillText("FOCUS CHOSEN ✓", 70, 720);
+  if (!currentFocusId) return;
 
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Could not create focus image")), "image/png");
+
+  const confirmed = window.confirm(
+    "Mark this Focus as finished?"
+  );
+
+
+  if (!confirmed) return;
+
+
+  setLoading(true);
+
+
+  const {
+    data,
+    error
+  } = await focusSupabase
+    .from("focuses")
+    .update({
+
+      status: "completed",
+
+      completed_at:
+        new Date().toISOString(),
+
+      /*
+        We are no longer asking for a
+        completion reflection or consent.
+      */
+
+      is_public: true
+
+    })
+    .eq("id", currentFocusId)
+    .select()
+    .single();
+
+
+  setLoading(false);
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Couldn't complete this Focus. Please try again."
+    );
+
+    return;
+  }
+
+
+  currentFocus = data;
+
+
+  /*
+    Important:
+    There is NO completion page anymore.
+
+    Once completed, go straight home.
+  */
+
+  currentFocusId = null;
+
+  clearFocusUrl();
+
+  updateNavigation();
+
+  await showHome();
+}
+
+
+/* --------------------------------
+   ABANDON
+-------------------------------- */
+
+function showAbandonFocus() {
+
+  $("focusEndingSection")
+    .classList.add("hidden");
+
+
+  $("abandonFocusSection")
+    .classList.remove("hidden");
+
+
+  $("abandonLearning").value = "";
+
+
+  window.scrollTo({
+    top:
+      $("abandonFocusSection").offsetTop - 30,
+    behavior: "smooth"
   });
 }
 
-function downloadFocusImage(blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "my-focus.png";
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+async function abandonFocus() {
+
+  const learning =
+    $("abandonLearning")
+      .value.trim();
+
+
+  const {
+    data,
+    error
+  } = await focusSupabase
+    .from("focuses")
+    .update({
+
+      status: "abandoned",
+
+      abandoned_at:
+        new Date().toISOString(),
+
+      learning:
+
+        learning || null,
+
+      is_public: true
+
+    })
+    .eq("id", currentFocusId)
+    .select()
+    .single();
+
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Couldn't abandon this Focus. Please try again."
+    );
+
+    return;
+  }
+
+
+  currentFocus = data;
+
+  currentFocusId = null;
+
+
+  clearFocusUrl();
+
+  updateNavigation();
+
+  await showHome();
 }
 
 
-function launchFireworks() {
-  const container = document.getElementById("fireworks");
-  container.innerHTML = "";
-  for (let i = 0; i < 90; i++) {
-    const spark = document.createElement("span");
-    spark.className = "spark";
-    spark.style.setProperty("--x", `${Math.random() * 100}vw`);
-    spark.style.setProperty("--y", `${Math.random() * 75 + 5}vh`);
-    spark.style.setProperty("--dx", `${(Math.random() - .5) * 260}px`);
-    spark.style.setProperty("--dy", `${(Math.random() - .5) * 260}px`);
-    spark.style.setProperty("--delay", `${Math.random() * .7}s`);
-    container.appendChild(spark);
+/* --------------------------------
+   SHARED FOCUS VIEW
+-------------------------------- */
+
+async function showPublicFocus(focusId) {
+
+  await openFocus(focusId);
+
+}
+
+
+/* --------------------------------
+   INITIAL LOAD
+-------------------------------- */
+
+async function initializeApp() {
+
+  const focusId =
+    getFocusIdFromUrl();
+
+
+  if (focusId) {
+
+    currentFocusId = focusId;
+
+    await showFocus();
+
+    return;
+  }
+
+
+  await showHome();
+
+
+  /*
+    If there is an active Focus in the database,
+    make it available in the persistent menu.
+  */
+
+  const {
+    data,
+    error
+  } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", {
+      ascending: false
+    })
+    .limit(1)
+    .maybeSingle();
+
+
+  if (!error && data) {
+
+    currentFocus = data;
+
+    currentFocusId = data.id;
+
+    updateNavigation();
+
+    /*
+      We don't change the page here.
+      The user remains on Home.
+    */
+
   }
 }
 
-if (state.focus) {
-  document.getElementById("focusTitle").textContent = state.focus;
-  document.getElementById("celebrationFocus").textContent = state.focus;
-  updateShareLink();
-}
-renderIdeas();
+
+/*
+  Browser back / forward support.
+*/
+
+window.addEventListener(
+  "popstate",
+  async () => {
+
+    const focusId =
+      getFocusIdFromUrl();
+
+
+    if (focusId) {
+
+      currentFocusId = focusId;
+
+      await showFocus();
+
+    } else {
+
+      currentFocusId = null;
+
+      currentFocus = null;
+
+      await showHome();
+
+    }
+
+  }
+);
+
+
+document.addEventListener(
+  "DOMContentLoaded",
+  initializeApp
+);
