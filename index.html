@@ -6,198 +6,538 @@
   <title>Focus Practice</title>
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
+
+  <!-- PERSISTENT TOP MENU -->
+  <header class="site-header">
+    <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
+
+    <nav>
+      <a href="#" onclick="showCreateFocus(); return false;">Get Started</a>
+
+      <a
+        href="#"
+        id="currentFocusNav"
+        class="hidden"
+        onclick="goToCurrentFocus(); return false;"
+      >
+        My Current Focus
+      </a>
+
+      <a href="#" onclick="showCollection(); return false;">
+        Focus Collection
+      </a>
+
+      <a href="#" onclick="showAbout(); return false;">
+        About
+      </a>
+    </nav>
+  </header>
+
 
   <main>
 
     <!-- HOME -->
     <section id="homeScreen" class="screen">
-      <div class="hero">
-        <h1>Actually, we have enough time.</h1>
-        <p class="hero-copy">We just need ... to focus.</p>
-        <button class="primary-button" onclick="showCreateFocus()">Start a Focus</button>
-      </div>
 
-      <section class="public-focuses-section">
+      <!-- HOME HERO -->
+      <section class="home-section hero-section">
+        <div class="hero">
+          <p class="eyebrow">GOOD NEWS!</p>
+
+          <h1>We have enough time.</h1>
+
+          <p class="hero-copy">
+            We just need ... to focus.
+          </p>
+
+          <button
+            class="primary-button"
+            onclick="showCreateFocus()"
+          >
+            Start a Focus
+          </button>
+        </div>
+      </section>
+
+
+      <!-- CURRENT / STARTED FOCUSES -->
+      <section class="home-section started-focuses-section">
+
         <div class="section-heading">
-          <p class="eyebrow">FOCUS COLLECTION</p>
+          <p class="eyebrow">FOCUS IN PRACTICE</p>
           <h2>People are focusing on...</h2>
         </div>
-        <div id="publicFocusesList" class="public-focuses-list"></div>
+
+        <div
+          id="publicFocusesList"
+          class="public-focuses-list"
+        ></div>
+
       </section>
+
     </section>
 
 
     <!-- CREATE FOCUS -->
-    <section id="createFocusScreen" class="screen hidden">
-      <button class="back-button" onclick="showHome()">← Back</button>
+    <section
+      id="createFocusScreen"
+      class="screen hidden"
+    >
 
-      <div class="create-focus">
-        <p class="eyebrow">START A FOCUS</p>
-        <h1>What do you want to focus on?</h1>
+      <div class="page-section create-focus-section">
 
-        <input
-          id="focusTitle"
-          type="text"
-          placeholder="Your focus"
-          maxlength="200"
+        <button
+          class="back-button"
+          onclick="showHome()"
         >
+          ← Back
+        </button>
 
-        <button class="primary-button" onclick="startNewFocus()">Start this Focus</button>
+        <div class="create-focus">
+
+          <p class="eyebrow">START A FOCUS</p>
+
+          <h1>What do you want to focus on?</h1>
+
+          <input
+            id="focusTitle"
+            class="big-input"
+            type="text"
+            placeholder="Your focus"
+            maxlength="200"
+          >
+
+          <button
+            class="primary-button"
+            onclick="startNewFocus()"
+          >
+            Start this Focus
+          </button>
+
+        </div>
+
       </div>
+
     </section>
 
 
-    <!-- ACTIVE FOCUS -->
-    <section id="focusScreen" class="screen hidden">
-      <button class="back-button" onclick="showHome()">← Back</button>
+    <!-- ACTIVE / FOCUS LOG -->
+    <section
+      id="focusScreen"
+      class="screen hidden"
+    >
 
-      <div class="focus-header">
-        <p class="eyebrow focus-goal-label">MY CURRENT FOCUS</p>
-        <h1 id="focusTitleDisplay"></h1>
-        <p id="focusStarted" class="focus-started"></p>
-      </div>
+      <div class="page-section focus-page">
 
-      <button id="addSessionButton" class="secondary-button add-session-button" onclick="openSessionForm()">
-        + Add a session
-      </button>
+        <div class="focus-top-actions">
 
-      <!-- NEW SESSION FORM -->
-      <div id="newSessionForm" class="new-session-form hidden">
-        <div class="session-form-label">
-          <span>NEW SESSION</span>
+          <button
+            class="back-button"
+            onclick="showHome()"
+          >
+            ← Home
+          </button>
+
         </div>
 
-        <label for="sessionDate">Date</label>
-        <input id="sessionDate" type="date">
 
-        <label for="sessionText">What happened?</label>
-        <textarea
-          id="sessionText"
-          rows="6"
-          placeholder="What did you do? What surprised you? What got harder or easier?"
-        ></textarea>
+        <div class="focus-header">
 
-        <label for="sessionAccomplished">Things accomplished</label>
-        <textarea id="sessionAccomplished" rows="3" placeholder="Optional"></textarea>
+          <p
+            class="eyebrow focus-goal-label"
+            id="focusStatusLabel"
+          >
+            MY CURRENT FOCUS
+          </p>
 
-        <label for="sessionFunny">Funny things that happened</label>
-        <textarea id="sessionFunny" rows="3" placeholder="Optional"></textarea>
+          <h1 id="focusTitleDisplay"></h1>
 
-        <label for="sessionExcitements">Excitements</label>
-        <textarea id="sessionExcitements" rows="3" placeholder="Optional"></textarea>
+          <p
+            id="focusStarted"
+            class="focus-started"
+          ></p>
 
-        <label for="sessionMistakes">Mistakes</label>
-        <textarea id="sessionMistakes" rows="3" placeholder="Optional"></textarea>
+        </div>
 
-        <label for="sessionLearned">Things I learned</label>
-        <textarea id="sessionLearned" rows="3" placeholder="Optional"></textarea>
 
-        <p class="session-subheading">FOR NEXT TIME</p>
+        <!-- ADD SESSION -->
+        <button
+          id="addSessionButton"
+          class="secondary-button add-session-button"
+          onclick="openSessionForm()"
+        >
+          + Add a session
+        </button>
 
-        <label for="sessionNextTime">For next time</label>
-        <textarea id="sessionNextTime" rows="3" placeholder="Optional"></textarea>
 
-        <label for="sessionTimeSpent">Time spent</label>
-        <input
-          id="sessionTimeSpent"
-          type="text"
-          placeholder="Optional — e.g. 45 minutes"
+        <!-- NEW SESSION FORM -->
+        <div
+          id="newSessionForm"
+          class="new-session-form hidden"
         >
 
-        <div class="form-actions">
-          <button class="primary-button" onclick="saveSession()">Save session</button>
-          <button class="text-button" onclick="closeSessionForm()">Cancel</button>
+          <div class="session-form-label">
+            <span>NEW SESSION</span>
+          </div>
+
+          <label for="sessionDate">Date</label>
+
+          <input
+            id="sessionDate"
+            type="date"
+          >
+
+          <label for="sessionText">
+            What happened?
+          </label>
+
+          <textarea
+            id="sessionText"
+            rows="6"
+            placeholder="What did you do? What surprised you? What got harder or easier?"
+          ></textarea>
+
+          <label for="sessionAccomplished">
+            Things accomplished
+          </label>
+
+          <textarea
+            id="sessionAccomplished"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <label for="sessionFunny">
+            Funny things that happened
+          </label>
+
+          <textarea
+            id="sessionFunny"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <label for="sessionExcitements">
+            Excitements
+          </label>
+
+          <textarea
+            id="sessionExcitements"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <label for="sessionMistakes">
+            Mistakes
+          </label>
+
+          <textarea
+            id="sessionMistakes"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <label for="sessionLearned">
+            Things I learned
+          </label>
+
+          <textarea
+            id="sessionLearned"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <p class="session-subheading">
+            FOR NEXT TIME
+          </p>
+
+          <label for="sessionNextTime">
+            For next time
+          </label>
+
+          <textarea
+            id="sessionNextTime"
+            rows="3"
+            placeholder="Optional"
+          ></textarea>
+
+          <label for="sessionTimeSpent">
+            Time spent
+          </label>
+
+          <input
+            id="sessionTimeSpent"
+            type="text"
+            placeholder="Optional — e.g. 45 minutes"
+          >
+
+          <div class="form-actions">
+
+            <button
+              class="primary-button"
+              onclick="saveSession()"
+            >
+              Save session
+            </button>
+
+            <button
+              class="text-button"
+              onclick="closeSessionForm()"
+            >
+              Cancel
+            </button>
+
+          </div>
+
         </div>
+
+
+        <!-- SESSION LOG -->
+        <div
+          id="sessionLogSection"
+          class="session-log hidden"
+        >
+
+          <div class="section-heading">
+
+            <p class="eyebrow">
+              SESSION LOG
+            </p>
+
+            <h2>
+              What happened?
+            </h2>
+
+          </div>
+
+          <div
+            id="sessionsList"
+            class="sessions-list"
+          ></div>
+
+        </div>
+
+
+        <!-- END FOCUS -->
+        <div
+          id="focusEndingSection"
+          class="focus-ending"
+        >
+
+          <div class="ending-actions">
+
+            <button
+              class="primary-button"
+              onclick="completeFocus()"
+            >
+              I've finished
+            </button>
+
+            <button
+              class="secondary-button"
+              onclick="showAbandonFocus()"
+            >
+              Abandon
+            </button>
+
+              <button
+                id="deleteFocusButton"
+               class="delete-button"
+                onclick="deleteCurrentFocus()"
+          >
+            Delete Focus
+          </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- ABANDON -->
+        <div
+          id="abandonFocusSection"
+          class="completion-section hidden"
+        >
+
+          <button
+            class="back-button"
+            onclick="showFocus()"
+          >
+            ← Back
+          </button>
+
+          <p class="eyebrow">
+            ABANDON
+          </p>
+
+          <h2>
+            Not everything needs to be finished.
+          </h2>
+
+          <label for="abandonLearning">
+            What did this Focus teach you?
+          </label>
+
+          <textarea
+            id="abandonLearning"
+            rows="6"
+            placeholder="Optional"
+          ></textarea>
+
+          <div class="form-actions">
+
+            <button
+              class="primary-button"
+              onclick="abandonFocus()"
+            >
+              Abandon Focus
+            </button>
+
+            <button
+              class="text-button"
+              onclick="showFocus()"
+            >
+              Cancel
+            </button>
+
+          </div>
+
+        </div>
+
       </div>
 
+    </section>
 
-      <!-- SESSION LOG -->
-      <div id="sessionLogSection" class="session-log hidden">
+
+    <!-- FOCUS COLLECTION -->
+    <section
+      id="collectionScreen"
+      class="screen hidden"
+    >
+
+      <div class="page-section collection-page">
+
         <div class="section-heading">
-          <p class="eyebrow">SESSION LOG</p>
-          <h2>What happened?</h2>
+
+          <p class="eyebrow">
+            FOCUS COLLECTION
+          </p>
+
+          <h1>
+            A record of the practice.
+          </h1>
+
+          <p class="page-intro">
+            Focuses started, worked on, finished, and abandoned.
+            The point isn't perfection. It's practice.
+          </p>
+
         </div>
 
-        <div id="sessionsList" class="sessions-list"></div>
-      </div>
+        <div
+          id="collectionList"
+          class="collection-list"
+        ></div>
 
-
-      <!-- END FOCUS -->
-      <div id="focusEndingSection" class="focus-ending">
-        <div class="ending-actions">
-          <button class="primary-button" onclick="showCompleteFocus()">I've finished</button>
-          <button class="secondary-button" onclick="showAbandonFocus()">Abandon</button>
-        </div>
-      </div>
-
-
-      <!-- COMPLETE -->
-      <div id="completeFocusSection" class="completion-section hidden">
-        <button class="back-button" onclick="showFocus()">← Back</button>
-
-        <p class="eyebrow">COMPLETED</p>
-        <h1>You did it.</h1>
-
-        <label for="completionText">What did you make / learn / finish?</label>
-        <textarea id="completionText" rows="6"></textarea>
-
-        <label for="completionLearning">What did this Focus teach you?</label>
-        <textarea id="completionLearning" rows="6"></textarea>
-
-        <label class="checkbox-label">
-          <input id="completionPublic" type="checkbox">
-          <span>Share this Focus on the homepage</span>
-        </label>
-
-        <div class="form-actions">
-          <button class="primary-button" onclick="completeFocus()">Complete Focus</button>
-          <button class="text-button" onclick="showFocus()">Cancel</button>
-        </div>
-      </div>
-
-
-      <!-- ABANDON -->
-      <div id="abandonFocusSection" class="completion-section hidden">
-        <button class="back-button" onclick="showFocus()">← Back</button>
-
-        <p class="eyebrow">ABANDONED</p>
-        <h1>Not everything needs to be finished.</h1>
-
-        <label for="abandonLearning">What did this Focus teach you?</label>
-        <textarea id="abandonLearning" rows="6"></textarea>
-
-        <div class="form-actions">
-          <button class="primary-button" onclick="abandonFocus()">Abandon Focus</button>
-          <button class="text-button" onclick="showFocus()">Cancel</button>
-        </div>
-      </div>
-
-
-      <!-- SHARE -->
-      <div id="shareSection" class="share-section hidden">
-        <p class="eyebrow">SHARED</p>
-        <h2>Your Focus is now part of the practice.</h2>
-        <button class="primary-button" onclick="showHome()">Back home</button>
       </div>
 
     </section>
 
 
-    <!-- PUBLIC FOCUS -->
-    <section id="publicFocusScreen" class="screen hidden">
-      <button class="back-button" onclick="showHome()">← Back</button>
+    <!-- ABOUT -->
+    <section
+      id="aboutScreen"
+      class="screen hidden"
+    >
 
-      <div id="publicFocusContent"></div>
+      <div class="page-section about-page">
+
+        <div class="about-content">
+
+            <p class="eyebrow">
+              ABOUT
+            </p>
+
+             <p>
+           👋 Hey, I'm Judith - I have over 10 years of engineering experience shipping world class projects. And yet...  
+          </p>
+
+          <p>
+           I was wasting my precious free time in indecision of what to do with it.            Should I do that project? Or the other one? Just take a nap?
+</p>
+<p>I read 20+ time management books and did 12 experiments on myself with the goal of increasing satisfaction and productivity with how I spent my time. 
+What I learned really surprised me... and had very little to do with time management 😂
+          </p>
+
+          <div class="about-loop">
+
+            <p class="eyebrow">
+              THE PRACTICE
+            </p>
+
+            <p class="loop">
+              Choose → Focus → Learn → Push Through → Complete → Share → Recover → Choose again
+            </p>
+
+          </div>
+
+
+          <p>
+           It turns out what I needed to feel more satisfaction and productivity was not more time, or to be better at time, but to be better at choosing a focus. 
+          </p>
+          </div>
+
+          <p class="about-final">
+Focus is a muscle, and this is a practice to improve it.
+          </p>
+
+          <p> I'm working on a book that explains the practice, as well as coaching and workshop offerings. Reach out to judithprays@gmail.com for more info!</p>
+
+        </div>
+
+      </div>
+
     </section>
 
 
-    <footer>
-    </footer>
+    <!-- PUBLIC / SHARED FOCUS -->
+    <section
+      id="publicFocusScreen"
+      class="screen hidden"
+    >
+
+      <div class="page-section public-focus-page">
+
+        <div class="focus-top-actions">
+
+          <button
+            class="back-button"
+            onclick="showHome()"
+          >
+            ← Home
+          </button>
+
+        </div>
+
+        <div id="publicFocusContent"></div>
+
+      </div>
+
+    </section>
+
+
+    <footer></footer>
 
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+  ></script>
+
   <script src="script.js"></script>
+
 </body>
 </html>
