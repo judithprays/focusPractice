@@ -1,127 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>The Focus Practice</title>
-  <meta name="description" content="A simple practice for choosing one thing, making it real, and actually finishing it." />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Practice</title>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="site-header">
-    <a class="wordmark" href="#" data-home>THE FOCUS PRACTICE</a>
-    <div class="header-actions"></div>
-  </header>
 
   <main>
-    <section id="home" class="screen active">
+
+    <!-- HOME -->
+    <section id="homeScreen" class="screen">
       <div class="hero">
-        <p class="eyebrow">A practice for people with a million things to do</p>
-        <h1>You don't need<br><em>more time.</em><br>You need focus.</h1>
-        <p class="hero-copy">Give one thing a chance to become real.</p>
-        <button class="primary-button large" data-start>Start a focus <span>→</span></button>
+        <h1>Actually, we have enough time.</h1>
+        <p class="hero-copy">We just need ... to focus.</p>
+        <button class="primary-button" onclick="showCreateFocus()">Start a Focus</button>
       </div>
-      <div class="home-note">
-        <span>Choose.</span><span>Focus.</span><span>Learn.</span><span>Push through.</span><span>Complete.</span><span>Share.</span><span>Recover.</span>
+
+      <section class="public-focuses-section">
+        <div class="section-heading">
+          <p class="eyebrow">FOCUS COLLECTION</p>
+          <h2>People are focusing on...</h2>
+        </div>
+        <div id="publicFocusesList" class="public-focuses-list"></div>
+      </section>
+    </section>
+
+
+    <!-- CREATE FOCUS -->
+    <section id="createFocusScreen" class="screen hidden">
+      <button class="back-button" onclick="showHome()">← Back</button>
+
+      <div class="create-focus">
+        <p class="eyebrow">START A FOCUS</p>
+        <h1>What do you want to focus on?</h1>
+
+        <input
+          id="focusTitle"
+          type="text"
+          placeholder="Your focus"
+          maxlength="200"
+        >
+
+        <button class="primary-button" onclick="startNewFocus()">Start this Focus</button>
       </div>
     </section>
 
-    <section id="dump" class="screen">
-      <div class="content narrow">
-        <div class="page-nav"><button class="back-button" data-back>← Back</button><div class="progress">01 / 04</div></div>
-        <p class="eyebrow">Idea dump</p>
-        <h2>What do you want to do?</h2>
-        <p class="lede">You probably have a lot of things. That's okay. Don't choose yet. Just get them out.</p>
-        <div id="ideas" class="idea-list"></div>
-        <button class="secondary-button add-idea" id="addIdea">+ Add another idea</button>
-        <div class="dump-actions">
-          <button class="stuck-cta" id="stuckDump" type="button">I'm stuck</button>
-          <button class="primary-button dump-cta" id="doneDump">Next <span>→</span></button>
+
+    <!-- ACTIVE FOCUS -->
+    <section id="focusScreen" class="screen hidden">
+      <button class="back-button" onclick="showHome()">← Back</button>
+
+      <div class="focus-header">
+        <p class="eyebrow focus-goal-label">MY CURRENT FOCUS</p>
+        <h1 id="focusTitleDisplay"></h1>
+        <p id="focusStarted" class="focus-started"></p>
+      </div>
+
+      <button id="addSessionButton" class="secondary-button add-session-button" onclick="openSessionForm()">
+        + Add a session
+      </button>
+
+      <!-- NEW SESSION FORM -->
+      <div id="newSessionForm" class="new-session-form hidden">
+        <div class="session-form-label">
+          <span>NEW SESSION</span>
+        </div>
+
+        <label for="sessionDate">Date</label>
+        <input id="sessionDate" type="date">
+
+        <label for="sessionText">What happened?</label>
+        <textarea
+          id="sessionText"
+          rows="6"
+          placeholder="What did you do? What surprised you? What got harder or easier?"
+        ></textarea>
+
+        <label for="sessionAccomplished">Things accomplished</label>
+        <textarea id="sessionAccomplished" rows="3" placeholder="Optional"></textarea>
+
+        <label for="sessionFunny">Funny things that happened</label>
+        <textarea id="sessionFunny" rows="3" placeholder="Optional"></textarea>
+
+        <label for="sessionExcitements">Excitements</label>
+        <textarea id="sessionExcitements" rows="3" placeholder="Optional"></textarea>
+
+        <label for="sessionMistakes">Mistakes</label>
+        <textarea id="sessionMistakes" rows="3" placeholder="Optional"></textarea>
+
+        <label for="sessionLearned">Things I learned</label>
+        <textarea id="sessionLearned" rows="3" placeholder="Optional"></textarea>
+
+        <p class="session-subheading">FOR NEXT TIME</p>
+
+        <label for="sessionNextTime">For next time</label>
+        <textarea id="sessionNextTime" rows="3" placeholder="Optional"></textarea>
+
+        <label for="sessionTimeSpent">Time spent</label>
+        <input
+          id="sessionTimeSpent"
+          type="text"
+          placeholder="Optional — e.g. 45 minutes"
+        >
+
+        <div class="form-actions">
+          <button class="primary-button" onclick="saveSession()">Save session</button>
+          <button class="text-button" onclick="closeSessionForm()">Cancel</button>
         </div>
       </div>
-    </section>
 
-    <section id="choose" class="screen">
-      <div class="content narrow">
-        <div class="page-nav"><button class="back-button" data-back>← Back</button><div class="progress">02 / 04</div></div>
-        <p class="eyebrow">Choose</p>
-        <h2>Now choose one.</h2>
-        <p class="lede warning-copy">Warning: this is the hardest part</p>
 
-        <div id="choiceList" class="choice-list"></div>
-
-        <div class="choose-help">
-          <button class="stuck-cta" id="stuckChoose" type="button">I'm stuck</button>
-          <div id="chooseCoaching" class="coaching-cta hidden">
-            <p class="small-label">Want help?</p>
-            <p>Sometimes choosing is better together.</p>
-            <a class="secondary-button coaching-link" id="coachingLink" target="_blank" rel="noopener" href="mailto:judithprays@gmail.com">Talk to me about focus coaching <span>→</span></a>
-          </div>
+      <!-- SESSION LOG -->
+      <div id="sessionLogSection" class="session-log hidden">
+        <div class="section-heading">
+          <p class="eyebrow">SESSION LOG</p>
+          <h2>What happened?</h2>
         </div>
 
+        <div id="sessionsList" class="sessions-list"></div>
       </div>
+
+
+      <!-- END FOCUS -->
+      <div id="focusEndingSection" class="focus-ending">
+        <div class="ending-actions">
+          <button class="primary-button" onclick="showCompleteFocus()">I've finished</button>
+          <button class="secondary-button" onclick="showAbandonFocus()">Abandon</button>
+        </div>
+      </div>
+
+
+      <!-- COMPLETE -->
+      <div id="completeFocusSection" class="completion-section hidden">
+        <button class="back-button" onclick="showFocus()">← Back</button>
+
+        <p class="eyebrow">COMPLETED</p>
+        <h1>You did it.</h1>
+
+        <label for="completionText">What did you make / learn / finish?</label>
+        <textarea id="completionText" rows="6"></textarea>
+
+        <label for="completionLearning">What did this Focus teach you?</label>
+        <textarea id="completionLearning" rows="6"></textarea>
+
+        <label class="checkbox-label">
+          <input id="completionPublic" type="checkbox">
+          <span>Share this Focus on the homepage</span>
+        </label>
+
+        <div class="form-actions">
+          <button class="primary-button" onclick="completeFocus()">Complete Focus</button>
+          <button class="text-button" onclick="showFocus()">Cancel</button>
+        </div>
+      </div>
+
+
+      <!-- ABANDON -->
+      <div id="abandonFocusSection" class="completion-section hidden">
+        <button class="back-button" onclick="showFocus()">← Back</button>
+
+        <p class="eyebrow">ABANDONED</p>
+        <h1>Not everything needs to be finished.</h1>
+
+        <label for="abandonLearning">What did this Focus teach you?</label>
+        <textarea id="abandonLearning" rows="6"></textarea>
+
+        <div class="form-actions">
+          <button class="primary-button" onclick="abandonFocus()">Abandon Focus</button>
+          <button class="text-button" onclick="showFocus()">Cancel</button>
+        </div>
+      </div>
+
+
+      <!-- SHARE -->
+      <div id="shareSection" class="share-section hidden">
+        <p class="eyebrow">SHARED</p>
+        <h2>Your Focus is now part of the practice.</h2>
+        <button class="primary-button" onclick="showHome()">Back home</button>
+      </div>
+
     </section>
 
-    <section id="define" class="screen">
-      <div class="content narrow">
-        <div class="page-nav"><button class="back-button" data-back>← Back</button><div class="progress">03 / 04</div></div>
-        <p class="eyebrow">Define it</p>
-        <h2>Let's make it smaller.</h2>
-        <p class="lede">A good focus has a clear, doable finish line. Big enough to matter, small enough to accomplish.</p>
-        <div class="selected-idea">
-          <span class="small-label">Your starting idea</span>
-          <strong id="startingIdea"></strong>
-        </div>
-        <label for="focusInput">What would “done” actually look like?</label>
-        <input id="focusInput" class="focus-input" type="text" placeholder="e.g. Publish the homepage" />
-        <div class="definition-checks">
-          <div><span>✓</span><b>Finite</b><small>There is a clear finish line.</small></div>
-          <div><span>✓</span><b>Motivating</b><small>It moves something you care about forward.</small></div>
-        </div>
-        <button class="primary-button" id="beginFocus" disabled>Make it real <span>→</span></button>
-      </div>
+
+    <!-- PUBLIC FOCUS -->
+    <section id="publicFocusScreen" class="screen hidden">
+      <button class="back-button" onclick="showHome()">← Back</button>
+
+      <div id="publicFocusContent"></div>
     </section>
 
-    <section id="celebrate" class="screen celebration-screen">
-      <div class="celebration-nav"><button class="back-button" data-back>← Back</button><div class="progress">03 / 04</div></div>
-      <div id="fireworks" class="fireworks" aria-hidden="true"></div>
-      <div class="content narrow center celebration-content">
-        <p class="eyebrow">Focus chosen</p>
-        <h2>You did it!!!</h2>
-        <p class="celebration-lede">Hope you feel amazing.</p>
-        <div class="celebration-focus" id="celebrationFocus"></div>
-        <button class="primary-button large" id="celebrationNext">Next <span>→</span></button>
-      </div>
-    </section>
 
-    <section id="focus" class="screen">
-      <div class="content">
-        <div class="page-nav"><button class="back-button" data-back>← Back</button><div class="progress">04 / 04</div></div>
-        <div class="focus-card">
-          <div class="focus-card-top">MY FOCUS</div>
-          <h2 id="focusTitle"></h2>
-          <div class="focus-share-box">
-            <a class="primary-button share-focus-link" id="shareFocus" target="_blank" rel="noopener" href="mailto:judithprays@gmail.com">Share your focus with me <span>→</span></a>
-          </div>
-        </div>
-        <div id="dipPanel" class="dip-panel hidden">
-          <p class="eyebrow">You hit the dip.</p>
-          <h3>This is normal.</h3>
-          <p>Which one sounds like you?</p>
-          <div class="dip-options">
-            <button data-dip="big">This is too big.</button>
-            <button data-dip="next">I don't know what to do next.</button>
-            <button data-dip="help">I need support.</button>
-            <button data-dip="quit">I want to quit.</button>
-          </div>
-          <p id="dipResponse" class="dip-response"></p>
-        </div>
-        <p class="work-in-progress">This site is a work in progress! More coming soon!</p>
-      </div>
-    </section>
+    <footer>
+    </footer>
+
   </main>
 
-  <div id="toast" class="toast" role="status"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
 </html>

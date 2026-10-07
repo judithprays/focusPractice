@@ -1,252 +1,744 @@
-const state = {
-  ideas: ["", "", ""],
-  selected: "",
-  focus: localStorage.getItem("focusPractice.currentFocus") || "",
-  history: ["home"]
-};
+const SUPABASE_URL = "https://gsfuumnfnclufrjibmiw.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_jNLDH1M8SEDhGiOo4k3-wA_Zzzy93YJ";
 
-const screens = [...document.querySelectorAll(".screen")];
+const focusSupabase = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY
+);
+
+let currentFocusId = null;
+let currentFocus = null;
+let currentSessions = [];
 
 
-function show(id, { push = true } = {}) {
-  screens.forEach(screen => screen.classList.toggle("active", screen.id === id));
-  if (push && state.history[state.history.length - 1] !== id) state.history.push(id);
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  if (id === "celebrate") launchFireworks();
+/* -----------------------------
+   BASIC HELPERS
+----------------------------- */
+
+function $(id) {
+  return document.getElementById(id);
 }
 
-function back() {
-  if (state.history.length > 1) {
-    state.history.pop();
-    show(state.history[state.history.length - 1], { push: false });
-  } else show("home", { push: false });
+function todayString() {
+  return new Date().toISOString().split("T")[0];
 }
 
-function toast(message) {
-  const el = document.getElementById("toast");
-  el.textContent = message;
-  el.classList.add("show");
-  setTimeout(() => el.classList.remove("show"), 2600);
-}
+function formatDate(dateString) {
+  if (!dateString) return "";
 
-function escapeHtml(str) {
-  return str.replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
-}
+  const date = new Date(dateString + "T12:00:00");
 
-function renderIdeas() {
-  const container = document.getElementById("ideas");
-  container.innerHTML = "";
-  state.ideas.forEach((idea, index) => {
-    const row = document.createElement("div");
-    row.className = "idea-row";
-    row.innerHTML = `<input type="text" value="${escapeHtml(idea)}" placeholder="Something you want to do…" aria-label="Idea ${index + 1}">
-      ${state.ideas.length > 1 ? '<button class="remove-idea" type="button" aria-label="Remove idea">×</button>' : ""}`;
-    const input = row.querySelector("input");
-    input.addEventListener("input", e => state.ideas[index] = e.target.value);
-    const remove = row.querySelector(".remove-idea");
-    if (remove) remove.addEventListener("click", () => { state.ideas.splice(index, 1); renderIdeas(); });
-    container.appendChild(row);
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric"
   });
 }
 
-function renderChoices() {
-  const ideas = state.ideas.filter(Boolean);
-  const container = document.getElementById("choiceList");
-  container.innerHTML = "";
-  ideas.forEach(idea => {
-    const button = document.createElement("button");
-    button.className = "choice" + (state.selected === idea ? " selected" : "");
-    button.type = "button";
-    button.textContent = idea;
-    button.addEventListener("click", () => {
-      state.selected = idea;
-      renderChoices();
-      useSelection();
-    });
-    container.appendChild(button);
+function escapeHtml(value) {
+  if (value === null || value === undefined) return "";
+
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function showOnly(screenId) {
+  document.querySelectorAll(".screen").forEach((screen) => {
+    screen.classList.add("hidden");
   });
-}
 
-function useSelection() {
-  document.getElementById("startingIdea").textContent = state.selected;
-  document.getElementById("focusInput").value = "";
-  document.getElementById("beginFocus").disabled = true;
-  show("define");
-  setTimeout(() => document.getElementById("focusInput").focus(), 350);
-}
+  const screen = $(screenId);
 
-function resetForNewFocus() {
-  state.ideas = ["", "", ""];
-  state.selected = "";
-  state.history = ["home"];
-  renderIdeas();
-}
-
-function updateCoachingLink() {
-  const link = document.getElementById("coachingLink");
-  if (!link) return;
-  const projects = state.ideas.filter(Boolean).map(x => x.trim());
-  const list = projects.length ? projects.join(", ") : "a few different projects";
-  const body = `Hey Judith! I was on your site and I'm trying to decide between ${list}. I'd love to discuss this more with you - talk to me about focus coaching`;
-  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent("Focus coaching")}&body=${encodeURIComponent(body)}`;
-}
-
-function updateShareLink() {
-  const link = document.getElementById("shareFocus");
-  if (!link) return;
-  const subject = "My current focus";
-  const body = `Hey Judith! My current focus is: ${state.focus}`;
-  link.href = `mailto:judithprays@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-}
-
-document.querySelectorAll("[data-start]").forEach(btn => btn.addEventListener("click", () => { resetForNewFocus(); show("dump"); }));
-document.querySelectorAll("[data-home]").forEach(btn => btn.addEventListener("click", e => { e.preventDefault(); state.history = ["home"]; show("home", { push: false }); }));
-document.querySelectorAll("[data-back]").forEach(btn => btn.addEventListener("click", back));
-document.getElementById("addIdea").addEventListener("click", () => {
-  state.ideas.push("");
-  renderIdeas();
-  const inputs = document.querySelectorAll("#ideas input");
-  inputs[inputs.length - 1].focus();
-});
-
-document.getElementById("stuckDump").addEventListener("click", () => {
-  state.ideas = state.ideas.map(x => x.trim()).filter(Boolean);
-  if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
-  state.selected = "";
-  renderChoices();
-  updateCoachingLink();
-  show("choose");
-  document.getElementById("chooseCoaching").classList.remove("hidden");
-});
-
-document.getElementById("doneDump").addEventListener("click", () => {
-  state.ideas = state.ideas.map(x => x.trim()).filter(Boolean);
-  if (!state.ideas.length) { toast("Give yourself at least one possibility."); return; }
-  state.selected = "";
-  renderChoices();
-  updateCoachingLink();
-  show("choose");
-});
-
-document.getElementById("stuckChoose").addEventListener("click", () => {
-  document.getElementById("chooseCoaching").classList.remove("hidden");
-  updateCoachingLink();
-});
-
-document.getElementById("focusInput").addEventListener("input", e => {
-  document.getElementById("beginFocus").disabled = !e.target.value.trim();
-});
-
-document.getElementById("beginFocus").addEventListener("click", () => {
-  state.focus = document.getElementById("focusInput").value.trim();
-  localStorage.setItem("focusPractice.currentFocus", state.focus);
-  document.getElementById("focusTitle").textContent = state.focus;
-  document.getElementById("celebrationFocus").textContent = state.focus;
-  updateShareLink();
-  show("celebrate");
-});
-
-document.getElementById("celebrationNext").addEventListener("click", () => show("focus"));
-
-function roundedRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
-}
-
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(" ");
-  let line = "";
-  for (const word of words) {
-    const test = line ? `${line} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      ctx.fillText(line, x, y);
-      line = word;
-      y += lineHeight;
-    } else line = test;
+  if (screen) {
+    screen.classList.remove("hidden");
   }
-  if (line) ctx.fillText(line, x, y);
-  return y;
-}
 
-async function makeFocusImage() {
-  const canvas = document.createElement("canvas");
-  const scale = 2;
-  canvas.width = 1200 * scale;
-  canvas.height = 760 * scale;
-  const ctx = canvas.getContext("2d");
-  ctx.scale(scale, scale);
-
-  ctx.fillStyle = "#f7f3ea";
-  ctx.fillRect(0, 0, 1200, 760);
-  ctx.fillStyle = "#1e1e1b";
-  ctx.font = "700 18px Helvetica, Arial, sans-serif";
-  ctx.fillText("THE FOCUS PRACTICE", 70, 70);
-  ctx.fillStyle = "#c65f4d";
-  ctx.font = "700 15px Helvetica, Arial, sans-serif";
-  ctx.fillText("YOUR CURRENT FOCUS", 70, 150);
-
-  ctx.fillStyle = "#fffdf8";
-  ctx.strokeStyle = "#1e1e1b";
-  ctx.lineWidth = 2;
-  roundedRect(ctx, 70, 180, 1060, 400, 4);
-  ctx.fill(); ctx.stroke();
-
-  ctx.fillStyle = "#1e1e1b";
-  ctx.font = "400 52px Georgia, serif";
-  const endY = wrapText(ctx, state.focus, 115, 280, 970, 68);
-  ctx.strokeStyle = "#d9d0c0";
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(115, endY + 45); ctx.lineTo(1085, endY + 45); ctx.stroke();
-  ctx.fillStyle = "#777269";
-  ctx.font = "400 22px Helvetica, Arial, sans-serif";
-  wrapText(ctx, "This is the one thing you're giving your attention to right now.", 115, endY + 95, 900, 32);
-  ctx.font = "400 18px Helvetica, Arial, sans-serif";
-  ctx.fillText("You chose it. Now give it a chance to become real.", 70, 680);
-  ctx.fillStyle = "#c65f4d";
-  ctx.font = "700 15px Helvetica, Arial, sans-serif";
-  ctx.fillText("FOCUS CHOSEN ✓", 70, 720);
-
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Could not create focus image")), "image/png");
+  window.scrollTo({
+    top: 0,
+    behavior: "instant"
   });
 }
 
-function downloadFocusImage(blob) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "my-focus.png";
-  a.rel = "noopener";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+/* -----------------------------
+   HOME
+----------------------------- */
+
+async function showHome() {
+  showOnly("homeScreen");
+
+  await loadPublicFocuses();
+}
+
+async function loadPublicFocuses() {
+  const list = $("publicFocusesList");
+
+  if (!list) return;
+
+  list.innerHTML = `<p class="empty-state">Loading...</p>`;
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("is_public", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    list.innerHTML = `<p class="empty-state">Couldn't load Focuses.</p>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    list.innerHTML = `
+      <p class="empty-state">
+        No shared Focuses yet.
+      </p>
+    `;
+    return;
+  }
+
+  list.innerHTML = data
+    .map((focus) => {
+      const statusLabel =
+        focus.status === "completed"
+          ? "COMPLETED"
+          : focus.status === "abandoned"
+            ? "ABANDONED"
+            : "ACTIVE";
+
+      return `
+        <button
+          class="public-focus-card"
+          onclick="showPublicFocus('${focus.id}')"
+        >
+          <p class="eyebrow">${statusLabel}</p>
+          <h3>${escapeHtml(focus.title)}</h3>
+
+          ${
+            focus.completion_text
+              ? `<p>${escapeHtml(focus.completion_text)}</p>`
+              : ""
+          }
+
+          ${
+            focus.learning
+              ? `<p class="public-focus-learning">${escapeHtml(
+                  focus.learning
+                )}</p>`
+              : ""
+          }
+        </button>
+      `;
+    })
+    .join("");
 }
 
 
-function launchFireworks() {
-  const container = document.getElementById("fireworks");
-  container.innerHTML = "";
-  for (let i = 0; i < 90; i++) {
-    const spark = document.createElement("span");
-    spark.className = "spark";
-    spark.style.setProperty("--x", `${Math.random() * 100}vw`);
-    spark.style.setProperty("--y", `${Math.random() * 75 + 5}vh`);
-    spark.style.setProperty("--dx", `${(Math.random() - .5) * 260}px`);
-    spark.style.setProperty("--dy", `${(Math.random() - .5) * 260}px`);
-    spark.style.setProperty("--delay", `${Math.random() * .7}s`);
-    container.appendChild(spark);
+/* -----------------------------
+   CREATE FOCUS
+----------------------------- */
+
+function showCreateFocus() {
+  showOnly("createFocusScreen");
+
+  $("focusTitle").value = "";
+
+  setTimeout(() => {
+    $("focusTitle").focus();
+  }, 50);
+}
+
+async function startNewFocus() {
+  const title = $("focusTitle").value.trim();
+
+  if (!title) {
+    $("focusTitle").focus();
+    return;
+  }
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .insert({
+      title,
+      status: "active",
+      started_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't start this Focus. Please try again.");
+    return;
+  }
+
+  currentFocusId = data.id;
+  currentFocus = data;
+
+  showOnly("focusScreen");
+
+  await showFocus();
+}
+
+
+/* -----------------------------
+   ACTIVE FOCUS
+----------------------------- */
+
+async function showFocus() {
+  if (!currentFocusId) {
+    showHome();
+    return;
+  }
+
+  showOnly("focusScreen");
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("id", currentFocusId)
+    .single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  currentFocus = data;
+
+  renderFocusState();
+
+  await loadSessions();
+}
+
+function renderFocusState() {
+  if (!currentFocus) return;
+
+  $("focusTitleDisplay").textContent = currentFocus.title;
+
+  $("focusStarted").textContent =
+    currentFocus.started_at
+      ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
+      : "";
+
+  $("focusEndingSection").classList.remove("hidden");
+  $("completeFocusSection").classList.add("hidden");
+  $("abandonFocusSection").classList.add("hidden");
+  $("shareSection").classList.add("hidden");
+
+  if (currentFocus.status === "completed") {
+    $("focusEndingSection").classList.add("hidden");
+  }
+
+  if (currentFocus.status === "abandoned") {
+    $("focusEndingSection").classList.add("hidden");
   }
 }
 
-if (state.focus) {
-  document.getElementById("focusTitle").textContent = state.focus;
-  document.getElementById("celebrationFocus").textContent = state.focus;
-  updateShareLink();
+
+/* -----------------------------
+   SESSIONS
+----------------------------- */
+
+async function loadSessions() {
+  if (!currentFocusId) return;
+
+  const { data, error } = await focusSupabase
+    .from("sessions")
+    .select("*")
+    .eq("focus_id", currentFocusId)
+    .order("session_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  currentSessions = data || [];
+
+  renderSessions();
 }
-renderIdeas();
+
+function renderSessions() {
+  const section = $("sessionLogSection");
+  const list = $("sessionsList");
+
+  if (!section || !list) return;
+
+  if (currentSessions.length === 0) {
+    section.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+
+  section.classList.remove("hidden");
+
+  list.innerHTML = currentSessions
+    .map((session, index) => {
+      return `
+        <article class="session-card">
+
+          <div class="session-card-header">
+            <p class="eyebrow">SESSION ${index + 1}</p>
+            <p class="session-date">${formatDate(session.session_date)}</p>
+          </div>
+
+          <div class="session-main">
+            <p>${escapeHtml(session.body)}</p>
+          </div>
+
+          ${renderSessionDetail(
+            "Things accomplished",
+            session.accomplished
+          )}
+
+          ${renderSessionDetail(
+            "Funny things that happened",
+            session.funny
+          )}
+
+          ${renderSessionDetail(
+            "Excitements",
+            session.excitements
+          )}
+
+          ${renderSessionDetail(
+            "Mistakes",
+            session.mistakes
+          )}
+
+          ${renderSessionDetail(
+            "Things I learned",
+            session.learned
+          )}
+
+          ${renderSessionDetail(
+            "For next time",
+            session.next_time
+          )}
+
+          ${renderSessionDetail(
+            "Time spent",
+            session.time_spent
+          )}
+
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderSessionDetail(label, value) {
+  if (!value) return "";
+
+  return `
+    <div class="session-detail">
+      <div class="session-detail-label">${escapeHtml(label)}</div>
+      <div class="session-detail-text">${escapeHtml(value)}</div>
+    </div>
+  `;
+}
+
+function openSessionForm() {
+  $("newSessionForm").classList.remove("hidden");
+
+  $("sessionDate").value = todayString();
+
+  setTimeout(() => {
+    $("sessionText").focus();
+  }, 50);
+
+  window.scrollTo({
+    top: $("newSessionForm").offsetTop - 30,
+    behavior: "smooth"
+  });
+}
+
+function closeSessionForm() {
+  $("newSessionForm").classList.add("hidden");
+
+  $("sessionText").value = "";
+  $("sessionAccomplished").value = "";
+  $("sessionFunny").value = "";
+  $("sessionExcitements").value = "";
+  $("sessionMistakes").value = "";
+  $("sessionLearned").value = "";
+  $("sessionNextTime").value = "";
+  $("sessionTimeSpent").value = "";
+
+  $("sessionDate").value = todayString();
+}
+
+async function saveSession() {
+  const date = $("sessionDate").value;
+  const body = $("sessionText").value.trim();
+
+  if (!date) {
+    $("sessionDate").focus();
+    return;
+  }
+
+  if (!body) {
+    $("sessionText").focus();
+    return;
+  }
+
+  const session = {
+    focus_id: currentFocusId,
+    session_date: date,
+    body,
+    accomplished:
+      $("sessionAccomplished").value.trim() || null,
+    funny:
+      $("sessionFunny").value.trim() || null,
+    excitements:
+      $("sessionExcitements").value.trim() || null,
+    mistakes:
+      $("sessionMistakes").value.trim() || null,
+    learned:
+      $("sessionLearned").value.trim() || null,
+    next_time:
+      $("sessionNextTime").value.trim() || null,
+    time_spent:
+      $("sessionTimeSpent").value.trim() || null
+  };
+
+  const { error } = await focusSupabase
+    .from("sessions")
+    .insert(session);
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't save this session. Please try again.");
+    return;
+  }
+
+  closeSessionForm();
+
+  await loadSessions();
+}
+
+
+/* -----------------------------
+   COMPLETE
+----------------------------- */
+
+function showCompleteFocus() {
+  $("focusEndingSection").classList.add("hidden");
+  $("completeFocusSection").classList.remove("hidden");
+  $("abandonFocusSection").classList.add("hidden");
+
+  $("completionText").value = "";
+  $("completionLearning").value = "";
+  $("completionPublic").checked = false;
+
+  window.scrollTo({
+    top: $("completeFocusSection").offsetTop - 30,
+    behavior: "smooth"
+  });
+}
+
+async function completeFocus() {
+  const completionText = $("completionText").value.trim();
+  const learning = $("completionLearning").value.trim();
+  const isPublic = $("completionPublic").checked;
+
+  if (!completionText) {
+    $("completionText").focus();
+    return;
+  }
+
+  if (!learning) {
+    $("completionLearning").focus();
+    return;
+  }
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .update({
+      status: "completed",
+      completed_at: new Date().toISOString(),
+      completion_text: completionText,
+      learning,
+      is_public: isPublic
+    })
+    .eq("id", currentFocusId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't complete this Focus. Please try again.");
+    return;
+  }
+
+  currentFocus = data;
+
+  $("completeFocusSection").classList.add("hidden");
+  $("focusEndingSection").classList.add("hidden");
+  $("shareSection").classList.remove("hidden");
+
+  window.scrollTo({
+    top: $("shareSection").offsetTop - 30,
+    behavior: "smooth"
+  });
+}
+
+
+/* -----------------------------
+   ABANDON
+----------------------------- */
+
+function showAbandonFocus() {
+  $("focusEndingSection").classList.add("hidden");
+  $("abandonFocusSection").classList.remove("hidden");
+  $("completeFocusSection").classList.add("hidden");
+
+  $("abandonLearning").value = "";
+
+  window.scrollTo({
+    top: $("abandonFocusSection").offsetTop - 30,
+    behavior: "smooth"
+  });
+}
+
+async function abandonFocus() {
+  const learning = $("abandonLearning").value.trim();
+
+  if (!learning) {
+    $("abandonLearning").focus();
+    return;
+  }
+
+  const { data, error } = await focusSupabase
+    .from("focuses")
+    .update({
+      status: "abandoned",
+      abandoned_at: new Date().toISOString(),
+      learning,
+      is_public: false
+    })
+    .eq("id", currentFocusId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't abandon this Focus. Please try again.");
+    return;
+  }
+
+  currentFocus = data;
+
+  $("abandonFocusSection").classList.add("hidden");
+  $("focusEndingSection").classList.add("hidden");
+  $("shareSection").classList.remove("hidden");
+
+  $("shareSection").querySelector(".eyebrow").textContent = "ABANDONED";
+  $("shareSection").querySelector("h2").textContent =
+    "You learned something. That's part of the practice.";
+
+  window.scrollTo({
+    top: $("shareSection").offsetTop - 30,
+    behavior: "smooth"
+  });
+}
+
+
+/* -----------------------------
+   PUBLIC FOCUS
+----------------------------- */
+
+async function showPublicFocus(focusId) {
+  showOnly("publicFocusScreen");
+
+  $("publicFocusContent").innerHTML = `
+    <p class="empty-state">Loading...</p>
+  `;
+
+  const { data: focus, error: focusError } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("id", focusId)
+    .eq("is_public", true)
+    .single();
+
+  if (focusError) {
+    console.error(focusError);
+
+    $("publicFocusContent").innerHTML = `
+      <p class="empty-state">
+        Couldn't load this Focus.
+      </p>
+    `;
+
+    return;
+  }
+
+  const { data: sessions, error: sessionsError } =
+    await focusSupabase
+      .from("sessions")
+      .select("*")
+      .eq("focus_id", focusId)
+      .order("session_date", { ascending: true })
+      .order("created_at", { ascending: true });
+
+  if (sessionsError) {
+    console.error(sessionsError);
+  }
+
+  const sessionData = sessions || [];
+
+  const statusLabel =
+    focus.status === "completed"
+      ? "COMPLETED"
+      : focus.status === "abandoned"
+        ? "ABANDONED"
+        : "ACTIVE";
+
+  $("publicFocusContent").innerHTML = `
+    <div class="public-focus-header">
+
+      <p class="eyebrow">${statusLabel}</p>
+
+      <h1>${escapeHtml(focus.title)}</h1>
+
+      <p class="focus-started">
+        Started ${formatDate(focus.started_at.split("T")[0])}
+      </p>
+
+    </div>
+
+    ${
+      focus.completion_text
+        ? `
+          <div class="public-focus-section">
+            <p class="eyebrow">WHAT HAPPENED</p>
+            <p class="public-focus-large">
+              ${escapeHtml(focus.completion_text)}
+            </p>
+          </div>
+        `
+        : ""
+    }
+
+    ${
+      focus.learning
+        ? `
+          <div class="public-focus-section">
+            <p class="eyebrow">WHAT I LEARNED</p>
+            <p class="public-focus-large">
+              ${escapeHtml(focus.learning)}
+            </p>
+          </div>
+        `
+        : ""
+    }
+
+    ${
+      sessionData.length
+        ? `
+          <div class="public-focus-section">
+            <div class="section-heading">
+              <p class="eyebrow">SESSION LOG</p>
+              <h2>What happened along the way?</h2>
+            </div>
+
+            <div class="sessions-list">
+              ${sessionData
+                .map((session, index) => {
+                  return `
+                    <article class="session-card">
+
+                      <div class="session-card-header">
+                        <p class="eyebrow">SESSION ${index + 1}</p>
+                        <p class="session-date">
+                          ${formatDate(session.session_date)}
+                        </p>
+                      </div>
+
+                      <div class="session-main">
+                        <p>${escapeHtml(session.body)}</p>
+                      </div>
+
+                      ${renderSessionDetail(
+                        "Things accomplished",
+                        session.accomplished
+                      )}
+
+                      ${renderSessionDetail(
+                        "Funny things that happened",
+                        session.funny
+                      )}
+
+                      ${renderSessionDetail(
+                        "Excitements",
+                        session.excitements
+                      )}
+
+                      ${renderSessionDetail(
+                        "Mistakes",
+                        session.mistakes
+                      )}
+
+                      ${renderSessionDetail(
+                        "Things I learned",
+                        session.learned
+                      )}
+
+                      ${renderSessionDetail(
+                        "For next time",
+                        session.next_time
+                      )}
+
+                      ${renderSessionDetail(
+                        "Time spent",
+                        session.time_spent
+                      )}
+
+                    </article>
+                  `;
+                })
+                .join("")}
+            </div>
+          </div>
+        `
+        : ""
+    }
+
+    ${
+      focus.status === "completed"
+        ? `
+          <div class="public-focus-footer">
+            <p class="eyebrow">
+              ${sessionData.length} ${
+                sessionData.length === 1 ? "SESSION" : "SESSIONS"
+              }
+            </p>
+            <p>
+              It took ${sessionData.length} ${
+                sessionData.length === 1 ? "session" : "sessions"
+              } to complete this Focus.
+            </p>
+          </div>
+        `
+        : ""
+    }
+  `;
+}
+
+
+/* -----------------------------
+   INITIAL LOAD
+----------------------------- */
+
+document.addEventListener("DOMContentLoaded", () => {
+  showHome();
+});
