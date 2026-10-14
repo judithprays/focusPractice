@@ -129,6 +129,10 @@
 
       <div class="page-section focus-page">
 
+        <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Project cover image">
+          <img id="focusCoverImage" alt="Project cover">
+        </div>
+
         <div class="focus-top-actions">
 
           <button
@@ -279,6 +283,24 @@
             type="text"
             placeholder="Optional — e.g. 45 minutes"
           >
+
+          <label for="sessionSummaryEmoji">Session summary emoji</label>
+          <input
+            id="sessionSummaryEmoji"
+            type="text"
+            maxlength="8"
+            placeholder="✨"
+            aria-describedby="sessionSummaryHint"
+          >
+
+          <label for="sessionSummary">Session summary (TL;DR)</label>
+          <input
+            id="sessionSummary"
+            type="text"
+            maxlength="240"
+            placeholder="What’s the headline from this session?"
+          >
+          <p id="sessionSummaryHint" class="form-hint">A short, memorable line for your session log.</p>
 
           <div class="form-actions">
 
