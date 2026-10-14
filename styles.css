@@ -826,3 +826,25 @@ body.is-loading button {
     padding: 40px 20px;
   }
 }
+
+/* PROJECT GOAL + IMAGE UPLOADS */
+.field-label, .focus-goal-editor > label { display:block; margin:25px 0 8px; font-size:13px; font-weight:700; }
+.goal-input { display:block; width:100%; margin-bottom:30px; border:1px solid var(--light-gray); background:white; padding:14px; line-height:1.5; }
+.focus-goal-editor { max-width:680px; margin-top:28px; padding-top:22px; border-top:1px solid var(--light-gray); }
+.focus-goal-editor textarea { display:block; width:100%; margin-top:8px; border:1px solid var(--light-gray); background:white; padding:14px; line-height:1.5; }
+.goal-actions { margin-top:12px; }
+.save-status, .form-hint { color:var(--gray); font-size:13px; }
+.form-hint { margin:8px 0 20px; }
+.session-image-input { display:block; width:100%; padding:12px; border:1px solid var(--light-gray); background:var(--paper); }
+.collection-cover { position:relative; display:flex; align-items:flex-end; min-height:230px; margin:-30px -30px 24px; padding:24px; background-color:#e9e4dc; background-size:cover; background-position:center; text-align:left; }
+.collection-cover h3 { margin:0; color:white; font-size:22px; line-height:1.15; text-shadow:0 1px 8px rgba(0,0,0,.25); }
+.collection-cover-empty { min-height:110px; align-items:center; background:var(--orange-light); }
+.collection-cover-empty h3 { color:var(--black); text-shadow:none; }
+.session-images { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; margin-top:30px; }
+.session-image-item { margin:0; min-width:0; }
+.session-image-item a { display:block; overflow:hidden; background:var(--light-gray); }
+.session-image-item img { display:block; width:100%; aspect-ratio:4/3; object-fit:cover; }
+.session-image-item figcaption { padding-top:8px; }
+.image-cover-button { border:1px solid var(--light-gray); border-radius:100px; padding:7px 11px; background:white; color:var(--black); font-size:12px; }
+.image-cover-button.is-cover { border-color:var(--green); background:var(--green-light); color:var(--green); }
+@media (max-width:700px) { .collection-cover { min-height:200px; margin:-25px -25px 22px; padding:20px; } }
