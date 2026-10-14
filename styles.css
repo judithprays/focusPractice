@@ -1019,3 +1019,13 @@ body.is-loading button {
     font-size: 23px;
   }
 }
+
+
+/* Session text fields start on one line and grow as needed */
+.new-session-form textarea {
+  height: 1.2em;
+  min-height: 1.2em;
+  overflow-y: hidden;
+  resize: none;
+  padding: 15px 0;
+}
