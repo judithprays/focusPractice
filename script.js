@@ -556,7 +556,38 @@ async function saveFocusGoal() {
     return;
   }
   currentFocus = data;
-  $("goalSaveStatus").textContent = "Saved";
+  renderFocusGoal();
+}
+
+function renderFocusGoal() {
+  const goal = currentFocus?.goal?.trim() || "";
+  const display = $("focusGoalDisplay");
+  const editor = document.querySelector(".focus-goal-editor");
+  const editButton = $("editGoalButton");
+  const cancelButton = $("cancelGoalButton");
+  if (!display || !editor || !editButton) return;
+
+  display.textContent = goal ? `Goal: ${goal}` : "";
+  display.classList.toggle("hidden", !goal);
+  editButton.classList.toggle("hidden", !goal);
+  editor.classList.toggle("hidden", Boolean(goal));
+  if (cancelButton) cancelButton.classList.add("hidden");
+  $("goalSaveStatus").textContent = "";
+}
+
+function editFocusGoal() {
+  const editor = document.querySelector(".focus-goal-editor");
+  if (!editor) return;
+  $("focusGoalEdit").value = currentFocus?.goal || "";
+  editor.classList.remove("hidden");
+  $("editGoalButton").classList.add("hidden");
+  $("cancelGoalButton").classList.remove("hidden");
+  $("focusGoalEdit").focus();
+}
+
+function cancelEditFocusGoal() {
+  $("focusGoalEdit").value = currentFocus?.goal || "";
+  renderFocusGoal();
 }
 
 async function setCoverImage(sessionId, imageIndex) {
@@ -673,7 +704,7 @@ function renderFocusState() {
       : "";
 
   $("focusGoalEdit").value = currentFocus.goal || "";
-  $("goalSaveStatus").textContent = "";
+  renderFocusGoal();
 
   const statusLabel =
     currentFocus.status === "completed"
