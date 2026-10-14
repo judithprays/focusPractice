@@ -1029,3 +1029,176 @@ body.is-loading button {
   resize: none;
   padding: 15px 0;
 }
+
+
+/* SESSION FORM — calmer, clearer, and easier to scan */
+.new-session-form {
+  --form-line: #d8d3cc;
+  position: relative;
+  margin: 0 0 64px;
+  padding: clamp(22px, 4vw, 42px);
+  background: #fff;
+  border: 1px solid #e7e2db;
+  border-top: 4px solid var(--orange);
+  border-radius: 4px;
+  box-shadow: 0 8px 28px rgba(21, 21, 21, 0.045);
+}
+
+.new-session-form .session-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 18px;
+  margin: 0 0 24px;
+  border-bottom: 1px solid #eeeae5;
+  color: var(--orange);
+  font-size: 11px;
+  letter-spacing: .15em;
+}
+
+.new-session-form label {
+  display: block;
+  margin: 24px 0 5px;
+  color: #45413d;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .015em;
+}
+
+.new-session-form label:first-of-type {
+  margin-top: 0;
+}
+
+.new-session-form input[type="text"],
+.new-session-form input[type="date"],
+.new-session-form textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 9px 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--form-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--black);
+  font: 400 18px/1.4 Helvetica, Arial, sans-serif;
+  box-shadow: none;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.new-session-form input[type="text"]::placeholder,
+.new-session-form textarea::placeholder {
+  color: #aaa49d;
+  opacity: 1;
+}
+
+.new-session-form input[type="text"]:hover,
+.new-session-form input[type="date"]:hover,
+.new-session-form textarea:hover {
+  border-bottom-color: #aaa39a;
+}
+
+.new-session-form input[type="text"]:focus,
+.new-session-form input[type="date"]:focus,
+.new-session-form textarea:focus {
+  border-bottom: 2px solid var(--orange);
+  padding-bottom: 9px;
+  outline: none;
+}
+
+.new-session-form textarea {
+  height: calc(1.4em + 19px);
+  min-height: calc(1.4em + 19px);
+  overflow-y: hidden;
+  resize: none;
+  padding-top: 9px;
+  padding-bottom: 10px;
+}
+
+.new-session-form input[type="date"] {
+  width: auto;
+  max-width: 100%;
+  min-height: 42px;
+  font-size: 16px;
+}
+
+.new-session-form input[type="file"].session-image-input {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px;
+  border: 1px dashed #d8d3cc;
+  border-radius: 3px;
+  background: #faf9f6;
+  color: var(--gray);
+  font-size: 13px;
+}
+
+.new-session-form input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 100px;
+  background: #eee9e2;
+  color: var(--black);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.new-session-form .form-hint {
+  margin: 8px 0 22px;
+  color: #77716a;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.new-session-form .session-subheading {
+  margin: 36px 0 0;
+  padding: 20px 0 0;
+  border-top: 1px solid #eeeae5;
+  color: var(--orange);
+  font-size: 10px;
+  letter-spacing: .16em;
+}
+
+.new-session-form .form-actions {
+  gap: 16px;
+  margin-top: 36px;
+  padding-top: 22px;
+  border-top: 1px solid #eeeae5;
+}
+
+.new-session-form .form-actions .primary-button {
+  min-height: 48px;
+  padding: 14px 24px;
+}
+
+.new-session-form .form-actions .text-button {
+  min-height: 44px;
+  padding: 12px 4px;
+}
+
+.new-session-form :focus-visible {
+  outline: 2px solid var(--orange);
+  outline-offset: 4px;
+}
+
+@media (max-width: 700px) {
+  .new-session-form {
+    padding: 22px 18px;
+    margin-bottom: 48px;
+  }
+
+  .new-session-form input[type="text"],
+  .new-session-form textarea {
+    font-size: 17px;
+  }
+
+  .new-session-form .form-actions {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+}
