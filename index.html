@@ -133,18 +133,6 @@
           <img id="focusCoverImage" alt="Project cover">
         </div>
 
-        <div class="focus-top-actions">
-
-          <button
-            class="back-button"
-            onclick="showHome()"
-          >
-            ← Home
-          </button>
-
-        </div>
-
-
         <div class="focus-header">
 
           <p
@@ -157,11 +145,16 @@
           <h1 id="focusTitleDisplay"></h1>
 
           <p id="focusStarted" class="focus-started"></p>
+          <div class="focus-goal-display-row">
+            <p id="focusGoalDisplay" class="focus-started focus-goal-display hidden"></p>
+            <button id="editGoalButton" class="text-button focus-goal-edit-button hidden" onclick="editFocusGoal()">Edit goal</button>
+          </div>
           <div class="focus-goal-editor">
             <label for="focusGoalEdit">Goal of project</label>
             <textarea id="focusGoalEdit" rows="3" maxlength="2000" placeholder="What are you hoping to do, make, or discover?"></textarea>
             <div class="form-actions goal-actions">
               <button class="secondary-button" onclick="saveFocusGoal()">Save goal</button>
+              <button id="cancelGoalButton" class="text-button hidden" onclick="cancelEditFocusGoal()">Cancel</button>
               <span id="goalSaveStatus" class="save-status" aria-live="polite"></span>
             </div>
           </div>
