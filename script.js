@@ -1395,3 +1395,17 @@ document.addEventListener(
   "DOMContentLoaded",
   initializeApp
 );
+
+/* Session text fields grow only when the user types more */
+function resizeSessionTextarea(textarea) {
+  textarea.style.height = "1.2em";
+  textarea.style.height = textarea.scrollHeight + "px";
+}
+
+document.addEventListener("input", (event) => {
+  if (
+    event.target.matches(".new-session-form textarea")
+  ) {
+    resizeSessionTextarea(event.target);
+  }
+});
