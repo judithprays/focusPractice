@@ -1396,16 +1396,18 @@ document.addEventListener(
   initializeApp
 );
 
-/* Session text fields grow only when the user types more */
+/* Session text fields start compact and grow to fit their content. */
 function resizeSessionTextarea(textarea) {
-  textarea.style.height = "1.2em";
+  textarea.style.height = "auto";
   textarea.style.height = textarea.scrollHeight + "px";
 }
 
+function resizeSessionTextareas() {
+  document.querySelectorAll(".new-session-form textarea").forEach(resizeSessionTextarea);
+}
+
 document.addEventListener("input", (event) => {
-  if (
-    event.target.matches(".new-session-form textarea")
-  ) {
+  if (event.target.matches(".new-session-form textarea")) {
     resizeSessionTextarea(event.target);
   }
 });
