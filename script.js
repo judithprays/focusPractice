@@ -14,6 +14,9 @@ let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
 
+const SESSION_IMAGES_BUCKET = "session-images";
+const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
+
 
 /* --------------------------------
    BASIC HELPERS
@@ -77,6 +80,42 @@ function showOnly(screenId) {
 
 function setLoading(isLoading) {
   document.body.classList.toggle("is-loading", isLoading);
+}
+
+function getPublicImageUrl(path) {
+  const { data } = focusSupabase.storage.from(SESSION_IMAGES_BUCKET).getPublicUrl(path);
+  return data?.publicUrl || "";
+}
+
+function isSafeImageUrl(url) {
+  return typeof url === "string" && /^https?:\/\//i.test(url);
+}
+
+function renderSessionImages(session) {
+  const urls = Array.isArray(session.image_urls) ? session.image_urls : [];
+  if (!urls.length) return "";
+  return `<div class="session-images">${urls.map((url, imageIndex) => {
+    if (!isSafeImageUrl(url)) return "";
+    const isCover = currentFocus?.cover_image_url === url;
+    return `<figure class="session-image-item">
+      <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="Open session image in a new tab"><img src="${escapeHtml(url)}" alt="Image from session ${session.session_date ? escapeHtml(session.session_date) : ""}" loading="lazy"></a>
+      <figcaption><button type="button" class="image-cover-button ${isCover ? "is-cover" : ""}" onclick="setCoverImage('${escapeHtml(session.id)}', ${imageIndex})">${isCover ? "✓ Project cover" : "Use as cover"}</button></figcaption>
+    </figure>`;
+  }).join("")}</div>`;
+}
+
+async function uploadSessionImages(files, sessionId) {
+  const urls = [];
+  for (const file of Array.from(files || [])) {
+    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
+    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+    const path = `${currentFocusId}/${sessionId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+    const { error } = await focusSupabase.storage.from(SESSION_IMAGES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    if (error) throw error;
+    urls.push(getPublicImageUrl(path));
+  }
+  return urls;
 }
 
 
@@ -371,20 +410,16 @@ async function loadCollection() {
             : "ACTIVE";
 
 
-      return `
-        <button
-          class="collection-card"
-          onclick="openFocus('${focus.id}')"
-        >
+      const cover = isSafeImageUrl(focus.cover_image_url)
+        ? `<div class="collection-cover" style="background-image: linear-gradient(0deg, rgba(0,0,0,.66), rgba(0,0,0,0) 72%), url('${escapeHtml(focus.cover_image_url)}')"><h3>${escapeHtml(focus.title)}</h3></div>`
+        : `<div class="collection-cover collection-cover-empty"><h3>${escapeHtml(focus.title)}</h3></div>`;
 
+      return `
+        <button class="collection-card" onclick="openFocus('${focus.id}')">
+          ${cover}
           <p class="focus-status ${focus.status}">
             ${statusLabel}
           </p>
-
-          <h3>
-            ${escapeHtml(focus.title)}
-          </h3>
-
           <p class="collection-meta">
             Started ${formatDate(
               focus.started_at
@@ -421,6 +456,7 @@ function showCreateFocus() {
   showOnly("createFocusScreen");
 
   $("focusTitle").value = "";
+  $("focusGoalInput").value = "";
 
   setTimeout(() => {
     $("focusTitle").focus();
@@ -430,9 +466,8 @@ function showCreateFocus() {
 
 async function startNewFocus() {
 
-  const title =
-    $("focusTitle").value.trim();
-
+  const title = $("focusTitle").value.trim();
+  const goal = $("focusGoalInput").value.trim() || null;
 
   if (!title) {
 
@@ -450,7 +485,7 @@ async function startNewFocus() {
     .insert({
 
       title,
-
+      goal,
       status: "active",
 
       started_at:
@@ -502,6 +537,34 @@ async function openFocus(focusId) {
 
 }
 
+
+async function saveFocusGoal() {
+  if (!currentFocusId || !currentFocus) return;
+  const goal = $("focusGoalEdit").value.trim() || null;
+  $("goalSaveStatus").textContent = "Saving…";
+  const { data, error } = await focusSupabase.from("focuses").update({ goal }).eq("id", currentFocusId).select().single();
+  if (error) {
+    console.error("Goal update error:", error);
+    $("goalSaveStatus").textContent = "Couldn't save. Try again.";
+    return;
+  }
+  currentFocus = data;
+  $("goalSaveStatus").textContent = "Saved";
+}
+
+async function setCoverImage(sessionId, imageIndex) {
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  const url = session?.image_urls?.[imageIndex];
+  if (!url || !currentFocusId) return;
+  const { data, error } = await focusSupabase.from("focuses").update({ cover_image_url: url }).eq("id", currentFocusId).select().single();
+  if (error) {
+    console.error("Cover image update error:", error);
+    alert("Couldn't set the cover image. Please try again.");
+    return;
+  }
+  currentFocus = data;
+  renderSessions();
+}
 
 async function showFocus() {
 
@@ -563,11 +626,11 @@ function renderFocusState() {
 
   $("focusStarted").textContent =
     currentFocus.started_at
-      ? `Started ${formatDate(
-          currentFocus.started_at.split("T")[0]
-        )}`
+      ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
       : "";
 
+  $("focusGoalEdit").value = currentFocus.goal || "";
+  $("goalSaveStatus").textContent = "";
 
   const statusLabel =
     currentFocus.status === "completed"
@@ -842,6 +905,8 @@ function renderSessions() {
 
             </div>
 
+            ${renderSessionImages(session)}
+
           </article>
         `;
       })
@@ -907,6 +972,7 @@ function closeSessionForm() {
 
 
   $("sessionText").value = "";
+  $("sessionImages").value = "";
 
   $("sessionAccomplished").value = "";
 
@@ -952,8 +1018,8 @@ async function saveSession() {
   }
 
 
+  const selectedImages = $("sessionImages").files;
   const session = {
-
     focus_id: currentFocusId,
 
     session_date: date,
@@ -993,27 +1059,30 @@ async function saveSession() {
   setLoading(true);
 
 
-  const { error } =
-    await focusSupabase
-      .from("sessions")
-      .insert(session);
-
-
-  setLoading(false);
-
-
+  const { data: insertedSession, error } = await focusSupabase.from("sessions").insert(session).select().single();
   if (error) {
-
+    setLoading(false);
     console.error(error);
-
-    alert(
-      "Couldn't save this session. Please try again."
-    );
-
+    alert("Couldn't save this session. Please try again.");
     return;
   }
 
+  try {
+    if (selectedImages && selectedImages.length) {
+      const uploadedUrls = await uploadSessionImages(selectedImages, insertedSession.id);
+      const { error: imageSaveError } = await focusSupabase.from("sessions").update({ image_urls: uploadedUrls }).eq("id", insertedSession.id);
+      if (imageSaveError) throw imageSaveError;
+    }
+  } catch (imageError) {
+    console.error("Session image upload error:", imageError);
+    setLoading(false);
+    alert(`The session was saved, but the images could not be uploaded. ${imageError.message || "Please try again."}`);
+    closeSessionForm();
+    await loadSessions();
+    return;
+  }
 
+  setLoading(false);
   closeSessionForm();
 
   await loadSessions();
