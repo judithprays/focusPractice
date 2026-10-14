@@ -622,6 +622,41 @@ async function showFocus() {
    FOCUS STATE
 -------------------------------- */
 
+function updateFocusCoverBanner() {
+  const coverBanner = $("focusCoverBanner");
+  const coverImage = $("focusCoverImage");
+  if (!coverBanner || !coverImage) return;
+
+  // Prefer a cover the user explicitly selected. Otherwise, use the newest
+  // photo in this project's session log automatically.
+  let coverUrl = isSafeImageUrl(currentFocus?.cover_image_url)
+    ? currentFocus.cover_image_url
+    : "";
+
+  if (!coverUrl) {
+    for (let sessionIndex = currentSessions.length - 1; sessionIndex >= 0 && !coverUrl; sessionIndex--) {
+      const urls = Array.isArray(currentSessions[sessionIndex].image_urls)
+        ? currentSessions[sessionIndex].image_urls
+        : [];
+      for (let imageIndex = urls.length - 1; imageIndex >= 0; imageIndex--) {
+        if (isSafeImageUrl(urls[imageIndex])) {
+          coverUrl = urls[imageIndex];
+          break;
+        }
+      }
+    }
+  }
+
+  if (coverUrl) {
+    if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
+    coverBanner.classList.remove("hidden");
+  } else {
+    coverImage.removeAttribute("src");
+    coverBanner.classList.add("hidden");
+  }
+}
+
+
 function renderFocusState() {
 
   if (!currentFocus) return;
@@ -630,17 +665,7 @@ function renderFocusState() {
   $("focusTitleDisplay").textContent =
     currentFocus.title;
 
-  const coverBanner = $("focusCoverBanner");
-  const coverImage = $("focusCoverImage");
-  if (coverBanner && coverImage) {
-    if (isSafeImageUrl(currentFocus.cover_image_url)) {
-      coverImage.src = currentFocus.cover_image_url;
-      coverBanner.classList.remove("hidden");
-    } else {
-      coverImage.removeAttribute("src");
-      coverBanner.classList.add("hidden");
-    }
-  }
+  updateFocusCoverBanner();
 
   $("focusStarted").textContent =
     currentFocus.started_at
@@ -826,6 +851,7 @@ async function loadSessions() {
 
   currentSessions = data || [];
 
+  updateFocusCoverBanner();
   renderSessions();
 }
 
