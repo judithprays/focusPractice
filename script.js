@@ -45,6 +45,13 @@ function formatDate(dateString) {
 }
 
 
+function formatWeekday(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString + "T12:00:00");
+  return date.toLocaleDateString("en-US", { weekday: "long" });
+}
+
+
 function escapeHtml(value) {
   if (value === null || value === undefined) {
     return "";
@@ -623,6 +630,17 @@ function renderFocusState() {
   $("focusTitleDisplay").textContent =
     currentFocus.title;
 
+  const coverBanner = $("focusCoverBanner");
+  const coverImage = $("focusCoverImage");
+  if (coverBanner && coverImage) {
+    if (isSafeImageUrl(currentFocus.cover_image_url)) {
+      coverImage.src = currentFocus.cover_image_url;
+      coverBanner.classList.remove("hidden");
+    } else {
+      coverImage.removeAttribute("src");
+      coverBanner.classList.add("hidden");
+    }
+  }
 
   $("focusStarted").textContent =
     currentFocus.started_at
@@ -813,104 +831,58 @@ async function loadSessions() {
 
 
 function renderSessions() {
-
-  const section =
-    $("sessionLogSection");
-
-  const list =
-    $("sessionsList");
-
-
+  const section = $("sessionLogSection");
+  const list = $("sessionsList");
   if (!section || !list) return;
 
-
   if (currentSessions.length === 0) {
-
     section.classList.add("hidden");
-
     list.innerHTML = "";
-
     return;
   }
 
-
   section.classList.remove("hidden");
+  list.innerHTML = currentSessions.map((session, index) => {
+    const summary = (session.summary || session.body || "").trim();
+    const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
+    const emoji = session.summary_emoji || "📝";
+    const dateLabel = formatDate(session.session_date);
+    const dayLabel = formatWeekday(session.session_date);
 
+    return `
+      <details class="session-card">
+        <summary class="session-collapsed-header">
+          <div class="session-heading-top">
+            <span class="eyebrow session-number">SESSION ${index + 1}</span>
+            <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
+            <span class="session-time">${escapeHtml(session.time_spent || "Time not logged")}</span>
+          </div>
+          <div class="session-tldr">
+            <span class="session-tldr-emoji">${escapeHtml(emoji)}</span>
+            <span class="session-tldr-text">${escapeHtml(summaryPreview || "Add a short summary next time.")}</span>
+            <span class="session-expand-indicator" aria-hidden="true">＋</span>
+          </div>
+        </summary>
 
-  list.innerHTML =
-    currentSessions
-      .map((session, index) => {
+        <div class="session-expanded-content">
+          <div class="session-main">
+            <p>${escapeHtml(session.body)}</p>
+          </div>
 
-        return `
-          <article class="session-card">
+          <div class="session-details">
+            ${renderSessionDetail("Things accomplished", session.accomplished)}
+            ${renderSessionDetail("Funny things that happened", session.funny)}
+            ${renderSessionDetail("Excitements", session.excitements)}
+            ${renderSessionDetail("Mistakes", session.mistakes)}
+            ${renderSessionDetail("Things I learned", session.learned)}
+            ${renderSessionDetail("For next time", session.next_time)}
+          </div>
 
-            <div class="session-card-header">
-
-              <p class="eyebrow">
-                SESSION ${index + 1}
-              </p>
-
-              <p class="session-date">
-                ${formatDate(session.session_date)}
-              </p>
-
-            </div>
-
-
-            <div class="session-main">
-
-              <p>
-                ${escapeHtml(session.body)}
-              </p>
-
-            </div>
-
-
-            <div class="session-details">
-
-              ${renderSessionDetail(
-                "Things accomplished",
-                session.accomplished
-              )}
-
-              ${renderSessionDetail(
-                "Funny things that happened",
-                session.funny
-              )}
-
-              ${renderSessionDetail(
-                "Excitements",
-                session.excitements
-              )}
-
-              ${renderSessionDetail(
-                "Mistakes",
-                session.mistakes
-              )}
-
-              ${renderSessionDetail(
-                "Things I learned",
-                session.learned
-              )}
-
-              ${renderSessionDetail(
-                "For next time",
-                session.next_time
-              )}
-
-              ${renderSessionDetail(
-                "Time spent",
-                session.time_spent
-              )}
-
-            </div>
-
-            ${renderSessionImages(session)}
-
-          </article>
-        `;
-      })
-      .join("");
+          ${renderSessionImages(session)}
+        </div>
+      </details>
+    `;
+  }).join("");
 }
 
 
@@ -987,6 +959,8 @@ function closeSessionForm() {
   $("sessionNextTime").value = "";
 
   $("sessionTimeSpent").value = "";
+  $("sessionSummaryEmoji").value = "";
+  $("sessionSummary").value = "";
 
   $("sessionDate").value =
     todayString();
@@ -1052,6 +1026,14 @@ async function saveSession() {
 
     time_spent:
       $("sessionTimeSpent")
+        .value.trim() || null,
+
+    summary:
+      $("sessionSummary")
+        .value.trim() || null,
+
+    summary_emoji:
+      $("sessionSummaryEmoji")
         .value.trim() || null
   };
 
