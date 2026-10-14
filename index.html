@@ -101,13 +101,11 @@
 
           <h1>What do you want to focus on?</h1>
 
-          <input
-            id="focusTitle"
-            class="big-input"
-            type="text"
-            placeholder="Your focus"
-            maxlength="200"
-          >
+          <label class="field-label" for="focusTitle">Name of project</label>
+          <input id="focusTitle" class="big-input" type="text" placeholder="Give this focus a name" maxlength="200">
+
+          <label class="field-label" for="focusGoalInput">Goal of project</label>
+          <textarea id="focusGoalInput" class="goal-input" rows="3" placeholder="What are you hoping to do, make, or discover?" maxlength="2000"></textarea>
 
           <button
             class="primary-button"
@@ -154,10 +152,15 @@
 
           <h1 id="focusTitleDisplay"></h1>
 
-          <p
-            id="focusStarted"
-            class="focus-started"
-          ></p>
+          <p id="focusStarted" class="focus-started"></p>
+          <div class="focus-goal-editor">
+            <label for="focusGoalEdit">Goal of project</label>
+            <textarea id="focusGoalEdit" rows="3" maxlength="2000" placeholder="What are you hoping to do, make, or discover?"></textarea>
+            <div class="form-actions goal-actions">
+              <button class="secondary-button" onclick="saveFocusGoal()">Save goal</button>
+              <span id="goalSaveStatus" class="save-status" aria-live="polite"></span>
+            </div>
+          </div>
 
         </div>
 
@@ -188,6 +191,10 @@
             id="sessionDate"
             type="date"
           >
+
+          <label for="sessionImages">Images from this session</label>
+          <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple>
+          <p class="form-hint">Choose one or more images. After saving, you can mark any image as the project cover.</p>
 
           <label for="sessionText">
             What happened?
