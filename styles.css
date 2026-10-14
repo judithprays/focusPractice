@@ -341,27 +341,30 @@ p {
   margin-bottom: 35px;
 }
 
-.big-input {
+.big-input,
+input[type="text"] {
   display: block;
-
   width: 100%;
-
   border: 0;
   border-bottom: 2px solid var(--black);
-
+  border-radius: 0;
   background: transparent;
-
   padding: 15px 0;
-
   font-size: 30px;
-
+  line-height: 1.2;
   outline: none;
-
-  margin-bottom: 35px;
+  margin-bottom: 25px;
+  box-shadow: none;
 }
 
-.big-input::placeholder {
+.big-input::placeholder,
+input[type="text"]::placeholder {
   color: #aaa;
+}
+
+.big-input:focus,
+input[type="text"]:focus {
+  border-color: var(--orange);
 }
 
 
@@ -938,5 +941,36 @@ body.is-loading button {
   }
   .session-time {
     margin-left: 0;
+  }
+}
+
+
+/* PROJECT GOAL DISPLAY */
+.focus-goal-display-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.focus-goal-display {
+  margin: 0 0 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.focus-goal-edit-button {
+  padding: 0;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+.focus-goal-editor {
+  margin-bottom: 12px;
+}
+.focus-goal-editor textarea {
+  margin-bottom: 15px;
+}
+@media (max-width: 700px) {
+  .big-input,
+  input[type="text"] {
+    font-size: 23px;
   }
 }
