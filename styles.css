@@ -974,3 +974,48 @@ body.is-loading button {
     font-size: 23px;
   }
 }
+
+
+/* SESSION FORM FIELDS — MATCH THE FOCUS NAME INPUT */
+.new-session-form input[type="text"],
+.new-session-form input[type="date"],
+.new-session-form textarea {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 2px solid var(--black);
+  border-radius: 0;
+  background: transparent;
+  padding: 15px 0;
+  font-size: 30px;
+  line-height: 1.2;
+  outline: none;
+  box-shadow: none;
+  margin-bottom: 25px;
+}
+
+.new-session-form textarea {
+  min-height: 2.4em;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.new-session-form input[type="text"]::placeholder,
+.new-session-form textarea::placeholder {
+  color: #aaa;
+  opacity: 1;
+}
+
+.new-session-form input[type="text"]:focus,
+.new-session-form input[type="date"]:focus,
+.new-session-form textarea:focus {
+  border-color: var(--orange);
+}
+
+@media (max-width: 700px) {
+  .new-session-form input[type="text"],
+  .new-session-form input[type="date"],
+  .new-session-form textarea {
+    font-size: 23px;
+  }
+}
