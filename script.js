@@ -45,6 +45,13 @@ function formatDate(dateString) {
 }
 
 
+function formatWeekday(dateString) {
+  if (!dateString) return "";
+  const date = new Date(dateString + "T12:00:00");
+  return date.toLocaleDateString("en-US", { weekday: "long" });
+}
+
+
 function escapeHtml(value) {
   if (value === null || value === undefined) {
     return "";
@@ -549,7 +556,38 @@ async function saveFocusGoal() {
     return;
   }
   currentFocus = data;
-  $("goalSaveStatus").textContent = "Saved";
+  renderFocusGoal();
+}
+
+function renderFocusGoal() {
+  const goal = currentFocus?.goal?.trim() || "";
+  const display = $("focusGoalDisplay");
+  const editor = document.querySelector(".focus-goal-editor");
+  const editButton = $("editGoalButton");
+  const cancelButton = $("cancelGoalButton");
+  if (!display || !editor || !editButton) return;
+
+  display.textContent = goal ? `Goal: ${goal}` : "";
+  display.classList.toggle("hidden", !goal);
+  editButton.classList.toggle("hidden", !goal);
+  editor.classList.toggle("hidden", Boolean(goal));
+  if (cancelButton) cancelButton.classList.add("hidden");
+  $("goalSaveStatus").textContent = "";
+}
+
+function editFocusGoal() {
+  const editor = document.querySelector(".focus-goal-editor");
+  if (!editor) return;
+  $("focusGoalEdit").value = currentFocus?.goal || "";
+  editor.classList.remove("hidden");
+  $("editGoalButton").classList.add("hidden");
+  $("cancelGoalButton").classList.remove("hidden");
+  $("focusGoalEdit").focus();
+}
+
+function cancelEditFocusGoal() {
+  $("focusGoalEdit").value = currentFocus?.goal || "";
+  renderFocusGoal();
 }
 
 async function setCoverImage(sessionId, imageIndex) {
@@ -615,6 +653,41 @@ async function showFocus() {
    FOCUS STATE
 -------------------------------- */
 
+function updateFocusCoverBanner() {
+  const coverBanner = $("focusCoverBanner");
+  const coverImage = $("focusCoverImage");
+  if (!coverBanner || !coverImage) return;
+
+  // Prefer a cover the user explicitly selected. Otherwise, use the newest
+  // photo in this project's session log automatically.
+  let coverUrl = isSafeImageUrl(currentFocus?.cover_image_url)
+    ? currentFocus.cover_image_url
+    : "";
+
+  if (!coverUrl) {
+    for (let sessionIndex = currentSessions.length - 1; sessionIndex >= 0 && !coverUrl; sessionIndex--) {
+      const urls = Array.isArray(currentSessions[sessionIndex].image_urls)
+        ? currentSessions[sessionIndex].image_urls
+        : [];
+      for (let imageIndex = urls.length - 1; imageIndex >= 0; imageIndex--) {
+        if (isSafeImageUrl(urls[imageIndex])) {
+          coverUrl = urls[imageIndex];
+          break;
+        }
+      }
+    }
+  }
+
+  if (coverUrl) {
+    if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
+    coverBanner.classList.remove("hidden");
+  } else {
+    coverImage.removeAttribute("src");
+    coverBanner.classList.add("hidden");
+  }
+}
+
+
 function renderFocusState() {
 
   if (!currentFocus) return;
@@ -623,6 +696,7 @@ function renderFocusState() {
   $("focusTitleDisplay").textContent =
     currentFocus.title;
 
+  updateFocusCoverBanner();
 
   $("focusStarted").textContent =
     currentFocus.started_at
@@ -630,7 +704,7 @@ function renderFocusState() {
       : "";
 
   $("focusGoalEdit").value = currentFocus.goal || "";
-  $("goalSaveStatus").textContent = "";
+  renderFocusGoal();
 
   const statusLabel =
     currentFocus.status === "completed"
@@ -808,109 +882,64 @@ async function loadSessions() {
 
   currentSessions = data || [];
 
+  updateFocusCoverBanner();
   renderSessions();
 }
 
 
 function renderSessions() {
-
-  const section =
-    $("sessionLogSection");
-
-  const list =
-    $("sessionsList");
-
-
+  const section = $("sessionLogSection");
+  const list = $("sessionsList");
   if (!section || !list) return;
 
-
   if (currentSessions.length === 0) {
-
     section.classList.add("hidden");
-
     list.innerHTML = "";
-
     return;
   }
 
-
   section.classList.remove("hidden");
+  list.innerHTML = currentSessions.map((session, index) => {
+    const summary = (session.summary || session.body || "").trim();
+    const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
+    const emoji = session.summary_emoji || "📝";
+    const dateLabel = formatDate(session.session_date);
+    const dayLabel = formatWeekday(session.session_date);
 
+    return `
+      <details class="session-card">
+        <summary class="session-collapsed-header">
+          <div class="session-heading-top">
+            <span class="eyebrow session-number">SESSION ${index + 1}</span>
+            <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
+            <span class="session-time">${escapeHtml(session.time_spent || "Time not logged")}</span>
+          </div>
+          <div class="session-tldr">
+            <span class="session-tldr-emoji">${escapeHtml(emoji)}</span>
+            <span class="session-tldr-text">${escapeHtml(summaryPreview || "Add a short summary next time.")}</span>
+            <span class="session-expand-indicator" aria-hidden="true">＋</span>
+          </div>
+        </summary>
 
-  list.innerHTML =
-    currentSessions
-      .map((session, index) => {
+        <div class="session-expanded-content">
+          <div class="session-main">
+            <p>${escapeHtml(session.body)}</p>
+          </div>
 
-        return `
-          <article class="session-card">
+          <div class="session-details">
+            ${renderSessionDetail("Things accomplished", session.accomplished)}
+            ${renderSessionDetail("Funny things that happened", session.funny)}
+            ${renderSessionDetail("Excitements", session.excitements)}
+            ${renderSessionDetail("Mistakes", session.mistakes)}
+            ${renderSessionDetail("Things I learned", session.learned)}
+            ${renderSessionDetail("For next time", session.next_time)}
+          </div>
 
-            <div class="session-card-header">
-
-              <p class="eyebrow">
-                SESSION ${index + 1}
-              </p>
-
-              <p class="session-date">
-                ${formatDate(session.session_date)}
-              </p>
-
-            </div>
-
-
-            <div class="session-main">
-
-              <p>
-                ${escapeHtml(session.body)}
-              </p>
-
-            </div>
-
-
-            <div class="session-details">
-
-              ${renderSessionDetail(
-                "Things accomplished",
-                session.accomplished
-              )}
-
-              ${renderSessionDetail(
-                "Funny things that happened",
-                session.funny
-              )}
-
-              ${renderSessionDetail(
-                "Excitements",
-                session.excitements
-              )}
-
-              ${renderSessionDetail(
-                "Mistakes",
-                session.mistakes
-              )}
-
-              ${renderSessionDetail(
-                "Things I learned",
-                session.learned
-              )}
-
-              ${renderSessionDetail(
-                "For next time",
-                session.next_time
-              )}
-
-              ${renderSessionDetail(
-                "Time spent",
-                session.time_spent
-              )}
-
-            </div>
-
-            ${renderSessionImages(session)}
-
-          </article>
-        `;
-      })
-      .join("");
+          ${renderSessionImages(session)}
+        </div>
+      </details>
+    `;
+  }).join("");
 }
 
 
@@ -987,6 +1016,8 @@ function closeSessionForm() {
   $("sessionNextTime").value = "";
 
   $("sessionTimeSpent").value = "";
+  $("sessionSummaryEmoji").value = "";
+  $("sessionSummary").value = "";
 
   $("sessionDate").value =
     todayString();
@@ -1052,6 +1083,14 @@ async function saveSession() {
 
     time_spent:
       $("sessionTimeSpent")
+        .value.trim() || null,
+
+    summary:
+      $("sessionSummary")
+        .value.trim() || null,
+
+    summary_emoji:
+      $("sessionSummaryEmoji")
         .value.trim() || null
   };
 
@@ -1356,3 +1395,19 @@ document.addEventListener(
   "DOMContentLoaded",
   initializeApp
 );
+
+/* Session text fields start compact and grow to fit their content. */
+function resizeSessionTextarea(textarea) {
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
+}
+
+function resizeSessionTextareas() {
+  document.querySelectorAll(".new-session-form textarea").forEach(resizeSessionTextarea);
+}
+
+document.addEventListener("input", (event) => {
+  if (event.target.matches(".new-session-form textarea")) {
+    resizeSessionTextarea(event.target);
+  }
+});

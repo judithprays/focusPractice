@@ -129,17 +129,9 @@
 
       <div class="page-section focus-page">
 
-        <div class="focus-top-actions">
-
-          <button
-            class="back-button"
-            onclick="showHome()"
-          >
-            ← Home
-          </button>
-
+        <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Project cover image">
+          <img id="focusCoverImage" alt="Project cover">
         </div>
-
 
         <div class="focus-header">
 
@@ -153,11 +145,16 @@
           <h1 id="focusTitleDisplay"></h1>
 
           <p id="focusStarted" class="focus-started"></p>
+          <div class="focus-goal-display-row">
+            <p id="focusGoalDisplay" class="focus-started focus-goal-display hidden"></p>
+            <button id="editGoalButton" class="text-button focus-goal-edit-button hidden" onclick="editFocusGoal()">Edit goal</button>
+          </div>
           <div class="focus-goal-editor">
             <label for="focusGoalEdit">Goal of project</label>
             <textarea id="focusGoalEdit" rows="3" maxlength="2000" placeholder="What are you hoping to do, make, or discover?"></textarea>
             <div class="form-actions goal-actions">
               <button class="secondary-button" onclick="saveFocusGoal()">Save goal</button>
+              <button id="cancelGoalButton" class="text-button hidden" onclick="cancelEditFocusGoal()">Cancel</button>
               <span id="goalSaveStatus" class="save-status" aria-live="polite"></span>
             </div>
           </div>
@@ -194,7 +191,7 @@
 
           <label for="sessionImages">Images from this session</label>
           <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple>
-          <p class="form-hint">Choose one or more images. After saving, you can mark any image as the project cover.</p>
+          <p class="form-hint">The newest session photo appears at the top automatically. You can choose a different cover from the session log.</p>
 
           <label for="sessionText">
             What happened?
@@ -279,6 +276,24 @@
             type="text"
             placeholder="Optional — e.g. 45 minutes"
           >
+
+          <label for="sessionSummaryEmoji">Session summary emoji</label>
+          <input
+            id="sessionSummaryEmoji"
+            type="text"
+            maxlength="8"
+            placeholder="✨"
+            aria-describedby="sessionSummaryHint"
+          >
+
+          <label for="sessionSummary">Session summary (TL;DR)</label>
+          <input
+            id="sessionSummary"
+            type="text"
+            maxlength="240"
+            placeholder="What’s the headline from this session?"
+          >
+          <p id="sessionSummaryHint" class="form-hint">A short, memorable line for your session log.</p>
 
           <div class="form-actions">
 
