@@ -852,9 +852,9 @@ body.is-loading button {
 
 /* PROJECT COVER + COLLAPSED SESSION SUMMARIES */
 .focus-cover-banner {
-  width: 100%;
+  width: calc(100% + 100px);
   height: 250px;
-  margin: -40px 0 30px;
+  margin: -40px 0 30px -50px;
   overflow: hidden;
   background: var(--light-gray);
   border-radius: 2px;
@@ -929,8 +929,9 @@ body.is-loading button {
 }
 @media (max-width: 700px) {
   .focus-cover-banner {
+    width: calc(100% + 40px);
     height: 180px;
-    margin-top: -40px;
+    margin: -40px 0 30px -20px;
   }
   .session-heading-top {
     gap: 7px 10px;
