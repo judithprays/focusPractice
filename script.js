@@ -112,39 +112,42 @@ function getSessionVideoUrl(body) {
 
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
+  const visuals = [];
   const image = urls[0];
   if (image) {
     const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
-    return `<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
+    visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
       <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
-    </div>`;
+    </div>`);
   }
 
   const videoUrl = getSessionVideoUrl(session.body);
-  if (!videoUrl) return "";
+  if (videoUrl) {
+    let embedUrl = "";
+    try {
+      const url = new URL(videoUrl);
+      if (url.hostname === "youtu.be") {
+        embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(url.pathname.slice(1));
+      } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
+        const id = url.searchParams.get("v");
+        if (id) embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
+        else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
+      } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+        const id = url.pathname.split("/").filter(Boolean).pop();
+        if (id && /^\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
+      } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+        visuals.push(`<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`);
+      }
+    } catch {}
 
-  let embedUrl = "";
-  try {
-    const url = new URL(videoUrl);
-    if (url.hostname === "youtu.be") {
-      embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(url.pathname.slice(1));
-    } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
-      const id = url.searchParams.get("v");
-      if (id) embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
-      else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
-    } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
-      const id = url.pathname.split("/").filter(Boolean).pop();
-      if (id && /^\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
-    } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
-      return `<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`;
+    if (embedUrl) {
+      visuals.push(`<div class="session-card-visual session-card-video"><iframe src="${escapeHtml(embedUrl)}" title="Video from this session" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`);
+    } else if (!visuals.some(markup => markup.includes("<video "))) {
+      visuals.push(`<a class="session-card-visual session-card-video-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer"><span>▶</span><strong>Watch this session video</strong><span class="video-link-arrow">↗</span></a>`);
     }
-  } catch {}
-
-  if (embedUrl) {
-    return `<div class="session-card-visual session-card-video"><iframe src="${escapeHtml(embedUrl)}" title="Video from this session" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
   }
 
-  return `<a class="session-card-visual session-card-video-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer"><span>▶</span><strong>Watch this session video</strong><span class="video-link-arrow">↗</span></a>`;
+  return visuals.join("");
 }
 
 function renderSessionImages(session) {
