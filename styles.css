@@ -1513,3 +1513,6 @@ body.is-loading button {
   border-top: 0;
   padding-top: 14px;
 }
+
+.new-session-form input[type="file"].session-image-input { display: none; }
+.new-session-form input[type="file"].session-image-input.is-visible { display: block; }
