@@ -1478,3 +1478,38 @@ body.is-loading button {
   .composer-footer { align-items: flex-start; flex-direction: column; }
   .composer-actions { width: 100%; justify-content: flex-end; }
 }
+
+
+/* Composer refinements: reveal inputs on demand and simplify the date */
+.new-session-form .composer-title { display: none; }
+.new-session-form #sessionText.hidden { display: none; }
+.new-session-form .session-image-input,
+.new-session-form .session-image-input.is-visible {
+  display: none;
+}
+.new-session-form .session-image-input.is-visible {
+  display: block;
+}
+.new-session-form .composer-date {
+  gap: 0;
+}
+.new-session-form .composer-date input[type="date"] {
+  width: 126px;
+  min-height: 30px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #777168;
+  font: 13px Helvetica, Arial, sans-serif;
+  appearance: none;
+  -webkit-appearance: none;
+}
+.new-session-form .composer-date input[type="date"]::-webkit-calendar-picker-indicator {
+  margin-left: 5px;
+  opacity: .55;
+  cursor: pointer;
+}
+.new-session-form .composer-footer {
+  border-top: 0;
+  padding-top: 14px;
+}
