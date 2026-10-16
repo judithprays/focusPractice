@@ -1872,10 +1872,10 @@ body.is-loading button {
   width: min(var(--session-card-scale), 760px);
 }
 .session-card.has-session-visual:nth-child(even) {
-  width: min(calc(var(--session-card-scale) * .88), 660px);
+  width: min(calc(var(--session-card-scale) - 8%), 660px);
 }
 .session-card.has-session-visual:nth-child(3n) {
-  width: min(calc(var(--session-card-scale) * .78), 590px);
+  width: min(calc(var(--session-card-scale) - 16%), 590px);
 }
 @media (max-width: 700px) {
   .session-layout-control { margin: 0 0 26px auto; width: min(100%, 300px); }
