@@ -98,6 +98,55 @@ function isSafeImageUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
 }
 
+
+function getSessionVideoUrl(body) {
+  const match = String(body || "").match(/(?:^|\\n)Video:\\s*(https?:\\/\\/[^\\s]+)/i);
+  if (!match) return "";
+  try {
+    const url = new URL(match[1].replace(/[),.]+$/, ""));
+    return url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function renderSessionCardVisual(session) {
+  const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
+  const image = urls[0];
+  if (image) {
+    const isDrawing = /session-drawing\\.png(?:$|[?#])/i.test(image);
+    return `<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
+      <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
+    </div>`;
+  }
+
+  const videoUrl = getSessionVideoUrl(session.body);
+  if (!videoUrl) return "";
+
+  let embedUrl = "";
+  try {
+    const url = new URL(videoUrl);
+    if (url.hostname === "youtu.be") {
+      embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(url.pathname.slice(1));
+    } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
+      const id = url.searchParams.get("v");
+      if (id) embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
+      else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
+    } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+      const id = url.pathname.split("/").filter(Boolean).pop();
+      if (id && /^\\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
+    } else if (/\\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+      return `<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`;
+    }
+  } catch {}
+
+  if (embedUrl) {
+    return `<div class="session-card-visual session-card-video"><iframe src="${escapeHtml(embedUrl)}" title="Video from this session" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+  }
+
+  return `<a class="session-card-visual session-card-video-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer"><span>▶</span><strong>Watch this session video</strong><span class="video-link-arrow">↗</span></a>`;
+}
+
 function renderSessionImages(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls : [];
   if (!urls.length) return "";
@@ -962,17 +1011,17 @@ function renderSessions() {
 
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
-    const summary = (session.summary || session.body || "").trim();
+    const videoUrl = getSessionVideoUrl(session.body);
+    const bodyWithoutVideo = videoUrl
+      ? String(session.body || "").replace(/(?:^|\\n)Video:\\s*https?:\\/\\/[^\\s]+/i, "").trim()
+      : session.body;
+    const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
     const emoji = (session.summary_emoji || "").trim();
     const dateLabel = formatDate(session.session_date);
     const dayLabel = formatWeekday(session.session_date);
     const timeSpent = (session.time_spent || "").trim();
-    const imageUrls = Array.isArray(session.image_urls) ? session.image_urls : [];
-    const leadImage = imageUrls.find(isSafeImageUrl);
-    const visual = leadImage
-      ? `<div class="session-card-visual"><img src="${escapeHtml(leadImage)}" alt="Visual added to this session" loading="lazy"></div>`
-      : "";
+    const visual = renderSessionCardVisual(session);
     const hasTldr = Boolean(emoji || summaryPreview);
     const timeMarkup = timeSpent
       ? `<span class="session-time">${escapeHtml(timeSpent)}</span>`
@@ -986,7 +1035,7 @@ function renderSessions() {
       : "";
 
     return `
-      <details class="session-card">
+      <details class="session-card ${visual ? "has-session-visual" : ""}">
         ${visual}
         <summary class="session-collapsed-header">
           <div class="session-heading-top">
@@ -1000,7 +1049,7 @@ function renderSessions() {
 
         <div class="session-expanded-content">
           <div class="session-main">
-            <div class="session-body-content">${formatSessionBody(session.body)}</div>
+            <div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div>
           </div>
 
           <div class="session-details">
