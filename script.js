@@ -174,12 +174,27 @@ function renderSessionImages(session) {
   }).join("")}</div>`;
 }
 
+async function prepareSessionImage(file) {
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const isHeic = ["heic", "heif"].includes(extension) || ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(String(file.type || "").toLowerCase());
+  if (!isHeic) {
+    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    return file;
+  }
+
+  if (!window.heic2any) throw new Error("HEIC conversion couldn't load. Check your connection and try again, or export the photo as JPEG.");
+  const converted = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+  const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+  return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+}
+
 async function uploadSessionImages(files, sessionId) {
   const urls = [];
-  for (const file of Array.from(files || [])) {
-    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
-    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
-    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+  for (const originalFile of Array.from(files || [])) {
+    if (originalFile.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB. Please choose a smaller image.`);
+    const file = await prepareSessionImage(originalFile);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB after conversion. Please choose a smaller image.`);
+    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image.jpg";
     const path = `${currentFocusId}/${sessionId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
     const { error } = await focusSupabase.storage.from(SESSION_IMAGES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
     if (error) throw error;
