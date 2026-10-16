@@ -112,7 +112,7 @@
           class="secondary-button add-session-button"
           onclick="openSessionForm()"
         >
-          + Add a session
+          + Add a step
         </button>
 
 
@@ -171,7 +171,7 @@
             <canvas id="sessionDrawingCanvas" width="900" height="540" aria-label="Drawing canvas"></canvas>
           </div>
           <div class="composer-attachments">
-            <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple aria-label="Choose images">
+            <input id="sessionImages" class="session-image-input" type="file" accept="image/*" aria-label="Choose an image">
             <input id="sessionVideoUrl" type="url" placeholder="Paste a video link" aria-label="Video URL">
             <div class="composer-time" id="composerTimeControl">
               <label for="sessionTimeSlider">Time spent <span id="sessionTimeValue">45 min</span></label>
@@ -188,13 +188,13 @@
             <label class="composer-date" for="sessionDate"><input id="sessionDate" type="date" aria-label="Session date"></label>
             <div class="composer-actions">
               <button type="button" class="text-button" onclick="closeSessionForm()">Cancel</button>
-              <button type="button" class="primary-button composer-submit" onclick="saveSession()">Add to log</button>
+              <button type="button" class="primary-button composer-submit" onclick="saveSession()">Add step</button>
             </div>
           </div>
         </div>
 
 
-        <!-- SESSION LOG -->
+        <!-- YOUR STEPS -->
         <div
           id="sessionLogSection"
           class="session-log hidden"
@@ -207,7 +207,7 @@
             </p>
 
             <h2>
-              What happened?
+              Your focus, in steps
             </h2>
 
           </div>
