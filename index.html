@@ -144,6 +144,7 @@
             <button type="button" class="composer-tool" onclick="focusSessionVideo()" aria-label="Add video" title="Video"><span class="tool-play-icon">▶</span><span>Video</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionTime()" aria-label="Set time spent" title="Time"><span class="tool-clock-icon">◷</span><span>Time</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionEmoji()" aria-label="Add emoji" title="Emoji"><span>☺</span><span>Emoji</span></button>
+            <button type="button" class="composer-tool" onclick="showSessionDrawing()" aria-label="Draw" title="Drawing"><span aria-hidden="true">✎</span><span>Drawing</span></button>
             <div class="composer-prompt">
               <select id="sessionPrompt" class="session-prompt-select" aria-label="Choose a prompt">
                 <option value="">Choose a prompt...</option>
@@ -160,6 +161,15 @@
             </div>
           </div>
 
+<div id="sessionTextFormatting" class="session-text-formatting hidden" aria-label="Text formatting">
+            <button type="button" onclick="formatSessionText('bold')"><strong>B</strong> Bold</button>
+            <button type="button" onclick="formatSessionText('heading')">Heading</button>
+            <button type="button" onclick="formatSessionText('quote')">Quote</button>
+          </div>
+          <div id="sessionDrawingPanel" class="session-drawing-panel hidden">
+            <div class="drawing-toolbar"><span>Draw something for your log</span><button type="button" onclick="clearSessionDrawing()">Clear</button></div>
+            <canvas id="sessionDrawingCanvas" width="900" height="360" aria-label="Drawing canvas"></canvas>
+          </div>
           <div class="composer-attachments">
             <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple aria-label="Choose images">
             <input id="sessionVideoUrl" type="url" placeholder="Paste a video link" aria-label="Video URL">
