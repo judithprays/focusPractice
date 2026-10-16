@@ -1080,11 +1080,6 @@ function openSessionForm() {
   document.getElementById("composerTimeControl")?.classList.remove("is-open");
   document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
-  setTimeout(() => {
-    $("sessionText").focus();
-  }, 50);
-
-
   window.scrollTo({
     top:
       $("newSessionForm").offsetTop - 30,
@@ -1526,7 +1521,7 @@ document.addEventListener("input", (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.id === "sessionPrompt" && event.target.value) {
     focusSessionText();
-    $("sessionText").value = event.target.value + "\\n";
+    $("sessionText").value = event.target.value + "\n";
     resizeSessionTextarea($("sessionText"));
     $("sessionText").setSelectionRange($("sessionText").value.length, $("sessionText").value.length);
   }
