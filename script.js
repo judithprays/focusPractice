@@ -1125,6 +1125,8 @@ async function saveSession() {
     $("sessionDate").value;
 
   let body = $("sessionText").value.trim();
+  const hasImages = Boolean($("sessionImages").files && $("sessionImages").files.length);
+  if (!body && hasImages) body = "Added images to this session.";
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
   if (prompt && body) body = prompt + "\\n\\n" + body;
@@ -1506,5 +1508,21 @@ function resizeSessionTextareas() {
 document.addEventListener("input", (event) => {
   if (event.target.matches(".new-session-form textarea")) {
     resizeSessionTextarea(event.target);
+  }
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.id === "sessionImages") {
+    const existing = document.getElementById("sessionImageSelection");
+    if (existing) existing.remove();
+    if (event.target.files && event.target.files.length) {
+      const note = document.createElement("p");
+      note.id = "sessionImageSelection";
+      note.className = "composer-attachment-note";
+      note.textContent = event.target.files.length === 1
+        ? event.target.files[0].name
+        : event.target.files.length + " images selected";
+      event.target.closest(".session-composer").querySelector(".composer-attachments").prepend(note);
+    }
   }
 });
