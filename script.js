@@ -384,6 +384,14 @@ async function loadCollection() {
   }
 
 
+  const activeFocus = (data || []).find((focus) => focus.status === "active");
+  const action = $("collectionFocusAction");
+  if (action) {
+    action.innerHTML = activeFocus
+      ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
+      : `<button class="primary-button" onclick="showCreateFocus()">+ Start a new focus</button>`;
+  }
+
   if (!data || data.length === 0) {
 
     list.innerHTML =
@@ -445,7 +453,30 @@ async function loadCollection() {
    CREATE FOCUS
 -------------------------------- */
 
-function showCreateFocus() {
+async function showCreateFocus() {
+
+  const { data: activeFocus, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (activeFocus) {
+    currentFocus = activeFocus;
+    currentFocusId = activeFocus.id;
+    setFocusUrl(activeFocus.id);
+    await showFocus();
+    alert("Finish or abandon your current focus before starting another one.");
+    return;
+  }
 
   clearFocusUrl();
 
@@ -475,6 +506,32 @@ async function startNewFocus() {
 
   setLoading(true);
 
+  // Re-check immediately before inserting so a second active focus cannot
+  // be started from another tab or a stale collection page.
+  const { data: existingActiveFocus, error: activeCheckError } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeCheckError) {
+    setLoading(false);
+    console.error(activeCheckError);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (existingActiveFocus) {
+    setLoading(false);
+    currentFocus = existingActiveFocus;
+    currentFocusId = existingActiveFocus.id;
+    setFocusUrl(existingActiveFocus.id);
+    await showFocus();
+    alert("You already have an active focus. Finish or abandon it before starting another.");
+    return;
+  }
 
   const { data, error } = await focusSupabase
     .from("focuses")
