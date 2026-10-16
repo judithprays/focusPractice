@@ -1151,12 +1151,24 @@ function showSessionDrawing() {
   initSessionDrawing();
 }
 
+function paintSessionDrawingBackground(ctx, canvas) {
+  ctx.fillStyle = "#fffefa";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#e8e2d8";
+  for (let x = 18; x < canvas.width; x += 24) {
+    for (let y = 18; y < canvas.height; y += 24) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
 function initSessionDrawing() {
   const canvas = $("sessionDrawingCanvas");
   if (!canvas || canvas.dataset.ready) return;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#fffefa";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  paintSessionDrawingBackground(ctx, canvas);
   ctx.strokeStyle = "#292720";
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
@@ -1187,9 +1199,7 @@ function initSessionDrawing() {
 function clearSessionDrawing() {
   const canvas = $("sessionDrawingCanvas");
   const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "#fffefa";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  paintSessionDrawingBackground(ctx, canvas);
 }
 
 function showSessionImages() {
