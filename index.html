@@ -11,21 +11,7 @@
 
   <!-- PERSISTENT TOP MENU -->
   <header class="site-header">
-    <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
-
-    <nav>
-      <a href="#" onclick="showCreateFocus(); return false;">Get Started</a>
-
-      <a
-        href="#"
-        id="currentFocusNav"
-        class="hidden"
-        onclick="goToCurrentFocus(); return false;"
-      >
-        My Current Focus
-      </a>
-
-      <a href="#" onclick="showCollection(); return false;">
+    <a href="#" onclick="showCollection(); return false;">
         Focus Collection
       </a>
 
@@ -38,47 +24,8 @@
 
   <main>
 
-    <!-- HOME -->
-    <section id="homeScreen" class="screen">
-
-      <!-- HOME HERO -->
-      <section class="home-section hero-section">
-        <div class="hero">
-          <p class="eyebrow">GOOD NEWS!</p>
-
-          <h1>We have enough time.</h1>
-
-          <p class="hero-copy">
-            We just need ... to focus.
-          </p>
-
-          <button
-            class="primary-button"
-            onclick="showCreateFocus()"
-          >
-            Start a Focus
-          </button>
-        </div>
-      </section>
-
-
-      <!-- CURRENT / STARTED FOCUSES -->
-      <section class="home-section started-focuses-section">
-
-        <div class="section-heading">
-          <p class="eyebrow">FOCUS IN PRACTICE</p>
-          <h2>People are focusing on...</h2>
-        </div>
-
-        <div
-          id="publicFocusesList"
-          class="public-focuses-list"
-        ></div>
-
-      </section>
-
-    </section>
-
+    <!-- HOME: CURRENT FOCUS -->
+    <section id="homeScreen" class="screen"><div class="current-focus-home"><p class="eyebrow">MY CURRENT FOCUS</p><div id="currentFocusHomeContent"><p class="empty-state">Finding your focus…</p></div></div></section>
 
     <!-- CREATE FOCUS -->
     <section
@@ -193,9 +140,9 @@
           <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple>
           <p class="form-hint">The newest session photo appears at the top automatically. You can choose a different cover from the session log.</p>
 
-          <label for="sessionText">
-            What happened?
-          </label>
+          <label for="sessionPrompt">Need a prompt?</label>
+          <select id="sessionPrompt" class="session-prompt-select"><option value="">Write whatever comes to mind…</option><option>What did you focus on?</option><option>What did you accomplish?</option><option>What surprised you?</option><option>What was funny?</option><option>What excited you?</option><option>What was hard?</option><option>What mistake taught you something?</option><option>What did you learn?</option><option>What will you try next time?</option></select>
+          <label for="sessionText">A thought or reflection</label>
 
           <textarea
             id="sessionText"
@@ -267,13 +214,12 @@
             placeholder="Optional"
           ></textarea>
 
-          <label for="sessionTimeSpent">
-            Time spent
-          </label>
+          <label for="sessionVideoUrl">Video link (optional)</label><input id="sessionVideoUrl" type="url" placeholder="Paste a video link">
+          <label for="sessionTimeSpent">Time spent · <span id="sessionTimeValue">45 min</span></label><input id="sessionTimeSlider" class="session-time-slider" type="range" min="5" max="240" step="5" value="45" oninput="updateSessionTimeLabel()">
 
           <input
             id="sessionTimeSpent"
-            type="text"
+            type="hidden"
             placeholder="Optional — e.g. 45 minutes"
           >
 

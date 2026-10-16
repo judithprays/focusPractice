@@ -248,7 +248,7 @@ function showAbout() {
 
 async function loadHomeFocuses() {
 
-  const list = $("publicFocusesList");
+  const list = $("currentFocusHomeContent");
 
   if (!list) return;
 
@@ -264,9 +264,9 @@ async function loadHomeFocuses() {
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1);
 
 
   if (error) {
@@ -282,20 +282,9 @@ async function loadHomeFocuses() {
   }
 
 
-  if (!data || data.length === 0) {
-
-    list.innerHTML =
-      `<p class="empty-state">
-        No Focuses yet. Start one.
-      </p>`;
-
-    return;
-  }
-
-
-  list.innerHTML = data
-    .map(renderFocusCard)
-    .join("");
+  if (!data || data.length === 0) { list.innerHTML = '<div class="current-focus-empty"><h1>Nothing needs your attention yet.</h1><p>Choose something you want to give your attention to.</p><button class="primary-button" onclick="showCreateFocus()">Start a Focus</button></div>'; return; }
+  currentFocus = data[0]; currentFocusId = currentFocus.id; updateNavigation();
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1>' + escapeHtml(currentFocus.title) + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
 
 
@@ -970,6 +959,14 @@ function renderSessionDetail(
 /* --------------------------------
    SESSION FORM
 -------------------------------- */
+
+function updateSessionTimeLabel() {
+  const slider = $("sessionTimeSlider"), label = $("sessionTimeValue"), hidden = $("sessionTimeSpent");
+  if (!slider || !label || !hidden) return;
+  const minutes = Number(slider.value);
+  label.textContent = minutes >= 60 ? (Math.floor(minutes/60) + "h" + (minutes%60 ? " " + (minutes%60) + "m" : "")) : (minutes + " min");
+  hidden.value = label.textContent;
+}
 
 function openSessionForm() {
 
