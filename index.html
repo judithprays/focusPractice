@@ -12,73 +12,17 @@
   <!-- PERSISTENT TOP MENU -->
   <header class="site-header">
     <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
-
     <nav>
-      <a href="#" onclick="showCreateFocus(); return false;">Get Started</a>
-
-      <a
-        href="#"
-        id="currentFocusNav"
-        class="hidden"
-        onclick="goToCurrentFocus(); return false;"
-      >
-        My Current Focus
-      </a>
-
-      <a href="#" onclick="showCollection(); return false;">
-        Focus Collection
-      </a>
-
-      <a href="#" onclick="showAbout(); return false;">
-        About
-      </a>
+      <a href="#" onclick="showCollection(); return false;">Focus Collection</a>
+      <a href="#" onclick="showAbout(); return false;">About</a>
     </nav>
   </header>
 
 
   <main>
 
-    <!-- HOME -->
-    <section id="homeScreen" class="screen">
-
-      <!-- HOME HERO -->
-      <section class="home-section hero-section">
-        <div class="hero">
-          <p class="eyebrow">GOOD NEWS!</p>
-
-          <h1>We have enough time.</h1>
-
-          <p class="hero-copy">
-            We just need ... to focus.
-          </p>
-
-          <button
-            class="primary-button"
-            onclick="showCreateFocus()"
-          >
-            Start a Focus
-          </button>
-        </div>
-      </section>
-
-
-      <!-- CURRENT / STARTED FOCUSES -->
-      <section class="home-section started-focuses-section">
-
-        <div class="section-heading">
-          <p class="eyebrow">FOCUS IN PRACTICE</p>
-          <h2>People are focusing on...</h2>
-        </div>
-
-        <div
-          id="publicFocusesList"
-          class="public-focuses-list"
-        ></div>
-
-      </section>
-
-    </section>
-
+    <!-- HOME: CURRENT FOCUS -->
+    <section id="homeScreen" class="screen"><div class="current-focus-home"><p class="eyebrow">MY CURRENT FOCUS</p><div id="currentFocusHomeContent"><p class="empty-state">Finding your focus…</p></div></div></section>
 
     <!-- CREATE FOCUS -->
     <section
@@ -129,11 +73,9 @@
 
       <div class="page-section focus-page">
 
-        <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Project cover image">
-          <img id="focusCoverImage" alt="Project cover">
-        </div>
-
-        <div class="focus-header">
+        <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Current focus banner">
+          <img id="focusCoverImage" alt="">
+          <div class="focus-header">
 
           <p
             class="eyebrow focus-goal-label"
@@ -159,164 +101,92 @@
             </div>
           </div>
 
+          </div>
         </div>
 
 
         <!-- ADD SESSION -->
-        <button
-          id="addSessionButton"
-          class="secondary-button add-session-button"
-          onclick="openSessionForm()"
-        >
-          + Add a session
-        </button>
 
 
         <!-- NEW SESSION FORM -->
-        <div
-          id="newSessionForm"
-          class="new-session-form hidden"
-        >
-
-          <div class="session-form-label">
-            <span>NEW SESSION</span>
+        <div id="newSessionForm" class="new-session-form session-composer hidden">
+          <div class="composer-body">
+            <textarea id="sessionText" class="hidden" rows="1" aria-label="Session note" placeholder="Write a note..."></textarea>
+            <div class="composer-extra-fields">
+              <label for="sessionAccomplished">Things accomplished</label>
+              <textarea id="sessionAccomplished" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionFunny">Funny things that happened</label>
+              <textarea id="sessionFunny" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionExcitements">Excitements</label>
+              <textarea id="sessionExcitements" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionMistakes">Mistakes</label>
+              <textarea id="sessionMistakes" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionLearned">Things I learned</label>
+              <textarea id="sessionLearned" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionNextTime">For next time</label>
+              <textarea id="sessionNextTime" rows="2" placeholder="Optional"></textarea>
+              <label for="sessionSummary">Session summary (TL;DR)</label>
+              <input id="sessionSummary" type="text" maxlength="240" placeholder="What's the headline from this session?">
+            </div>
           </div>
 
-          <label for="sessionDate">Date</label>
-
-          <input
-            id="sessionDate"
-            type="date"
-          >
-
-          <label for="sessionImages">Images from this session</label>
-          <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple>
-          <p class="form-hint">The newest session photo appears at the top automatically. You can choose a different cover from the session log.</p>
-
-          <label for="sessionText">
-            What happened?
-          </label>
-
-          <textarea
-            id="sessionText"
-            rows="6"
-            placeholder="What did you do? What surprised you? What got harder or easier?"
-          ></textarea>
-
-          <label for="sessionAccomplished">
-            Things accomplished
-          </label>
-
-          <textarea
-            id="sessionAccomplished"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <label for="sessionFunny">
-            Funny things that happened
-          </label>
-
-          <textarea
-            id="sessionFunny"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <label for="sessionExcitements">
-            Excitements
-          </label>
-
-          <textarea
-            id="sessionExcitements"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <label for="sessionMistakes">
-            Mistakes
-          </label>
-
-          <textarea
-            id="sessionMistakes"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <label for="sessionLearned">
-            Things I learned
-          </label>
-
-          <textarea
-            id="sessionLearned"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <p class="session-subheading">
-            FOR NEXT TIME
-          </p>
-
-          <label for="sessionNextTime">
-            For next time
-          </label>
-
-          <textarea
-            id="sessionNextTime"
-            rows="3"
-            placeholder="Optional"
-          ></textarea>
-
-          <label for="sessionTimeSpent">
-            Time spent
-          </label>
-
-          <input
-            id="sessionTimeSpent"
-            type="text"
-            placeholder="Optional — e.g. 45 minutes"
-          >
-
-          <label for="sessionSummaryEmoji">Session summary emoji</label>
-          <input
-            id="sessionSummaryEmoji"
-            type="text"
-            maxlength="8"
-            placeholder="✨"
-            aria-describedby="sessionSummaryHint"
-          >
-
-          <label for="sessionSummary">Session summary (TL;DR)</label>
-          <input
-            id="sessionSummary"
-            type="text"
-            maxlength="240"
-            placeholder="What’s the headline from this session?"
-          >
-          <p id="sessionSummaryHint" class="form-hint">A short, memorable line for your session log.</p>
-
-          <div class="form-actions">
-
-            <button
-              class="primary-button"
-              onclick="saveSession()"
-            >
-              Save session
-            </button>
-
-            <button
-              class="text-button"
-              onclick="closeSessionForm()"
-            >
-              Cancel
-            </button>
-
+          <div class="composer-toolbar" role="toolbar" aria-label="Session content options">
+            <button type="button" class="composer-tool" onclick="focusSessionText()" aria-label="Add text" title="Text"><span class="tool-text-icon">T</span><span>Text</span></button>
+            <button type="button" class="composer-tool" onclick="showSessionImages()" aria-label="Add image" title="Image"><span aria-hidden="true">▧</span><span>Image</span></button>
+            <button type="button" class="composer-tool" onclick="focusSessionVideo()" aria-label="Add video" title="Video"><span class="tool-play-icon">▶</span><span>Video</span></button>
+            <button type="button" class="composer-tool" onclick="focusSessionTime()" aria-label="Set time spent" title="Time"><span class="tool-clock-icon">◷</span><span>Time</span></button>
+            <button type="button" class="composer-tool" onclick="focusSessionEmoji()" aria-label="Add emoji" title="Emoji"><span>☺</span><span>Emoji</span></button>
+            <button type="button" class="composer-tool" onclick="showSessionDrawing()" aria-label="Draw" title="Drawing"><span aria-hidden="true">✎</span><span>Drawing</span></button>
+            <div class="composer-prompt">
+              <select id="sessionPrompt" class="session-prompt-select" aria-label="Choose a prompt">
+                <option value="">Choose a prompt...</option>
+                <option value="What did you focus on?">What did you focus on?</option>
+                <option value="What did you accomplish?">What did you accomplish?</option>
+                <option value="What surprised you?">What surprised you?</option>
+                <option value="What was funny?">What was funny?</option>
+                <option value="What excited you?">What excited you?</option>
+                <option value="What was hard?">What was hard?</option>
+                <option value="What mistake taught you something?">What mistake taught you something?</option>
+                <option value="What did you learn?">What did you learn?</option>
+                <option value="What will you try next time?">What will you try next time?</option>
+              </select>
+            </div>
           </div>
 
+<div id="sessionTextFormatting" class="session-text-formatting hidden" aria-label="Text formatting">
+            <button type="button" onclick="formatSessionText('bold')"><strong>B</strong> Bold</button>
+            <button type="button" onclick="formatSessionText('heading')">Heading</button>
+            <button type="button" onclick="formatSessionText('quote')">Quote</button>
+          </div>
+          <div id="sessionDrawingPanel" class="session-drawing-panel hidden">
+            <div class="drawing-toolbar"><span>Draw something for your log</span><button type="button" onclick="clearSessionDrawing()">Clear</button></div>
+            <canvas id="sessionDrawingCanvas" width="900" height="540" aria-label="Drawing canvas"></canvas>
+          </div>
+          <div class="composer-attachments">
+            <div class="session-image-fields"><input id="sessionImages" class="session-image-input" type="file" accept="image/*,.heic,.heif" aria-label="Choose an image"><input id="sessionImageCaption" class="session-image-caption-input" type="text" maxlength="300" placeholder="Add a caption (optional)" aria-label="Image caption"></div>
+            <input id="sessionVideoUrl" type="url" placeholder="Paste a video link" aria-label="Video URL">
+            <div class="composer-time" id="composerTimeControl">
+              <label for="sessionTimeSlider">Time spent <span id="sessionTimeValue">45 min</span></label>
+              <input id="sessionTimeSlider" class="session-time-slider" type="range" min="5" max="240" step="5" value="45" oninput="updateSessionTimeLabel()">
+              <input id="sessionTimeSpent" type="hidden">
+            </div>
+            <div class="composer-emoji" id="composerEmojiControl">
+              <label for="sessionSummaryEmoji">Session emoji</label>
+              <input id="sessionSummaryEmoji" type="text" maxlength="8" placeholder="✨" aria-label="Session emoji">
+            </div>
+          </div>
+
+          <div class="composer-footer">
+            <label class="composer-date" for="sessionDate"><input id="sessionDate" type="date" aria-label="Session date"></label>
+            <div class="composer-actions">
+              <button type="button" class="text-button" onclick="closeSessionForm()">Cancel</button>
+              <button type="button" class="primary-button composer-submit" onclick="saveSession()">Add step</button>
+            </div>
+          </div>
         </div>
 
 
-        <!-- SESSION LOG -->
+        <!-- YOUR STEPS -->
         <div
           id="sessionLogSection"
           class="session-log hidden"
@@ -325,7 +195,7 @@
           <div class="section-heading">
 
             <p class="eyebrow">
-              SESSION LOG
+              YOUR STEPS
             </p>
 
             <h2>
@@ -340,6 +210,8 @@
           ></div>
 
         </div>
+
+        <button id="addSessionButton" class="secondary-button add-session-button" onclick="openSessionForm()">+ Add a step</button>
 
 
         <!-- END FOCUS -->
@@ -458,6 +330,8 @@
 
         </div>
 
+        <div id="collectionFocusAction" class="collection-focus-action"></div>
+
         <div
           id="collectionList"
           class="collection-list"
@@ -559,6 +433,7 @@ Focus is a muscle, and this is a practice to improve it.
     src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
   ></script>
 
+  <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
   <script src="script.js"></script>
 
 </body>

@@ -98,6 +98,69 @@ function isSafeImageUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
 }
 
+
+function getSessionVideoUrl(body) {
+  const match = String(body || "").match(/(?:^|\n)Video:\s*(https?:\/\/[^\s]+)/i);
+  if (!match) return "";
+  try {
+    const url = new URL(match[1].replace(/[),.]+$/, ""));
+    return url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function getSessionImageCaption(body) {
+  const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)\[\/image-caption\]/i);
+  return match ? match[1].trim() : "";
+}
+
+function stripSessionImageCaption(body) {
+  return String(body || "").replace(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
+}
+
+function renderSessionCardVisual(session) {
+  const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
+  const visuals = [];
+  const image = urls[0];
+  const caption = getSessionImageCaption(session.body);
+  if (image) {
+    const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
+    visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
+      <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
+      ${caption ? `<p class="session-image-caption">${escapeHtml(caption)}</p>` : ""}
+    </div>`);
+  }
+
+  const videoUrl = getSessionVideoUrl(session.body);
+  if (videoUrl) {
+    let embedUrl = "";
+    try {
+      const url = new URL(videoUrl);
+      if (url.hostname === "youtu.be") {
+        embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(url.pathname.slice(1));
+      } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
+        const id = url.searchParams.get("v");
+        if (id) embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
+        else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
+      } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+        const id = url.pathname.split("/").filter(Boolean).pop();
+        if (id && /^\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
+      } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+        visuals.push(`<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`);
+      }
+    } catch {}
+
+    if (embedUrl) {
+      visuals.push(`<div class="session-card-visual session-card-video"><iframe src="${escapeHtml(embedUrl)}" title="Video from this session" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`);
+    } else if (!visuals.some(markup => markup.includes("<video "))) {
+      visuals.push(`<a class="session-card-visual session-card-video-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer"><span>▶</span><strong>Watch this session video</strong><span class="video-link-arrow">↗</span></a>`);
+    }
+  }
+
+  return visuals.join("");
+}
+
 function renderSessionImages(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls : [];
   if (!urls.length) return "";
@@ -111,12 +174,27 @@ function renderSessionImages(session) {
   }).join("")}</div>`;
 }
 
+async function prepareSessionImage(file) {
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const isHeic = ["heic", "heif"].includes(extension) || ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(String(file.type || "").toLowerCase());
+  if (!isHeic) {
+    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    return file;
+  }
+
+  if (!window.heic2any) throw new Error("HEIC conversion couldn't load. Check your connection and try again, or export the photo as JPEG.");
+  const converted = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+  const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+  return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+}
+
 async function uploadSessionImages(files, sessionId) {
   const urls = [];
-  for (const file of Array.from(files || [])) {
-    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
-    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
-    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+  for (const originalFile of Array.from(files || [])) {
+    if (originalFile.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB. Please choose a smaller image.`);
+    const file = await prepareSessionImage(originalFile);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB after conversion. Please choose a smaller image.`);
+    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image.jpg";
     const path = `${currentFocusId}/${sessionId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
     const { error } = await focusSupabase.storage.from(SESSION_IMAGES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
     if (error) throw error;
@@ -248,7 +326,7 @@ function showAbout() {
 
 async function loadHomeFocuses() {
 
-  const list = $("publicFocusesList");
+  const list = $("currentFocusHomeContent");
 
   if (!list) return;
 
@@ -264,9 +342,9 @@ async function loadHomeFocuses() {
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1);
 
 
   if (error) {
@@ -283,19 +361,15 @@ async function loadHomeFocuses() {
 
 
   if (!data || data.length === 0) {
-
-    list.innerHTML =
-      `<p class="empty-state">
-        No Focuses yet. Start one.
-      </p>`;
-
+    const home = document.querySelector(".current-focus-home");
+    if (home) home.classList.add("no-active-focus");
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
     return;
   }
-
-
-  list.innerHTML = data
-    .map(renderFocusCard)
-    .join("");
+  const home = document.querySelector(".current-focus-home");
+  if (home) home.classList.remove("no-active-focus");
+  currentFocus = data[0]; currentFocusId = currentFocus.id; updateNavigation();
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1>' + escapeHtml(currentFocus.title) + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
 
 
@@ -395,6 +469,14 @@ async function loadCollection() {
   }
 
 
+  const activeFocus = (data || []).find((focus) => focus.status === "active");
+  const action = $("collectionFocusAction");
+  if (action) {
+    action.innerHTML = activeFocus
+      ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
+      : `<button class="primary-button" onclick="showCreateFocus()">+ Start a new focus</button>`;
+  }
+
   if (!data || data.length === 0) {
 
     list.innerHTML =
@@ -456,7 +538,30 @@ async function loadCollection() {
    CREATE FOCUS
 -------------------------------- */
 
-function showCreateFocus() {
+async function showCreateFocus() {
+
+  const { data: activeFocus, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (activeFocus) {
+    currentFocus = activeFocus;
+    currentFocusId = activeFocus.id;
+    setFocusUrl(activeFocus.id);
+    await showFocus();
+    alert("Finish or abandon your current focus before starting another one.");
+    return;
+  }
 
   clearFocusUrl();
 
@@ -486,6 +591,32 @@ async function startNewFocus() {
 
   setLoading(true);
 
+  // Re-check immediately before inserting so a second active focus cannot
+  // be started from another tab or a stale collection page.
+  const { data: existingActiveFocus, error: activeCheckError } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeCheckError) {
+    setLoading(false);
+    console.error(activeCheckError);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (existingActiveFocus) {
+    setLoading(false);
+    currentFocus = existingActiveFocus;
+    currentFocusId = existingActiveFocus.id;
+    setFocusUrl(existingActiveFocus.id);
+    await showFocus();
+    alert("You already have an active focus. Finish or abandon it before starting another.");
+    return;
+  }
 
   const { data, error } = await focusSupabase
     .from("focuses")
@@ -680,11 +811,12 @@ function updateFocusCoverBanner() {
 
   if (coverUrl) {
     if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
-    coverBanner.classList.remove("hidden");
+    coverBanner.classList.remove("no-cover");
   } else {
     coverImage.removeAttribute("src");
-    coverBanner.classList.add("hidden");
+    coverBanner.classList.add("no-cover");
   }
+  coverBanner.classList.remove("hidden");
 }
 
 
@@ -887,6 +1019,15 @@ async function loadSessions() {
 }
 
 
+function formatSessionBody(value) {
+  const safe = escapeHtml(value || "");
+  return safe.split("\n").map(line => {
+    if (line.startsWith("## ")) return "<h3>" + line.slice(3) + "</h3>";
+    if (line.startsWith("> ")) return "<blockquote>" + line.slice(2) + "</blockquote>";
+    return line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  }).join("<br>");
+}
+
 function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
@@ -900,30 +1041,48 @@ function renderSessions() {
 
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
-    const summary = (session.summary || session.body || "").trim();
+    const videoUrl = getSessionVideoUrl(session.body);
+    const bodyWithoutVideo = stripSessionImageCaption(videoUrl
+      ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
+      : session.body);
+    const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
-    const emoji = session.summary_emoji || "📝";
+    const emoji = (session.summary_emoji || "").trim();
     const dateLabel = formatDate(session.session_date);
     const dayLabel = formatWeekday(session.session_date);
+    const timeSpent = (session.time_spent || "").trim();
+    const visual = renderSessionCardVisual(session);
+    const hasTldr = Boolean(emoji || summaryPreview);
+    const timeMarkup = timeSpent
+      ? `<span class="session-time">${escapeHtml(timeSpent)}</span>`
+      : "";
+    const tldr = hasTldr
+      ? `<div class="session-tldr">
+          ${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}
+          ${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}
+          <span class="session-expand-indicator" aria-hidden="true">＋</span>
+        </div>`
+      : "";
 
     return `
-      <details class="session-card">
+      <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
         <summary class="session-collapsed-header">
+          ${visual}
+          <div class="session-overlay-copy">
           <div class="session-heading-top">
-            <span class="eyebrow session-number">SESSION ${index + 1}</span>
+            <span class="eyebrow session-number">STEP ${index + 1}</span>
             <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
-            <span class="session-time">${escapeHtml(session.time_spent || "Time not logged")}</span>
+            ${timeMarkup}
           </div>
-          <div class="session-tldr">
-            <span class="session-tldr-emoji">${escapeHtml(emoji)}</span>
-            <span class="session-tldr-text">${escapeHtml(summaryPreview || "Add a short summary next time.")}</span>
-            <span class="session-expand-indicator" aria-hidden="true">＋</span>
+          ${tldr}
+          ${!hasTldr ? '<span class="session-expand-indicator session-expand-only" aria-hidden="true">＋</span>' : ""}
           </div>
+          <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${escapeHtml(session.id)}')">×</button>
         </summary>
 
         <div class="session-expanded-content">
           <div class="session-main">
-            <p>${escapeHtml(session.body)}</p>
+            <div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div>
           </div>
 
           <div class="session-details">
@@ -942,7 +1101,28 @@ function renderSessions() {
   }).join("");
 }
 
+async function deleteSession(event, sessionId) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (!sessionId || !currentFocusId) return;
+  if (!window.confirm("Delete this step? This can't be undone.")) return;
 
+  const { error } = await focusSupabase
+    .from("sessions")
+    .delete()
+    .eq("id", sessionId)
+    .eq("focus_id", currentFocusId);
+
+  if (error) {
+    console.error("Could not delete step:", error);
+    alert("Couldn't delete this step. Please try again.");
+    return;
+  }
+
+  currentSessions = currentSessions.filter(session => String(session.id) !== String(sessionId));
+  renderSessions();
+  updateFocusCoverBanner();
+}
 function renderSessionDetail(
   label,
   value
@@ -971,20 +1151,162 @@ function renderSessionDetail(
    SESSION FORM
 -------------------------------- */
 
+function updateSessionTimeLabel() {
+  const slider = $("sessionTimeSlider"), label = $("sessionTimeValue"), hidden = $("sessionTimeSpent");
+  if (!slider || !label || !hidden) return;
+  const minutes = Number(slider.value);
+  label.textContent = minutes >= 60 ? (Math.floor(minutes/60) + "h" + (minutes%60 ? " " + (minutes%60) + "m" : "")) : (minutes + " min");
+  hidden.value = label.textContent;
+}
+
+function hideSessionInputs(except) {
+  const inputs = {
+    text: $("sessionText"),
+    image: $("sessionImages"),
+    video: $("sessionVideoUrl"),
+    time: $("composerTimeControl"),
+    emoji: $("composerEmojiControl"),
+    drawing: $("sessionDrawingPanel")
+  };
+  Object.entries(inputs).forEach(([key, element]) => {
+    if (!element || key === except) return;
+    if (key === "text") element.classList.add("hidden");
+    else if (key === "image" || key === "video") element.classList.remove("is-visible");
+    else if (key === "time" || key === "emoji") element.classList.remove("is-open");
+    else element.classList.add("hidden");
+  });
+  $("sessionImageCaption")?.classList.toggle("is-visible", except === "image");
+  $("sessionTextFormatting")?.classList.toggle("hidden", except !== "text");
+}
+
+function focusSessionText() {
+  hideSessionInputs("text");
+  const field = $("sessionText");
+  field.classList.remove("hidden");
+  $("sessionTextFormatting")?.classList.remove("hidden");
+  field.focus();
+  field.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function formatSessionText(kind) {
+  const field = $("sessionText");
+  const start = field.selectionStart, end = field.selectionEnd;
+  const selected = field.value.slice(start, end) || "your text";
+  let before = "", after = "";
+  if (kind === "bold") { before = "**"; after = "**"; }
+  if (kind === "heading") before = "## ";
+  if (kind === "quote") before = "> ";
+  field.setRangeText(before + selected + after, start, end, "select");
+  field.focus();
+  resizeSessionTextarea(field);
+}
+
+function showSessionDrawing() {
+  hideSessionInputs("drawing");
+  $("sessionDrawingPanel").classList.remove("hidden");
+  initSessionDrawing();
+}
+
+function paintSessionDrawingBackground(ctx, canvas) {
+  ctx.fillStyle = "#fffefa";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#e8e2d8";
+  for (let x = 18; x < canvas.width; x += 24) {
+    for (let y = 18; y < canvas.height; y += 24) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function initSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  if (!canvas || canvas.dataset.ready) return;
+  const ctx = canvas.getContext("2d");
+  paintSessionDrawingBackground(ctx, canvas);
+  ctx.strokeStyle = "#292720";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  let drawing = false;
+  const point = event => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+  };
+  canvas.addEventListener("pointerdown", event => {
+    drawing = true;
+    canvas.setPointerCapture(event.pointerId);
+    const p = point(event);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener("pointermove", event => {
+    if (!drawing) return;
+    const p = point(event);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+  canvas.dataset.ready = "true";
+}
+
+function clearSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  const ctx = canvas.getContext("2d");
+  paintSessionDrawingBackground(ctx, canvas);
+}
+
+function showSessionImages() {
+  hideSessionInputs("image");
+  const field = $("sessionImages");
+  field.classList.add("is-visible");
+  $("sessionImageCaption")?.classList.add("is-visible");
+  field.focus();
+}
+
+function focusSessionVideo() {
+  hideSessionInputs("video");
+  const field = $("sessionVideoUrl");
+  field.classList.add("is-visible");
+  field.focus();
+}
+
+function focusSessionTime() {
+  const control = $("composerTimeControl");
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "time");
+  if (!wasOpen) { control.classList.add("is-open"); $("sessionTimeSlider").focus(); }
+}
+
+function focusSessionEmoji() {
+  const control = $("composerEmojiControl");
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "emoji");
+  if (!wasOpen) { control.classList.add("is-open"); $("sessionSummaryEmoji").focus(); }
+}
+
 function openSessionForm() {
 
   $("newSessionForm")
     .classList.remove("hidden");
 
 
-  $("sessionDate").value =
-    todayString();
-
-
-  setTimeout(() => {
-    $("sessionText").focus();
-  }, 50);
-
+  $("sessionDate").value = todayString();
+  clearSessionDrawing();
+  $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
+  $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
+  $("sessionTimeSlider").value = "45";
+  updateSessionTimeLabel();
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   window.scrollTo({
     top:
@@ -1002,6 +1324,13 @@ function closeSessionForm() {
 
   $("sessionText").value = "";
   $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
+  $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
+  $("sessionPrompt").value = "";
 
   $("sessionAccomplished").value = "";
 
@@ -1018,6 +1347,10 @@ function closeSessionForm() {
   $("sessionTimeSpent").value = "";
   $("sessionSummaryEmoji").value = "";
   $("sessionSummary").value = "";
+  $("sessionVideoUrl").value = "";
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   $("sessionDate").value =
     todayString();
@@ -1029,8 +1362,15 @@ async function saveSession() {
   const date =
     $("sessionDate").value;
 
-  const body =
-    $("sessionText").value.trim();
+  let body = $("sessionText").value.trim();
+  const imageCaption = $("sessionImageCaption").value.trim();
+  const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
+  const videoUrl = $("sessionVideoUrl").value.trim();
+  const prompt = $("sessionPrompt").value;
+  if (prompt && body) body = prompt + "\n\n" + body;
+  else if (prompt) body = prompt;
+  if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
+  if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
 
 
   if (!date) {
@@ -1041,15 +1381,19 @@ async function saveSession() {
   }
 
 
-  if (!body) {
-
+  if (!body && !($("sessionImages").files || []).length && $("sessionDrawingPanel").classList.contains("hidden")) {
     $("sessionText").focus();
-
     return;
   }
 
 
-  const selectedImages = $("sessionImages").files;
+  const selectedImages = Array.from($("sessionImages").files || []);
+  const drawingCanvas = $("sessionDrawingCanvas");
+  const drawingVisible = !$("sessionDrawingPanel").classList.contains("hidden");
+  if (drawingVisible && drawingCanvas) {
+    const drawingFile = await new Promise(resolve => drawingCanvas.toBlob(blob => resolve(blob ? new File([blob], "session-drawing.png", { type: "image/png" }) : null), "image/png"));
+    if (drawingFile) selectedImages.push(drawingFile);
+  }
   const session = {
     focus_id: currentFocusId,
 
@@ -1409,5 +1753,27 @@ function resizeSessionTextareas() {
 document.addEventListener("input", (event) => {
   if (event.target.matches(".new-session-form textarea")) {
     resizeSessionTextarea(event.target);
+  }
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.id === "sessionPrompt" && event.target.value) {
+    focusSessionText();
+    $("sessionText").value = event.target.value + "\n";
+    resizeSessionTextarea($("sessionText"));
+    $("sessionText").setSelectionRange($("sessionText").value.length, $("sessionText").value.length);
+  }
+  if (event.target.id === "sessionImages") {
+    const existing = document.getElementById("sessionImageSelection");
+    if (existing) existing.remove();
+    if (event.target.files && event.target.files.length) {
+      const note = document.createElement("p");
+      note.id = "sessionImageSelection";
+      note.className = "composer-attachment-note";
+      note.textContent = event.target.files.length === 1
+        ? event.target.files[0].name
+        : event.target.files.length + " images selected";
+      event.target.closest(".session-composer").querySelector(".composer-attachments").prepend(note);
+    }
   }
 });
