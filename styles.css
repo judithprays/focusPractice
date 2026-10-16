@@ -1761,3 +1761,40 @@ body.is-loading button {
     padding: 14px 14px 34px;
   }
 }
+
+
+/* Focus Practice visual scrapbook refinements */
+.focus-cover-banner { position: relative; height: 360px; margin-bottom: 38px; background: linear-gradient(135deg, #b9aa95, #61594f); }
+.focus-cover-banner.no-cover img { display: none; }
+.focus-cover-banner:not(.no-cover) img { position: absolute; inset: 0; }
+.focus-cover-banner::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(18,17,15,.08) 15%, rgba(18,17,15,.76) 100%); pointer-events: none; }
+.focus-cover-banner .focus-header { position: absolute; z-index: 1; left: clamp(18px, 5vw, 54px); right: clamp(18px, 5vw, 54px); bottom: 24px; max-width: 850px; color: #fff; }
+.focus-cover-banner .focus-header .eyebrow,
+.focus-cover-banner .focus-header h1,
+.focus-cover-banner .focus-header .focus-started,
+.focus-cover-banner .focus-header .text-button { color: #fff; }
+.focus-cover-banner .focus-header h1 { margin-bottom: 8px; text-shadow: 0 2px 18px rgba(0,0,0,.2); }
+.focus-cover-banner .focus-header .focus-goal-editor { max-width: 600px; padding: 12px; border-radius: 8px; background: rgba(20,19,17,.72); backdrop-filter: blur(8px); }
+.focus-cover-banner .focus-header .focus-goal-editor label { color: #fff; }
+.focus-cover-banner .focus-header .focus-goal-editor textarea { color: #26241f; background: #fffefa; }
+.session-card.has-session-visual { position: relative; padding: 0; margin: 0 0 24px; border: 1px solid #e7e1d7; border-radius: 9px; background: #fffefa; overflow: hidden; }
+.session-card.has-session-visual > .session-collapsed-header { position: relative; display: block; padding: 0; overflow: hidden; }
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual { position: relative; display: block; width: 100%; margin: 0; }
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual img,
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual video { display: block; width: 100%; height: auto; max-height: 520px; aspect-ratio: 5 / 3; object-fit: cover; }
+.session-card.has-session-visual .session-overlay-copy { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-start; padding: 18px 58px 26px 18px; color: #fff; background: linear-gradient(180deg, rgba(20,19,17,.68), rgba(20,19,17,.05) 65%, rgba(20,19,17,.35)); }
+.session-card.has-session-visual .session-overlay-copy .session-number,
+.session-card.has-session-visual .session-overlay-copy .session-date,
+.session-card.has-session-visual .session-overlay-copy .session-time,
+.session-card.has-session-visual .session-overlay-copy .session-tldr,
+.session-card.has-session-visual .session-overlay-copy .session-expand-indicator { color: #fff; }
+.session-card.has-session-visual .session-overlay-copy .session-tldr { text-shadow: 0 1px 8px rgba(0,0,0,.22); }
+.session-card.has-session-visual .step-delete-button { position: absolute; top: 12px; right: 12px; }
+.session-card.has-session-visual .session-expanded-content { padding: 18px; }
+.session-card.text-only-step { position: relative; padding: 0; margin: 0 0 20px; border-bottom: 1px solid #e7e1d7; }
+.session-card.text-only-step > .session-collapsed-header { position: relative; padding: 24px 54px 24px 0; }
+.session-card.text-only-step .step-delete-button { position: absolute; top: 18px; right: 0; }
+.session-card .session-overlay-copy { min-width: 0; }
+.session-card .session-overlay-copy .session-heading-top { margin-bottom: 10px; }
+.session-card .session-expanded-content { padding: 20px 0; }
+@media (max-width: 700px) { .focus-cover-banner { width: calc(100% + 40px); height: 330px; margin: -30px 0 28px -20px; } .session-card.has-session-visual > .session-collapsed-header > .session-card-visual img, .session-card.has-session-visual > .session-collapsed-header > .session-card-visual video { max-height: 400px; } .session-card.has-session-visual .session-overlay-copy { padding: 14px 52px 20px 14px; } }
