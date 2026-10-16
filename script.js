@@ -1032,20 +1032,103 @@ function updateSessionTimeLabel() {
   hidden.value = label.textContent;
 }
 
+function hideSessionInputs(except) {
+  const inputs = {
+    text: $("sessionText"),
+    image: $("sessionImages"),
+    video: $("sessionVideoUrl"),
+    time: $("composerTimeControl"),
+    emoji: $("composerEmojiControl"),
+    drawing: $("sessionDrawingPanel")
+  };
+  Object.entries(inputs).forEach(([key, element]) => {
+    if (!element || key === except) return;
+    if (key === "text") element.classList.add("hidden");
+    else if (key === "image" || key === "video") element.classList.remove("is-visible");
+    else if (key === "time" || key === "emoji") element.classList.remove("is-open");
+    else element.classList.add("hidden");
+  });
+  $("sessionTextFormatting")?.classList.toggle("hidden", except !== "text");
+}
+
 function focusSessionText() {
+  hideSessionInputs("text");
   const field = $("sessionText");
   field.classList.remove("hidden");
+  $("sessionTextFormatting")?.classList.remove("hidden");
   field.focus();
   field.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
+function formatSessionText(kind) {
+  const field = $("sessionText");
+  const start = field.selectionStart, end = field.selectionEnd;
+  const selected = field.value.slice(start, end) || "your text";
+  let before = "", after = "";
+  if (kind === "bold") { before = "**"; after = "**"; }
+  if (kind === "heading") before = "## ";
+  if (kind === "quote") before = "> ";
+  field.setRangeText(before + selected + after, start, end, "select");
+  field.focus();
+  resizeSessionTextarea(field);
+}
+
+function showSessionDrawing() {
+  hideSessionInputs("drawing");
+  $("sessionDrawingPanel").classList.remove("hidden");
+  initSessionDrawing();
+}
+
+function initSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  if (!canvas || canvas.dataset.ready) return;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fffefa";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#292720";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  let drawing = false;
+  const point = event => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+  };
+  canvas.addEventListener("pointerdown", event => {
+    drawing = true;
+    canvas.setPointerCapture(event.pointerId);
+    const p = point(event);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener("pointermove", event => {
+    if (!drawing) return;
+    const p = point(event);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+  canvas.dataset.ready = "true";
+}
+
+function clearSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  const ctx = canvas.getContext("2d");
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#fffefa";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
 function showSessionImages() {
+  hideSessionInputs("image");
   const field = $("sessionImages");
   field.classList.add("is-visible");
   field.focus();
 }
 
 function focusSessionVideo() {
+  hideSessionInputs("video");
   const field = $("sessionVideoUrl");
   field.classList.add("is-visible");
   field.focus();
@@ -1053,14 +1136,16 @@ function focusSessionVideo() {
 
 function focusSessionTime() {
   const control = $("composerTimeControl");
-  control.classList.toggle("is-open");
-  if (control.classList.contains("is-open")) $("sessionTimeSlider").focus();
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "time");
+  if (!wasOpen) { control.classList.add("is-open"); $("sessionTimeSlider").focus(); }
 }
 
 function focusSessionEmoji() {
   const control = $("composerEmojiControl");
-  control.classList.toggle("is-open");
-  if (control.classList.contains("is-open")) $("sessionSummaryEmoji").focus();
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "emoji");
+  if (!wasOpen) { control.classList.add("is-open"); $("sessionSummaryEmoji").focus(); }
 }
 
 function openSessionForm() {
@@ -1074,6 +1159,8 @@ function openSessionForm() {
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
   $("sessionTimeSlider").value = "45";
   updateSessionTimeLabel();
   document.querySelector(".composer-extra-fields")?.classList.add("hidden");
@@ -1099,6 +1186,8 @@ function closeSessionForm() {
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
   $("sessionPrompt").value = "";
 
   $("sessionAccomplished").value = "";
@@ -1132,7 +1221,7 @@ async function saveSession() {
     $("sessionDate").value;
 
   let body = $("sessionText").value.trim();
-  const hasImages = Boolean($("sessionImages").files && $("sessionImages").files.length);
+  const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   if (!body && hasImages) body = "Added images to this session.";
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
@@ -1149,13 +1238,19 @@ async function saveSession() {
   }
 
 
-  if (!body && !($("sessionImages").files || []).length) {
+  if (!body && !($("sessionImages").files || []).length && $("sessionDrawingPanel").classList.contains("hidden")) {
     $("sessionText").focus();
     return;
   }
 
 
-  const selectedImages = $("sessionImages").files;
+  const selectedImages = Array.from($("sessionImages").files || []);
+  const drawingCanvas = $("sessionDrawingCanvas");
+  const drawingVisible = !$("sessionDrawingPanel").classList.contains("hidden");
+  if (drawingVisible && drawingCanvas) {
+    const drawingFile = await new Promise(resolve => drawingCanvas.toBlob(blob => resolve(blob ? new File([blob], "session-drawing.png", { type: "image/png" }) : null), "image/png"));
+    if (drawingFile) selectedImages.push(drawingFile);
+  }
   const session = {
     focus_id: currentFocusId,
 
