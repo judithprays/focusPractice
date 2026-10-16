@@ -785,11 +785,12 @@ function updateFocusCoverBanner() {
 
   if (coverUrl) {
     if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
-    coverBanner.classList.remove("hidden");
+    coverBanner.classList.remove("no-cover");
   } else {
     coverImage.removeAttribute("src");
-    coverBanner.classList.add("hidden");
+    coverBanner.classList.add("no-cover");
   }
+  coverBanner.classList.remove("hidden");
 }
 
 
