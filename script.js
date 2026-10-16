@@ -110,14 +110,25 @@ function getSessionVideoUrl(body) {
   }
 }
 
+function getSessionImageCaption(body) {
+  const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)(?=\n\[\/image-caption\]|$)/i);
+  return match ? match[1].trim() : "";
+}
+
+function stripSessionImageCaption(body) {
+  return String(body || "").replace(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
+}
+
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
   const image = urls[0];
+  const caption = getSessionImageCaption(session.body);
   if (image) {
     const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
     visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
       <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
+      ${caption ? `<p class="session-image-caption">${escapeHtml(caption)}</p>` : ""}
     </div>`);
   }
 
@@ -1016,9 +1027,9 @@ function renderSessions() {
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
-    const bodyWithoutVideo = videoUrl
-      ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "").trim()
-      : session.body;
+    const bodyWithoutVideo = stripSessionImageCaption(videoUrl
+      ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
+      : session.body);
     const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
     const emoji = (session.summary_emoji || "").trim();
@@ -1268,6 +1279,7 @@ function openSessionForm() {
   $("sessionDate").value = todayString();
   clearSessionDrawing();
   $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
@@ -1295,6 +1307,7 @@ function closeSessionForm() {
 
   $("sessionText").value = "";
   $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
@@ -1333,12 +1346,14 @@ async function saveSession() {
     $("sessionDate").value;
 
   let body = $("sessionText").value.trim();
+  const imageCaption = $("sessionImageCaption").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
   if (prompt && body) body = prompt + "\n\n" + body;
   else if (prompt) body = prompt;
   if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
+  if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
 
 
   if (!date) {
