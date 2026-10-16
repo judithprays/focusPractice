@@ -1516,3 +1516,50 @@ body.is-loading button {
 
 .new-session-form input[type="file"].session-image-input { display: none; }
 .new-session-form input[type="file"].session-image-input.is-visible { display: block; }
+
+
+/* On-demand drawing and text formatting */
+.session-text-formatting {
+  display: flex;
+  gap: 6px;
+  padding: 10px 0 0;
+}
+.session-text-formatting.hidden,
+.session-drawing-panel.hidden { display: none; }
+.session-text-formatting button,
+.drawing-toolbar button {
+  border: 1px solid #e5e1da;
+  border-radius: 6px;
+  background: #fffefa;
+  padding: 6px 10px;
+  color: #4d4942;
+  font: 12px Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+.session-drawing-panel {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #e5e1da;
+  border-radius: 8px;
+  background: #fffefa;
+}
+.drawing-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: #777168;
+  font-size: 12px;
+}
+#sessionDrawingCanvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 2;
+  border: 1px solid #e5e1da;
+  border-radius: 4px;
+  background: #fffefa;
+  touch-action: none;
+  cursor: crosshair;
+}
