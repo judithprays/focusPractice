@@ -1129,9 +1129,9 @@ async function saveSession() {
   if (!body && hasImages) body = "Added images to this session.";
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
-  if (prompt && body) body = prompt + "\\n\\n" + body;
+  if (prompt && body) body = prompt + "\n\n" + body;
   else if (prompt) body = prompt;
-  if (videoUrl) body = (body ? body + "\\n\\n" : "") + "Video: " + videoUrl;
+  if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
 
 
   if (!date) {
