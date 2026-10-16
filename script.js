@@ -1040,6 +1040,38 @@ function formatSessionBody(value) {
   }).join("<br>");
 }
 
+const SESSION_CARD_SIZE_KEY = "focusPractice.sessionCardSize";
+
+function applySessionCardSize(value, save = true) {
+  const size = Math.max(45, Math.min(100, Number(value) || 80));
+  const list = $("sessionsList");
+  const slider = $("sessionCardSize");
+  const output = $("sessionCardSizeValue");
+  if (list) list.style.setProperty("--session-card-scale", size + "%");
+  if (slider && slider.value !== String(size)) slider.value = String(size);
+  if (output) output.value = size + "%";
+  if (output) output.textContent = size + "%";
+  if (save) {
+    try { localStorage.setItem(SESSION_CARD_SIZE_KEY, String(size)); } catch {}
+  }
+}
+
+function initSessionCardSizeControl() {
+  const slider = $("sessionCardSize");
+  if (!slider || slider.dataset.ready) return;
+  let savedSize = 80;
+  try {
+    const saved = Number(localStorage.getItem(SESSION_CARD_SIZE_KEY));
+    if (Number.isFinite(saved) && saved >= 45 && saved <= 100) savedSize = saved;
+  } catch {}
+  slider.value = String(savedSize);
+  applySessionCardSize(savedSize, false);
+  slider.addEventListener("input", () => applySessionCardSize(slider.value));
+  slider.dataset.ready = "true";
+}
+
+document.addEventListener("DOMContentLoaded", initSessionCardSizeControl);
+
 function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
