@@ -1042,7 +1042,7 @@ function formatSessionBody(value) {
 
 const SESSION_CARD_SIZES_KEY = "focusPractice.sessionCardSizes";
 function readSessionCardSizes() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_SIZES_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
-function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [48, 56, 42, 52, 46][index % 5]; }
+function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [44, 46, 40, 48, 42][index % 5]; }
 function updateSessionCardSize(sessionId, value) { const size = Math.max(25, Math.min(100, Number(value) || 48)); const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId)); if (!item) return; item.style.setProperty("--session-card-width", size + "%"); const output = item.querySelector(".session-card-size-value"); if (output) output.textContent = size + "%"; const sizes = readSessionCardSizes(); sizes[String(sessionId)] = size; try { localStorage.setItem(SESSION_CARD_SIZES_KEY, JSON.stringify(sizes)); } catch {} }
 function renderSessions() {
   const section = $("sessionLogSection");
