@@ -964,23 +964,38 @@ function renderSessions() {
   list.innerHTML = currentSessions.map((session, index) => {
     const summary = (session.summary || session.body || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
-    const emoji = session.summary_emoji || "📝";
+    const emoji = (session.summary_emoji || "").trim();
     const dateLabel = formatDate(session.session_date);
     const dayLabel = formatWeekday(session.session_date);
+    const timeSpent = (session.time_spent || "").trim();
+    const imageUrls = Array.isArray(session.image_urls) ? session.image_urls : [];
+    const leadImage = imageUrls.find(isSafeImageUrl);
+    const visual = leadImage
+      ? `<div class="session-card-visual"><img src="${escapeHtml(leadImage)}" alt="Visual added to this session" loading="lazy"></div>`
+      : "";
+    const hasTldr = Boolean(emoji || summaryPreview);
+    const timeMarkup = timeSpent
+      ? `<span class="session-time">${escapeHtml(timeSpent)}</span>`
+      : "";
+    const tldr = hasTldr
+      ? `<div class="session-tldr">
+          ${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}
+          ${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}
+          <span class="session-expand-indicator" aria-hidden="true">＋</span>
+        </div>`
+      : "";
 
     return `
       <details class="session-card">
+        ${visual}
         <summary class="session-collapsed-header">
           <div class="session-heading-top">
             <span class="eyebrow session-number">SESSION ${index + 1}</span>
             <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
-            <span class="session-time">${escapeHtml(session.time_spent || "Time not logged")}</span>
+            ${timeMarkup}
           </div>
-          <div class="session-tldr">
-            <span class="session-tldr-emoji">${escapeHtml(emoji)}</span>
-            <span class="session-tldr-text">${escapeHtml(summaryPreview || "Add a short summary next time.")}</span>
-            <span class="session-expand-indicator" aria-hidden="true">＋</span>
-          </div>
+          ${tldr}
+          ${!hasTldr ? '<span class="session-expand-indicator session-expand-only" aria-hidden="true">＋</span>' : ""}
         </summary>
 
         <div class="session-expanded-content">
@@ -1003,7 +1018,6 @@ function renderSessions() {
     `;
   }).join("");
 }
-
 
 function renderSessionDetail(
   label,
