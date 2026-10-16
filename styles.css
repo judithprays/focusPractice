@@ -1798,3 +1798,36 @@ body.is-loading button {
 .session-card .session-overlay-copy .session-heading-top { margin-bottom: 10px; }
 .session-card .session-expanded-content { padding: 20px 0; }
 @media (max-width: 700px) { .focus-cover-banner { width: calc(100% + 40px); height: 330px; margin: -30px 0 28px -20px; } .session-card.has-session-visual > .session-collapsed-header > .session-card-visual img, .session-card.has-session-visual > .session-collapsed-header > .session-card-visual video { max-height: 400px; } .session-card.has-session-visual .session-overlay-copy { padding: 14px 52px 20px 14px; } }
+
+
+/* Borderless, image-first cascade: artwork sits naturally on the page. */
+.sessions-list { display: flex; flex-direction: column; gap: 34px; }
+.session-card.has-session-visual { width: min(86%, 760px); align-self: flex-start; margin: 0 0 4px; padding: 0; overflow: visible; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.session-card.has-session-visual:nth-child(even) { align-self: flex-end; width: min(76%, 660px); margin-top: 4px; }
+.session-card.has-session-visual:nth-child(3n) { width: min(68%, 590px); margin-top: -8px; }
+.session-card.has-session-visual > .session-collapsed-header { position: relative; display: flex; flex-direction: column; gap: 12px; padding: 0; overflow: visible; color: inherit; background: transparent; cursor: pointer; }
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual { width: 100%; margin: 0; overflow: visible; background: transparent; border-radius: 0; }
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual img,
+.session-card.has-session-visual > .session-collapsed-header > .session-card-visual video { display: block; width: 100%; height: auto; max-height: 560px; aspect-ratio: auto; object-fit: contain; border: 0; border-radius: 0; background: transparent; }
+.session-card.has-session-visual .session-overlay-copy { position: static; inset: auto; display: block; order: -1; padding: 0 42px 0 0; color: inherit; background: transparent; }
+.session-card.has-session-visual .session-number,
+.session-card.has-session-visual .session-date,
+.session-card.has-session-visual .session-time,
+.session-card.has-session-visual .session-tldr,
+.session-card.has-session-visual .session-expand-indicator { color: inherit; }
+.session-card.has-session-visual .session-tldr { max-width: 100%; text-shadow: none; }
+.session-card.has-session-visual .step-delete-button { top: 0; right: 0; border: 0; background: transparent; color: #777168; backdrop-filter: none; }
+.session-image-caption { margin: 9px 0 0; color: #6d685f; font-size: 14px; line-height: 1.5; text-align: left; }
+.session-card.has-session-visual .session-expanded-content { padding: 20px 0 0; }
+.session-card.has-session-visual .session-card-visual-drawing { background: transparent; background-image: none; }
+.session-card.has-session-visual .session-card-visual-drawing img { object-fit: contain; mix-blend-mode: multiply; }
+.session-image-fields { display: grid; gap: 10px; width: min(100%, 520px); }
+.session-image-caption-input { display: none; width: 100%; }
+.session-image-caption-input.is-visible { display: block; }
+@media (max-width: 700px) {
+  .sessions-list { gap: 28px; }
+  .session-card.has-session-visual, .session-card.has-session-visual:nth-child(even), .session-card.has-session-visual:nth-child(3n) { width: 94%; margin-top: 0; }
+  .session-card.has-session-visual:nth-child(even) { align-self: flex-end; }
+  .session-card.has-session-visual > .session-collapsed-header > .session-card-visual img,
+  .session-card.has-session-visual > .session-collapsed-header > .session-card-visual video { max-height: 440px; }
+}
