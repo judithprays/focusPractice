@@ -1117,8 +1117,8 @@ function renderSessions() {
         </div>
       </details>
       <div class="session-card-size-control">
-        <label for="sessionCardSize-\${safeId}">Width <output class="session-card-size-value" for="sessionCardSize-\${safeId}">\${size}%</output></label>
-        <input id="sessionCardSize-\${safeId}" type="range" min="25" max="100" step="1" value="\${size}" aria-label="Adjust width of step \${index + 1}" oninput="updateSessionCardSize('\${safeId}', this.value)">
+        <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value" for="sessionCardSize-${safeId}">${size}%</output></label>
+        <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width of step ${index + 1}" oninput="updateSessionCardSize('${safeId}', this.value)">
       </div>
       </div>
     `;
