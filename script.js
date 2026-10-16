@@ -940,6 +940,15 @@ async function loadSessions() {
 }
 
 
+function formatSessionBody(value) {
+  const safe = escapeHtml(value || "");
+  return safe.split("\n").map(line => {
+    if (line.startsWith("## ")) return "<h3>" + line.slice(3) + "</h3>";
+    if (line.startsWith("> ")) return "<blockquote>" + line.slice(2) + "</blockquote>";
+    return line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  }).join("<br>");
+}
+
 function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
@@ -976,7 +985,7 @@ function renderSessions() {
 
         <div class="session-expanded-content">
           <div class="session-main">
-            <p>${escapeHtml(session.body)}</p>
+            <div class="session-body-content">${formatSessionBody(session.body)}</div>
           </div>
 
           <div class="session-details">
@@ -1155,6 +1164,7 @@ function openSessionForm() {
 
 
   $("sessionDate").value = todayString();
+  clearSessionDrawing();
   $("sessionImages").value = "";
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
