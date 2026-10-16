@@ -188,10 +188,10 @@ async function prepareSessionImage(file) {
   // Allow a larger original HEIC file because conversion usually makes it smaller.
   // Keep a generous input limit to avoid trying to decode extremely large files.
   if (file.size > 25 * 1024 * 1024) throw new Error(`"${file.name}" is larger than 25 MB. Please choose a smaller photo.`);
-  if (!window.heic2any) throw new Error("HEIC conversion couldn't load. Check your connection and try again, or export the photo as JPEG.");
+  if (typeof window.HeicTo !== "function") throw new Error("HEIC conversion couldn't load. Refresh the page and try again, or export the photo as JPEG.");
 
   try {
-    const converted = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const converted = await window.HeicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
     const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
     if (!jpegBlob || typeof jpegBlob.size !== "number") throw new Error("The converter did not return a JPEG image.");
     return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
