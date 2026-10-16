@@ -1040,38 +1040,10 @@ function formatSessionBody(value) {
   }).join("<br>");
 }
 
-const SESSION_CARD_SIZE_KEY = "focusPractice.sessionCardSize";
-
-function applySessionCardSize(value, save = true) {
-  const size = Math.max(45, Math.min(100, Number(value) || 80));
-  const list = $("sessionsList");
-  const slider = $("sessionCardSize");
-  const output = $("sessionCardSizeValue");
-  if (list) list.style.setProperty("--session-card-scale", size + "%");
-  if (slider && slider.value !== String(size)) slider.value = String(size);
-  if (output) output.value = size + "%";
-  if (output) output.textContent = size + "%";
-  if (save) {
-    try { localStorage.setItem(SESSION_CARD_SIZE_KEY, String(size)); } catch {}
-  }
-}
-
-function initSessionCardSizeControl() {
-  const slider = $("sessionCardSize");
-  if (!slider || slider.dataset.ready) return;
-  let savedSize = 80;
-  try {
-    const saved = Number(localStorage.getItem(SESSION_CARD_SIZE_KEY));
-    if (Number.isFinite(saved) && saved >= 45 && saved <= 100) savedSize = saved;
-  } catch {}
-  slider.value = String(savedSize);
-  applySessionCardSize(savedSize, false);
-  slider.addEventListener("input", () => applySessionCardSize(slider.value));
-  slider.dataset.ready = "true";
-}
-
-document.addEventListener("DOMContentLoaded", initSessionCardSizeControl);
-
+const SESSION_CARD_SIZES_KEY = "focusPractice.sessionCardSizes";
+function readSessionCardSizes() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_SIZES_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [48, 56, 42, 52, 46][index % 5]; }
+function updateSessionCardSize(sessionId, value) { const size = Math.max(25, Math.min(100, Number(value) || 48)); const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId)); if (!item) return; item.style.setProperty("--session-card-width", size + "%"); const output = item.querySelector(".session-card-size-value"); if (output) output.textContent = size + "%"; const sizes = readSessionCardSizes(); sizes[String(sessionId)] = size; try { localStorage.setItem(SESSION_CARD_SIZES_KEY, JSON.stringify(sizes)); } catch {} }
 function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
@@ -1096,6 +1068,8 @@ function renderSessions() {
     const dayLabel = formatWeekday(session.session_date);
     const timeSpent = (session.time_spent || "").trim();
     const visual = renderSessionCardVisual(session);
+    const size = getSessionCardSize(session, index);
+    const safeId = escapeHtml(session.id);
     const hasTldr = Boolean(emoji || summaryPreview);
     const timeMarkup = timeSpent
       ? `<span class="session-time">${escapeHtml(timeSpent)}</span>`
@@ -1109,6 +1083,7 @@ function renderSessions() {
       : "";
 
     return `
+      <div class="session-card-item" data-session-id="${safeId}" style="--session-card-width: ${size}%">
       <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
         <summary class="session-collapsed-header">
           ${visual}
@@ -1141,6 +1116,11 @@ function renderSessions() {
           ${renderSessionImages(session)}
         </div>
       </details>
+      <div class="session-card-size-control">
+        <label for="sessionCardSize-\${safeId}">Width <output class="session-card-size-value" for="sessionCardSize-\${safeId}">\${size}%</output></label>
+        <input id="sessionCardSize-\${safeId}" type="range" min="25" max="100" step="1" value="\${size}" aria-label="Adjust width of step \${index + 1}" oninput="updateSessionCardSize('\${safeId}', this.value)">
+      </div>
+      </div>
     `;
   }).join("");
 }
