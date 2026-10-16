@@ -1260,3 +1260,221 @@ body.is-loading button {
   .active-focus-notice { padding: 18px; }
   .new-session-form #sessionText { font-size: 17px; }
 }
+
+
+/* Canvas-style session composer */
+.current-focus-home.no-active-focus {
+  min-height: calc(100vh - 100px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.current-focus-home.no-active-focus > .eyebrow {
+  display: none;
+}
+.current-focus-home.no-active-focus #currentFocusHomeContent {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+.home-start-focus {
+  min-width: 190px;
+  min-height: 54px;
+  padding: 16px 28px;
+  border-radius: 999px;
+  font-size: 16px;
+}
+.session-composer {
+  background: #faf9f6;
+  border: 1px solid #e5e1da;
+  border-radius: 12px;
+  padding: 26px;
+  margin: 26px 0 60px;
+  box-shadow: 0 3px 14px rgba(35, 31, 26, .035);
+}
+.composer-title {
+  margin: 0 0 22px;
+  font-family: "IBM Plex Mono", "Courier New", monospace;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+.session-composer .composer-body > #sessionText {
+  display: block;
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  padding: 8px 0 20px;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #e5e1da;
+  outline: none;
+  background: transparent;
+  font: 400 17px/1.65 Helvetica, Arial, sans-serif;
+  color: #25231f;
+}
+.session-composer .composer-body > #sessionText:focus {
+  border-bottom-color: #777168;
+}
+.session-composer #sessionText::placeholder {
+  color: #a29c92;
+}
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 16px 0;
+  border-bottom: 1px solid #e5e1da;
+}
+.composer-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #4d4942;
+  font: 12px/1 Helvetica, Arial, sans-serif;
+  cursor: pointer;
+}
+.composer-tool:hover, .composer-tool:focus-visible {
+  border-color: #e0dbd2;
+  background: #f1efe9;
+}
+.tool-text-icon { font: 18px/1 "IBM Plex Mono", monospace; }
+.tool-play-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px; height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 8px;
+}
+.tool-clock-icon { font-size: 20px; line-height: 14px; }
+.composer-prompt {
+  flex: 1 1 210px;
+  min-width: 180px;
+  margin-left: auto;
+}
+.session-composer .session-prompt-select {
+  width: 100%;
+  padding: 10px 28px 10px 12px;
+  border: 1px solid #e5e1da;
+  border-radius: 7px;
+  background: #fffefa;
+  color: #5d584f;
+  font: 13px Helvetica, Arial, sans-serif;
+}
+.composer-attachments {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+}
+.composer-attachments input[type="file"] {
+  display: block;
+  max-width: 100%;
+  font-size: 12px;
+}
+.session-composer .session-image-input {
+  display: none;
+}
+.composer-attachments #sessionVideoUrl {
+  display: none;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e5e1da;
+  border-radius: 7px;
+  background: #fffefa;
+}
+.composer-attachments #sessionVideoUrl.is-visible { display: block; }
+.composer-time, .composer-emoji {
+  display: none;
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: 12px;
+  border: 1px solid #e5e1da;
+  border-radius: 7px;
+  background: #fffefa;
+}
+.composer-time.is-open, .composer-emoji.is-open { display: block; }
+.session-composer .composer-time label, .session-composer .composer-emoji label {
+  display: block;
+  margin: 0 0 9px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.session-composer .composer-time input[type="range"] { width: 100%; }
+.session-composer .composer-emoji input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e5e1da;
+  border-radius: 6px;
+  background: #fffefa;
+}
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 20px;
+  margin-top: 14px;
+  border-top: 1px solid #e5e1da;
+}
+.session-composer .composer-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  color: #777168;
+  font-size: 12px;
+  font-weight: 400;
+}
+.session-composer .composer-date input {
+  width: 138px;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: #777168;
+  font: 12px Helvetica, Arial, sans-serif;
+}
+.composer-actions { display: flex; align-items: center; gap: 16px; }
+.session-composer .composer-submit {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: #26241f;
+  color: #fff;
+  border: 1px solid #26241f;
+  font-size: 13px;
+}
+.session-composer .composer-submit:hover { background: #403d36; }
+.composer-extra-fields { padding-top: 18px; }
+.composer-extra-fields.hidden { display: none; }
+.composer-extra-fields label {
+  display: block;
+  margin: 15px 0 6px;
+  font-size: 12px;
+}
+.composer-extra-fields textarea, .composer-extra-fields input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #e5e1da;
+  border-radius: 6px;
+  background: #fffefa;
+}
+@media (max-width: 640px) {
+  .session-composer { padding: 18px; }
+  .composer-toolbar { gap: 3px; }
+  .composer-tool { padding: 7px; }
+  .composer-tool > span:last-child { display: none; }
+  .composer-prompt { flex-basis: 100%; margin: 8px 0 0; }
+  .composer-footer { align-items: flex-start; flex-direction: column; }
+  .composer-actions { width: 100%; justify-content: flex-end; }
+}
