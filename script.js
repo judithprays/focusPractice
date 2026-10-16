@@ -100,7 +100,7 @@ function isSafeImageUrl(url) {
 
 
 function getSessionVideoUrl(body) {
-  const match = String(body || "").match(/(?:^|\\n)Video:\\s*(https?:\\/\\/[^\\s]+)/i);
+  const match = String(body || "").match(/(?:^|\n)Video:\s*(https?:\/\/[^\s]+)/i);
   if (!match) return "";
   try {
     const url = new URL(match[1].replace(/[),.]+$/, ""));
@@ -114,7 +114,7 @@ function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const image = urls[0];
   if (image) {
-    const isDrawing = /session-drawing\\.png(?:$|[?#])/i.test(image);
+    const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
     return `<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
       <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
     </div>`;
@@ -134,8 +134,8 @@ function renderSessionCardVisual(session) {
       else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
     } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
       const id = url.pathname.split("/").filter(Boolean).pop();
-      if (id && /^\\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
-    } else if (/\\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+      if (id && /^\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
+    } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
       return `<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`;
     }
   } catch {}
@@ -1013,7 +1013,7 @@ function renderSessions() {
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
     const bodyWithoutVideo = videoUrl
-      ? String(session.body || "").replace(/(?:^|\\n)Video:\\s*https?:\\/\\/[^\\s]+/i, "").trim()
+      ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "").trim()
       : session.body;
     const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
