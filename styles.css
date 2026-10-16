@@ -1563,3 +1563,28 @@ body.is-loading button {
   touch-action: none;
   cursor: crosshair;
 }
+
+
+/* Visual session content is the full-bleed cover of its card */
+.session-card-visual {
+  margin: -16px -16px 0;
+  overflow: hidden;
+  background: #f1efe9;
+}
+.session-card-visual img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+}
+.session-card-visual + .session-collapsed-header {
+  padding-top: 14px;
+}
+.session-expand-only {
+  display: inline-block;
+  padding-bottom: 12px;
+}
+@media (max-width: 700px) {
+  .session-card-visual { margin: -12px -12px 0; }
+}
