@@ -1038,10 +1038,10 @@ function renderSessions() {
       : "";
 
     return `
-      <details class="session-card ${visual ? "has-session-visual" : ""}">
-        ${visual}
-        <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${escapeHtml(session.id)}')">×</button>
+      <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
         <summary class="session-collapsed-header">
+          ${visual}
+          <div class="session-overlay-copy">
           <div class="session-heading-top">
             <span class="eyebrow session-number">STEP ${index + 1}</span>
             <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
@@ -1049,6 +1049,8 @@ function renderSessions() {
           </div>
           ${tldr}
           ${!hasTldr ? '<span class="session-expand-indicator session-expand-only" aria-hidden="true">＋</span>' : ""}
+          </div>
+          <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${escapeHtml(session.id)}')">×</button>
         </summary>
 
         <div class="session-expanded-content">
