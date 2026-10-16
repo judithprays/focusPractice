@@ -282,7 +282,14 @@ async function loadHomeFocuses() {
   }
 
 
-  if (!data || data.length === 0) { list.innerHTML = '<div class="current-focus-empty"><h1>Nothing needs your attention yet.</h1><p>Choose something you want to give your attention to.</p><button class="primary-button" onclick="showCreateFocus()">Start a Focus</button></div>'; return; }
+  if (!data || data.length === 0) {
+    const home = document.querySelector(".current-focus-home");
+    if (home) home.classList.add("no-active-focus");
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
+    return;
+  }
+  const home = document.querySelector(".current-focus-home");
+  if (home) home.classList.remove("no-active-focus");
   currentFocus = data[0]; currentFocusId = currentFocus.id; updateNavigation();
   list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1>' + escapeHtml(currentFocus.title) + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
@@ -1025,15 +1032,43 @@ function updateSessionTimeLabel() {
   hidden.value = label.textContent;
 }
 
+function focusSessionText() {
+  $("sessionText").focus();
+  $("sessionText").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function focusSessionVideo() {
+  const field = $("sessionVideoUrl");
+  field.classList.add("is-visible");
+  field.focus();
+}
+
+function focusSessionTime() {
+  const control = $("composerTimeControl");
+  control.classList.toggle("is-open");
+  if (control.classList.contains("is-open")) $("sessionTimeSlider").focus();
+}
+
+function focusSessionEmoji() {
+  const control = $("composerEmojiControl");
+  control.classList.toggle("is-open");
+  if (control.classList.contains("is-open")) $("sessionSummaryEmoji").focus();
+}
+
 function openSessionForm() {
 
   $("newSessionForm")
     .classList.remove("hidden");
 
 
-  $("sessionDate").value =
-    todayString();
-
+  $("sessionDate").value = todayString();
+  $("sessionImages").value = "";
+  $("sessionVideoUrl").value = "";
+  $("sessionTimeSlider").value = "45";
+  updateSessionTimeLabel();
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   setTimeout(() => {
     $("sessionText").focus();
@@ -1056,6 +1091,8 @@ function closeSessionForm() {
 
   $("sessionText").value = "";
   $("sessionImages").value = "";
+  $("sessionVideoUrl").value = "";
+  $("sessionPrompt").value = "";
 
   $("sessionAccomplished").value = "";
 
@@ -1072,6 +1109,10 @@ function closeSessionForm() {
   $("sessionTimeSpent").value = "";
   $("sessionSummaryEmoji").value = "";
   $("sessionSummary").value = "";
+  $("sessionVideoUrl").value = "";
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   $("sessionDate").value =
     todayString();
@@ -1083,8 +1124,12 @@ async function saveSession() {
   const date =
     $("sessionDate").value;
 
-  const body =
-    $("sessionText").value.trim();
+  let body = $("sessionText").value.trim();
+  const videoUrl = $("sessionVideoUrl").value.trim();
+  const prompt = $("sessionPrompt").value;
+  if (prompt && body) body = prompt + "\\n\\n" + body;
+  else if (prompt) body = prompt;
+  if (videoUrl) body = (body ? body + "\\n\\n" : "") + "Video: " + videoUrl;
 
 
   if (!date) {
@@ -1095,10 +1140,8 @@ async function saveSession() {
   }
 
 
-  if (!body) {
-
+  if (!body && !($("sessionImages").files || []).length) {
     $("sessionText").focus();
-
     return;
   }
 
