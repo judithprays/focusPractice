@@ -1588,3 +1588,95 @@ body.is-loading button {
 @media (max-width: 700px) {
   .session-card-visual { margin: -12px -12px 0; }
 }
+
+
+/* Scrapbook-style visual-first session cards */
+.session-card {
+  overflow: hidden;
+  border-radius: 7px;
+}
+.session-card-visual {
+  display: block;
+  position: relative;
+  width: calc(100% + 32px);
+  margin: -16px -16px 0;
+  overflow: hidden;
+  background: #eee9e1;
+  color: #26241f;
+  text-decoration: none;
+}
+.session-card-visual img,
+.session-card-visual video {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 440px;
+  aspect-ratio: 5 / 3;
+  object-fit: cover;
+}
+.session-card-visual-drawing {
+  background: #fffefa;
+  background-image: radial-gradient(#e8e2d8 0.7px, transparent 0.7px);
+  background-size: 12px 12px;
+}
+.session-card-visual-drawing img {
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+.session-card-video iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 0;
+}
+.session-card-video-link {
+  min-height: 150px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  background: #e8e1d6;
+  font-size: 14px;
+}
+.session-card-video-link > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #26241f;
+  color: white;
+}
+.session-card-video-link .video-link-arrow {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  font-size: 18px;
+}
+.session-card-visual + .session-collapsed-header {
+  padding-top: 14px;
+}
+.session-card.has-session-visual .session-collapsed-header {
+  padding-top: 14px;
+}
+.session-card.has-session-visual .session-expanded-content {
+  padding-top: 8px;
+}
+#sessionDrawingCanvas {
+  aspect-ratio: 5 / 3;
+  border: 1px solid #e5e1da;
+  background:
+    radial-gradient(#e8e2d8 0.7px, transparent 0.7px);
+  background-size: 12px 12px;
+}
+@media (max-width: 700px) {
+  .session-card-visual {
+    width: calc(100% + 24px);
+    margin: -12px -12px 0;
+  }
+  .session-card-visual img,
+  .session-card-visual video {
+    max-height: 360px;
+  }
+}
