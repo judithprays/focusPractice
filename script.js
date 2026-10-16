@@ -1040,9 +1040,10 @@ function renderSessions() {
     return `
       <details class="session-card ${visual ? "has-session-visual" : ""}">
         ${visual}
+        <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${escapeHtml(session.id)}')">×</button>
         <summary class="session-collapsed-header">
           <div class="session-heading-top">
-            <span class="eyebrow session-number">SESSION ${index + 1}</span>
+            <span class="eyebrow session-number">STEP ${index + 1}</span>
             <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
             ${timeMarkup}
           </div>
@@ -1071,6 +1072,28 @@ function renderSessions() {
   }).join("");
 }
 
+async function deleteSession(event, sessionId) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (!sessionId || !currentFocusId) return;
+  if (!window.confirm("Delete this step? This can't be undone.")) return;
+
+  const { error } = await focusSupabase
+    .from("sessions")
+    .delete()
+    .eq("id", sessionId)
+    .eq("focus_id", currentFocusId);
+
+  if (error) {
+    console.error("Could not delete step:", error);
+    alert("Couldn't delete this step. Please try again.");
+    return;
+  }
+
+  currentSessions = currentSessions.filter(session => String(session.id) !== String(sessionId));
+  renderSessions();
+  updateFocusCoverBanner();
+}
 function renderSessionDetail(
   label,
   value
