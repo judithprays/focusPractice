@@ -1246,7 +1246,6 @@ async function saveSession() {
 
   let body = $("sessionText").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
-  if (!body && hasImages) body = "Added images to this session.";
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
   if (prompt && body) body = prompt + "\n\n" + body;
