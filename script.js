@@ -176,22 +176,34 @@ function renderSessionImages(session) {
 
 async function prepareSessionImage(file) {
   const extension = String(file.name || "").split(".").pop().toLowerCase();
-  const isHeic = ["heic", "heif"].includes(extension) || ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(String(file.type || "").toLowerCase());
+  const mimeType = String(file.type || "").toLowerCase();
+  const isHeic = ["heic", "heif"].includes(extension) || ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(mimeType);
+
   if (!isHeic) {
-    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    if (!mimeType.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
     return file;
   }
 
+  // Allow a larger original HEIC file because conversion usually makes it smaller.
+  // Keep a generous input limit to avoid trying to decode extremely large files.
+  if (file.size > 25 * 1024 * 1024) throw new Error(`"${file.name}" is larger than 25 MB. Please choose a smaller photo.`);
   if (!window.heic2any) throw new Error("HEIC conversion couldn't load. Check your connection and try again, or export the photo as JPEG.");
-  const converted = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
-  const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
-  return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+
+  try {
+    const converted = await window.heic2any({ blob: file, toType: "image/jpeg", quality: 0.9 });
+    const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+    if (!jpegBlob || typeof jpegBlob.size !== "number") throw new Error("The converter did not return a JPEG image.");
+    return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+  } catch (error) {
+    console.error("HEIC conversion failed:", error);
+    throw new Error(`Couldn't convert "${file.name}" to JPEG. Try another photo or export it as JPEG. ${error?.message ? `Details: ${error.message}` : ""}`.trim());
+  }
 }
 
 async function uploadSessionImages(files, sessionId) {
   const urls = [];
   for (const originalFile of Array.from(files || [])) {
-    if (originalFile.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB. Please choose a smaller image.`);
     const file = await prepareSessionImage(originalFile);
     if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB after conversion. Please choose a smaller image.`);
     const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image.jpg";
