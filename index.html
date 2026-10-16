@@ -118,10 +118,8 @@
 
         <!-- NEW SESSION FORM -->
         <div id="newSessionForm" class="new-session-form session-composer hidden">
-          <h3 class="composer-title">Add a new session</h3>
-
           <div class="composer-body">
-            <textarea id="sessionText" rows="1" placeholder="What would you like to capture?" aria-label="Session note"></textarea>
+            <textarea id="sessionText" class="hidden" rows="1" aria-label="Session note" placeholder="Write a note..."></textarea>
             <div class="composer-extra-fields">
               <label for="sessionAccomplished">Things accomplished</label>
               <textarea id="sessionAccomplished" rows="2" placeholder="Optional"></textarea>
@@ -142,7 +140,7 @@
 
           <div class="composer-toolbar" role="toolbar" aria-label="Session content options">
             <button type="button" class="composer-tool" onclick="focusSessionText()" aria-label="Add text" title="Text"><span class="tool-text-icon">T</span><span>Text</span></button>
-            <button type="button" class="composer-tool" onclick="document.getElementById('sessionImages').click()" aria-label="Add image" title="Image"><span aria-hidden="true">▧</span><span>Image</span></button>
+            <button type="button" class="composer-tool" onclick="showSessionImages()" aria-label="Add image" title="Image"><span aria-hidden="true">▧</span><span>Image</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionVideo()" aria-label="Add video" title="Video"><span class="tool-play-icon">▶</span><span>Video</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionTime()" aria-label="Set time spent" title="Time"><span class="tool-clock-icon">◷</span><span>Time</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionEmoji()" aria-label="Add emoji" title="Emoji"><span>☺</span><span>Emoji</span></button>
@@ -177,7 +175,7 @@
           </div>
 
           <div class="composer-footer">
-            <label class="composer-date" for="sessionDate"><span aria-hidden="true">▦</span><input id="sessionDate" type="date" aria-label="Session date"></label>
+            <label class="composer-date" for="sessionDate"><input id="sessionDate" type="date" aria-label="Session date"></label>
             <div class="composer-actions">
               <button type="button" class="text-button" onclick="closeSessionForm()">Cancel</button>
               <button type="button" class="primary-button composer-submit" onclick="saveSession()">Add to log</button>
