@@ -133,18 +133,18 @@
             type="date"
           >
 
-          <label for="sessionImages">Images from this session</label>
+          <label for="sessionImages">Add something visual</label>
           <input id="sessionImages" class="session-image-input" type="file" accept="image/*" multiple>
           <p class="form-hint">The newest session photo appears at the top automatically. You can choose a different cover from the session log.</p>
 
-          <label for="sessionPrompt">Need a prompt?</label>
+          <label for="sessionPrompt">A place to begin</label>
           <select id="sessionPrompt" class="session-prompt-select"><option value="">Write whatever comes to mind…</option><option>What did you focus on?</option><option>What did you accomplish?</option><option>What surprised you?</option><option>What was funny?</option><option>What excited you?</option><option>What was hard?</option><option>What mistake taught you something?</option><option>What did you learn?</option><option>What will you try next time?</option></select>
-          <label for="sessionText">A thought or reflection</label>
+          <label for="sessionText">What’s on your mind?</label>
 
           <textarea
             id="sessionText"
             rows="6"
-            placeholder="What did you do? What surprised you? What got harder or easier?"
+            placeholder="Write a thought, capture a moment, or leave yourself a note…"
           ></textarea>
 
           <label for="sessionAccomplished">
@@ -211,7 +211,7 @@
             placeholder="Optional"
           ></textarea>
 
-          <label for="sessionVideoUrl">Video link (optional)</label><input id="sessionVideoUrl" type="url" placeholder="Paste a video link">
+          <label for="sessionVideoUrl">Add a video (optional)</label><input id="sessionVideoUrl" type="url" placeholder="Paste a video link">
           <label for="sessionTimeSpent">Time spent · <span id="sessionTimeValue">45 min</span></label><input id="sessionTimeSlider" class="session-time-slider" type="range" min="5" max="240" step="5" value="45" oninput="updateSessionTimeLabel()">
 
           <input
@@ -400,6 +400,8 @@
           </p>
 
         </div>
+
+        <div id="collectionFocusAction" class="collection-focus-action"></div>
 
         <div
           id="collectionList"
