@@ -1885,3 +1885,17 @@ body.is-loading button {
     width: min(var(--session-card-scale), 100%);
   }
 }
+
+/* Flexible scrapbook rows with independently adjustable card widths */
+.sessions-list { display:flex; flex-flow:row wrap; align-items:flex-start; justify-content:flex-start; gap:30px 22px; border:0; }
+.session-card-item { flex:0 0 var(--session-card-width, 48%); width:var(--session-card-width, 48%); min-width:0; align-self:flex-start; }
+.session-card-item:nth-child(even) { margin-top:26px; }
+.session-card-item:nth-child(3n) { margin-top:52px; }
+.session-card-item .session-card.has-session-visual, .session-card-item .session-card.text-only-step { width:100%; max-width:none; margin:0; }
+.session-card-item .session-card.text-only-step { border:0; }
+.session-card-size-control { display:flex; align-items:center; gap:10px; margin-top:10px; opacity:.62; transition:opacity 150ms ease; }
+.session-card-item:hover .session-card-size-control, .session-card-size-control:focus-within { opacity:1; }
+.session-card-size-control label { display:flex; align-items:baseline; gap:5px; flex:0 0 auto; color:var(--gray); font-size:10px; white-space:nowrap; }
+.session-card-size-control output { font-variant-numeric:tabular-nums; }
+.session-card-size-control input[type="range"] { width:100%; min-width:40px; margin:0; accent-color:var(--orange); cursor:ew-resize; }
+@media (max-width:700px) { .sessions-list { gap:24px 14px; } .session-card-item:nth-child(even) { margin-top:20px; } .session-card-item:nth-child(3n) { margin-top:36px; } .session-card-size-control { gap:5px; } .session-card-size-control label { font-size:9px; } }
