@@ -111,7 +111,7 @@ function getSessionVideoUrl(body) {
 }
 
 function getSessionImageCaption(body) {
-  const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)(?=\n\[\/image-caption\]|$)/i);
+  const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)\[\/image-caption\]/i);
   return match ? match[1].trim() : "";
 }
 
@@ -1160,6 +1160,7 @@ function hideSessionInputs(except) {
     else if (key === "time" || key === "emoji") element.classList.remove("is-open");
     else element.classList.add("hidden");
   });
+  $("sessionImageCaption")?.classList.toggle("is-visible", except === "image");
   $("sessionTextFormatting")?.classList.toggle("hidden", except !== "text");
 }
 
@@ -1246,6 +1247,7 @@ function showSessionImages() {
   hideSessionInputs("image");
   const field = $("sessionImages");
   field.classList.add("is-visible");
+  $("sessionImageCaption")?.classList.add("is-visible");
   field.focus();
 }
 
