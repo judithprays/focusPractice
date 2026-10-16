@@ -135,8 +135,6 @@
               <textarea id="sessionLearned" rows="2" placeholder="Optional"></textarea>
               <label for="sessionNextTime">For next time</label>
               <textarea id="sessionNextTime" rows="2" placeholder="Optional"></textarea>
-              <label for="sessionSummaryEmoji">Session summary emoji</label>
-              <input id="sessionSummaryEmoji" type="text" maxlength="8" placeholder="✨">
               <label for="sessionSummary">Session summary (TL;DR)</label>
               <input id="sessionSummary" type="text" maxlength="240" placeholder="What's the headline from this session?">
             </div>
@@ -144,7 +142,7 @@
 
           <div class="composer-toolbar" role="toolbar" aria-label="Session content options">
             <button type="button" class="composer-tool" onclick="focusSessionText()" aria-label="Add text" title="Text"><span class="tool-text-icon">T</span><span>Text</span></button>
-            <button type="button" class="composer-tool" onclick="document.getElementById('sessionImages').click()" aria-label="Add image" title="Image"><icon-placeholder></icon-placeholder><span aria-hidden="true">▧</span><span>Image</span></button>
+            <button type="button" class="composer-tool" onclick="document.getElementById('sessionImages').click()" aria-label="Add image" title="Image"><span aria-hidden="true">▧</span><span>Image</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionVideo()" aria-label="Add video" title="Video"><span class="tool-play-icon">▶</span><span>Video</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionTime()" aria-label="Set time spent" title="Time"><span class="tool-clock-icon">◷</span><span>Time</span></button>
             <button type="button" class="composer-tool" onclick="focusSessionEmoji()" aria-label="Add emoji" title="Emoji"><span>☺</span><span>Emoji</span></button>
