@@ -1033,8 +1033,16 @@ function updateSessionTimeLabel() {
 }
 
 function focusSessionText() {
-  $("sessionText").focus();
-  $("sessionText").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const field = $("sessionText");
+  field.classList.remove("hidden");
+  field.focus();
+  field.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function showSessionImages() {
+  const field = $("sessionImages");
+  field.classList.add("is-visible");
+  field.focus();
 }
 
 function focusSessionVideo() {
@@ -1064,6 +1072,8 @@ function openSessionForm() {
   $("sessionDate").value = todayString();
   $("sessionImages").value = "";
   $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
   $("sessionTimeSlider").value = "45";
   updateSessionTimeLabel();
   document.querySelector(".composer-extra-fields")?.classList.add("hidden");
@@ -1092,6 +1102,8 @@ function closeSessionForm() {
   $("sessionText").value = "";
   $("sessionImages").value = "";
   $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
   $("sessionPrompt").value = "";
 
   $("sessionAccomplished").value = "";
@@ -1512,6 +1524,12 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if (event.target.id === "sessionPrompt" && event.target.value) {
+    focusSessionText();
+    $("sessionText").value = event.target.value + "\\n";
+    resizeSessionTextarea($("sessionText"));
+    $("sessionText").setSelectionRange($("sessionText").value.length, $("sessionText").value.length);
+  }
   if (event.target.id === "sessionImages") {
     const existing = document.getElementById("sessionImageSelection");
     if (existing) existing.remove();
