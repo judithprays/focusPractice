@@ -2271,3 +2271,10 @@ body.is-loading button {
 .session-poll-card strong { display:block; margin-bottom:10px; }
 .session-poll-option { display:flex; align-items:center; gap:8px; cursor:pointer; }
 .session-poll-option input { flex:0 0 auto; }
+
+/* Final alignment details */
+.session-card-visual.image-frame-polaroid { width:calc(100% + 32px)!important; margin:-16px -16px 0!important; }
+@media (max-width:700px) { .session-card-visual.image-frame-polaroid { width:calc(100% + 24px)!important; margin:-12px -12px 0!important; } }
+.session-tag-cloud { border:0!important; border-top:0!important; border-bottom:0!important; }
+.session-card-item > .session-poll-card { width:100%; }
+.focus-delete-bottom #deleteFocusButton::after { content:"🗑️😭"; font-size:21px; }
