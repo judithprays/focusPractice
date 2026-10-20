@@ -710,13 +710,12 @@ function renderFocusGoal() {
   const goal = currentFocus?.goal?.trim() || "";
   const display = $("focusGoalDisplay");
   const editor = document.querySelector(".focus-goal-editor");
-  const editButton = $("editGoalButton");
   const cancelButton = $("cancelGoalButton");
-  if (!display || !editor || !editButton) return;
+  if (!display || !editor) return;
 
-  display.textContent = goal ? `Goal: ${goal}` : "";
-  display.classList.toggle("hidden", !goal);
-  editButton.classList.toggle("hidden", !goal);
+  display.textContent = goal || "Add a goal";
+  display.classList.toggle("hidden", false);
+  display.classList.toggle("is-empty-goal", !goal);
   editor.classList.toggle("hidden", Boolean(goal));
   if (cancelButton) cancelButton.classList.add("hidden");
   $("goalSaveStatus").textContent = "";
@@ -727,7 +726,6 @@ function editFocusGoal() {
   if (!editor) return;
   $("focusGoalEdit").value = currentFocus?.goal || "";
   editor.classList.remove("hidden");
-  $("editGoalButton").classList.add("hidden");
   $("cancelGoalButton").classList.remove("hidden");
   $("focusGoalEdit").focus();
 }
@@ -802,39 +800,10 @@ async function showFocus() {
 
 function updateFocusCoverBanner() {
   const coverBanner = $("focusCoverBanner");
-  const coverImage = $("focusCoverImage");
-  if (!coverBanner || !coverImage) return;
-
-  // Prefer a cover the user explicitly selected. Otherwise, use the newest
-  // photo in this project's session log automatically.
-  let coverUrl = isSafeImageUrl(currentFocus?.cover_image_url)
-    ? currentFocus.cover_image_url
-    : "";
-
-  if (!coverUrl) {
-    for (let sessionIndex = currentSessions.length - 1; sessionIndex >= 0 && !coverUrl; sessionIndex--) {
-      const urls = Array.isArray(currentSessions[sessionIndex].image_urls)
-        ? currentSessions[sessionIndex].image_urls
-        : [];
-      for (let imageIndex = urls.length - 1; imageIndex >= 0; imageIndex--) {
-        if (isSafeImageUrl(urls[imageIndex])) {
-          coverUrl = urls[imageIndex];
-          break;
-        }
-      }
-    }
-  }
-
-  if (coverUrl) {
-    if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
-    coverBanner.classList.remove("no-cover");
-  } else {
-    coverImage.removeAttribute("src");
-    coverBanner.classList.add("no-cover");
-  }
+  if (!coverBanner) return;
+  coverBanner.classList.remove("no-cover");
   coverBanner.classList.remove("hidden");
 }
-
 
 function renderFocusState() {
 
@@ -1082,8 +1051,8 @@ function renderSessions() {
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
-            ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-heading-top"><span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>${timeMarkup}</div><div class="session-tldr">${visualSummary}<span class="session-expand-indicator" aria-hidden="true">＋</span></div></div>`}
-            ${isTextCard ? `<div class="text-card-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</div>` : ""}
+            ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
+            
             <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">×</button>
           </summary>
           <div class="session-expanded-content">
@@ -1093,7 +1062,7 @@ function renderSessions() {
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
               <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
             </div>
-            <div class="session-main"><div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
             <div class="session-details">
               ${renderSessionDetail("Things accomplished", session.accomplished)}
               ${renderSessionDetail("Funny things that happened", session.funny)}
@@ -1109,6 +1078,15 @@ function renderSessions() {
   }).join("");
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+async function saveEditedSessionText(element) {
+  const sessionId = element && element.dataset.sessionId;
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (!session || !element) return;
+  const body = element.innerText.trim();
+  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
+  if (error) { console.error(error); alert("Could not save this text. Please try again."); return; }
+  session.body = body;
+}
 function updateTextCardStyle(sessionId, key, value) {
   const styles = readSessionCardStyles();
   styles[String(sessionId)] = styles[String(sessionId)] || {};
