@@ -198,6 +198,7 @@
         </div>
 
         <button id="addSessionButton" class="secondary-button add-session-button" onclick="openSessionForm()">+ Add a step</button>
+        <div id="focusStepActions" class="focus-step-actions"></div>
 
 
         <!-- END FOCUS -->
@@ -206,33 +207,7 @@
           class="focus-ending"
         >
 
-          <div class="ending-actions">
-
-            <button
-              class="primary-button"
-              onclick="completeFocus()"
-            >
-              I've finished
-            </button>
-
-            <button
-              class="secondary-button"
-              onclick="showAbandonFocus()"
-            >
-              Abandon
-            </button>
-
-              <button
-                id="deleteFocusButton"
-               class="delete-button"
-                onclick="deleteCurrentFocus()"
-          >
-            Delete Focus
-          </button>
-
-          </div>
-
-        </div>
+          <div class="ending-actions"></div>
 
 
         <!-- ABANDON -->
@@ -285,6 +260,28 @@
           </div>
 
         </div>
+
+        <div class="focus-delete-bottom"><button
+              class="primary-button"
+              onclick="completeFocus()"
+            >
+              I've finished
+            </button>
+
+            <button
+              class="secondary-button"
+              onclick="showAbandonFocus()"
+            >
+              Abandon
+            </button>
+
+              <button
+                id="deleteFocusButton"
+               class="delete-button"
+                onclick="deleteCurrentFocus()"
+          >
+            🗑️😭 Delete focus
+          </button></div>
 
       </div>
 
