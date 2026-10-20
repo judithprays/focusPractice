@@ -1137,7 +1137,7 @@ function renderSessions() {
     const cardAngle = getSessionCardAngle(session.id);
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
-    const isTextCard = !visual;
+    const isTextCard = !visual && !linkUrl;
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
@@ -1182,8 +1182,11 @@ function renderSessions() {
   if (addButton && addButton.parentElement !== list) list.appendChild(addButton);
   if (composer && composer.parentElement !== list) list.appendChild(composer);
   if (addButton) list.appendChild(addButton);
+  const focusStepActions = $("focusStepActions");
+  if (focusStepActions) list.appendChild(focusStepActions);
   if (composer) list.appendChild(composer);
   if (addButton) addButton.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active" || !composer.classList.contains("hidden"));
+  if (focusStepActions) focusStepActions.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active");
 }
 function renderCaptionDisplayControl(sessionId, style) {
   const mode = style.captionDisplay || "below";
