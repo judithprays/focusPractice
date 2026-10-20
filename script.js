@@ -577,27 +577,23 @@ async function loadCollection() {
       : `<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>`;
   }
 
-  const renderBoard = (focus, statusLabel) => `
+  const renderBoard = (focus) => `
     <button class="focus-collection-board" onclick="openFocus('${focus.id}')" aria-label="Open ${escapeHtml(focus.title)} focus log">
-      <span class="focus-collection-status">${statusLabel}</span>
       <h2>${escapeHtml(focus.title || "Untitled focus")}</h2>
-      ${focus.goal ? `<p>${escapeHtml(focus.goal)}</p>` : ""}
-      ${focus.completion_text ? `<p class="focus-collection-note">${escapeHtml(focus.completion_text)}</p>` : ""}
-      <span class="focus-collection-open">Open focus log ↗</span>
     </button>
   `;
 
-  const renderSection = (title, items, statusLabel) => items.length ? `
+  const renderSection = (title, items) => items.length ? `
     <section class="focus-collection-group">
       <p class="eyebrow">${title}</p>
-      <div class="focus-collection-boards">${items.map((focus) => renderBoard(focus, statusLabel)).join("")}</div>
+      <div class="focus-collection-boards">${items.map(renderBoard).join("")}</div>
     </section>
   ` : "";
 
   const sections = [
-    activeFocus ? renderSection("MY CURRENT FOCUS", [activeFocus], "ACTIVE") : "",
-    renderSection("COMPLETED FOCUSES", completedFocuses, "COMPLETED"),
-    renderSection("ABANDONED FOCUSES", abandonedFocuses, "ABANDONED")
+    activeFocus ? renderSection("MY CURRENT FOCUS", [activeFocus]) : "",
+    renderSection("COMPLETED FOCUSES", completedFocuses),
+    renderSection("ABANDONED FOCUSES", abandonedFocuses)
   ].filter(Boolean).join("");
 
   list.innerHTML = sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`;
