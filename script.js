@@ -1073,7 +1073,7 @@ function renderSessions() {
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual;
-    const textStyle = `--text-card-height:${Math.max(80, Math.min(420, Number(cardStyle.height) || 150)}px;--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22)}px;--text-card-font-family:${["Helvetica, Arial, sans-serif","Georgia, serif","'Courier New', monospace","Arial, sans-serif"].includes(cardStyle.fontFamily) ? cardStyle.fontFamily : "Georgia, serif"}`;
+    const textStyle = `--text-card-height:${Math.max(80, Math.min(420, Number(cardStyle.height) || 150))}px;--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${["Helvetica, Arial, sans-serif","Georgia, serif","'Courier New', monospace","Arial, sans-serif"].includes(cardStyle.fontFamily) ? cardStyle.fontFamily : "Georgia, serif"}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
