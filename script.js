@@ -119,6 +119,68 @@ function stripSessionImageCaption(body) {
   return String(body || "").replace(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
 }
 
+
+async function saveSessionDate(sessionId, value) {
+  if (!value) return;
+  const { error } = await focusSupabase.from("sessions").update({ session_date: value }).eq("id", sessionId).eq("focus_id", currentFocusId);
+  if (error) { console.error(error); alert("Could not save the session date."); return; }
+  await loadSessions();
+}
+function readSessionTagsMap() { try { return JSON.parse(localStorage.getItem("focusPractice.sessionTags") || "{}") || {}; } catch { return {}; } }
+function getSessionTags(session) { return readSessionTagsMap()[String(session.id)] || []; }
+async function saveSessionTags(sessionId, value) {
+  const tags = [...new Set(String(value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
+  const map = readSessionTagsMap(); map[String(sessionId)] = tags;
+  try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(map)); } catch {}
+  await loadSessions();
+}
+function renderSessionTags(session) {
+  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function renderSessionTagCloud() {
+  const cloud = $("sessionTagCloud"); if (!cloud) return;
+  const tags = [...new Set(currentSessions.flatMap(getSessionTags))].sort((a,b) => a.localeCompare(b));
+  cloud.innerHTML = tags.map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function openFirstSessionWithTag(tag) {
+  const target = currentSessions.find(session => getSessionTags(session).some(value => value.toLowerCase() === String(tag).toLowerCase()));
+  if (!target) return;
+  const card = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(target.id)) + '"] .session-card');
+  if (card) { card.open = true; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+function updateSessionImageFlip(sessionId, value) {
+  if (!["none", "flip-horizontal", "flip-vertical", "flip-both"].includes(value)) return;
+  const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFlip: value };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId));
+  const image = item && item.querySelector(".session-card-visual img"); if (image) image.className = value === "none" ? "" : value;
+}
+let sessionTimerSeconds = 0, sessionTimerStartedAt = null, sessionTimerInterval = null;
+function formatTimer(seconds) { return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0"); }
+function updateSessionTimerDisplay() { const el = $("sessionTimerReadout"); if (el) el.textContent = formatTimer(sessionTimerSeconds + (sessionTimerStartedAt ? Math.floor((Date.now() - sessionTimerStartedAt) / 1000) : 0)); }
+function toggleSessionTimer() { $("sessionTimerPanel")?.classList.toggle("hidden"); updateSessionTimerDisplay(); }
+function startPauseSessionTimer() {
+  const button = $("sessionTimerPanel")?.querySelector("button.secondary-button");
+  if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; if (button) button.textContent = "Start"; }
+  else { sessionTimerStartedAt = Date.now(); sessionTimerInterval = setInterval(updateSessionTimerDisplay, 1000); if (button) button.textContent = "Pause"; }
+  updateSessionTimerDisplay();
+}
+function resetSessionTimer() { sessionTimerSeconds = 0; sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; const button = $("sessionTimerPanel")?.querySelector("button.secondary-button"); if (button) button.textContent = "Start"; updateSessionTimerDisplay(); }
+function togglePollComposer() { $("sessionPollPanel")?.classList.toggle("hidden"); }
+function attachSessionPoll() {
+  const question = $("sessionPollQuestion").value.trim();
+  const options = $("sessionPollOptions").value.split("\n").map(value => value.trim()).filter(Boolean);
+  if (!question || options.length < 2) { $("sessionPollStatus").textContent = "Add a question and at least two options."; return; }
+  $("sessionText").dataset.poll = JSON.stringify({ question, options });
+  $("sessionPollStatus").textContent = "Poll attached. Save this step to publish it.";
+}
+function renderSessionPoll(session) {
+  let poll; try { poll = JSON.parse(session.poll_data || "null"); } catch {}
+  if (!poll || !poll.question || !Array.isArray(poll.options)) return "";
+  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + poll.options.map((option, i) => '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\',' + i + ')"> ' + escapeHtml(option) + '</label>').join("") + '</div>';
+}
+function voteInSessionPoll(sessionId, option) { const votes = JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}"); votes[String(sessionId)] = option; try { localStorage.setItem("focusPractice.pollVotes", JSON.stringify(votes)); } catch {} }
+
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
