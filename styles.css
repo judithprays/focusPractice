@@ -2249,3 +2249,6 @@ body.is-loading button {
 .focus-delete-bottom { display:flex; justify-content:flex-start; margin:36px 0 12px; padding-top:18px; border-top:1px solid #ddd5ca; }
 .focus-delete-bottom #deleteFocusButton { border-radius:999px; }
 .session-link-preview { grid-column:1/-1; }
+
+/* Center the session log controls. */
+#sessionsList { justify-content:center!important; }
