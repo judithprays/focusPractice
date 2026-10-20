@@ -1101,9 +1101,9 @@ function renderSessions() {
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
-    const bodyWithoutVideo = stripSessionImageCaption(videoUrl
+    const bodyWithoutVideo = stripSessionImageCaption((videoUrl
       ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
-      : session.body);
+      : session.body).replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, ""));
     const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
     const emoji = (session.summary_emoji || "").trim();
@@ -1128,6 +1128,7 @@ function renderSessions() {
           <summary class="session-collapsed-header">
             ${visual}
             ${renderSessionTags(session)}
+            ${renderSessionPoll(session)}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
           </summary>
@@ -1163,6 +1164,7 @@ function renderSessions() {
   if (composer && composer.parentElement !== list) list.appendChild(composer);
   if (addButton) list.appendChild(addButton);
   if (composer) list.appendChild(composer);
+  if (addButton) addButton.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active" || !composer.classList.contains("hidden"));
 }
 function renderCaptionDisplayControl(sessionId, style) {
   const mode = style.captionDisplay || "below";
@@ -1412,6 +1414,9 @@ function openSessionForm() {
   $("addSessionButton")?.classList.add("hidden");
 
   $("sessionDate").value = todayString();
+  if ($("sessionTagsInput")) $("sessionTagsInput").value = "";
+  if ($("sessionText")) delete $("sessionText").dataset.poll;
+  $("sessionPollPanel")?.classList.add("hidden"); $("sessionTimerPanel")?.classList.add("hidden"); resetSessionTimer();
   clearSessionDrawing();
   $("sessionImages").value = "";
   $("sessionImageCaption").value = "";
@@ -1441,6 +1446,9 @@ function closeSessionForm() {
   $("addSessionButton")?.classList.remove("hidden");
 
   $("sessionText").value = "";
+  delete $("sessionText").dataset.poll;
+  if ($("sessionTagsInput")) $("sessionTagsInput").value = "";
+  $("sessionPollPanel")?.classList.add("hidden"); $("sessionTimerPanel")?.classList.add("hidden"); resetSessionTimer();
   $("sessionImages").value = "";
   $("sessionImageCaption").value = "";
   $("sessionVideoUrl").value = "";
@@ -1483,6 +1491,10 @@ async function saveSession() {
   // Read the note field at submit time, even if the toolbar hid it moments earlier.
   const textField = $("sessionText");
   let body = String(textField?.value || "").trim();
+  if (textField?.dataset.poll) body = body + (body ? "\n\n" : "") + "[focus-poll]" + textField.dataset.poll + "[/focus-poll]";
+  const tagValues = [...new Set(String($("sessionTagsInput")?.value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
+  if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
+  if (sessionTimerSeconds > 0 && !$("sessionTimeSpent").value.trim()) $("sessionTimeSpent").value = Math.max(1, Math.round(sessionTimerSeconds / 60)) + " min";
   const imageCaption = $("sessionImageCaption").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
@@ -1571,6 +1583,7 @@ async function saveSession() {
     return;
   }
 
+  if (tagValues.length) { const tagMap = readSessionTagsMap(); tagMap[String(insertedSession.id)] = tagValues; try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(tagMap)); } catch {} }
   // Persist the image style chosen on the initial composer screen.
   if (selectedImages.length) {
     const styles = readSessionCardStyles();
