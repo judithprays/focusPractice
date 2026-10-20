@@ -2095,3 +2095,6 @@ body.is-loading button {
 .include-prompt-option input { width:auto; margin:0; }
 .text-card-item .session-card[open] .text-card-preview { display:none!important; }
 @media(max-width:700px) { .focus-cover-banner .focus-board-title { width:min(68%,300px)!important; top:16px!important; left:14px!important; } }
+
+.session-save-button { margin-top:12px; padding:8px 16px; border:1px solid #bcb4a8; border-radius:4px; background:#fffefa; color:#111; cursor:pointer; }
+.session-save-button:hover { background:#eee8dd; }
