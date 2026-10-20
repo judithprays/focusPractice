@@ -1208,12 +1208,8 @@ async function saveEditedSessionText(element) {
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session || !element || element.dataset.saving === "true") return;
   const oldBody = String(session.body || "");
-  const oldLinkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
-  const oldLinkCaption = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
   const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
-  const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
-  const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
   const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
@@ -1223,8 +1219,6 @@ async function saveEditedSessionText(element) {
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
-  if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
-  if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
   if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
   if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
   if (oldLinkMatch) body += (body ? "\n\n" : "") + oldLinkMatch[1].trim();
