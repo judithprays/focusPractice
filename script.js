@@ -1185,11 +1185,13 @@ async function saveEditedSessionText(element) {
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session || !element || element.dataset.saving === "true") return;
   const oldBody = String(session.body || "");
+  const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
   const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
   let body = element.innerText.trim();
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
+  if (pollMatch) body += (body ? "\n\n" : "") + pollMatch[1].trim();
   if (body === oldBody) return;
   element.dataset.saving = "true";
   const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
