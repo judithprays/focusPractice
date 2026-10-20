@@ -13,6 +13,9 @@ const focusSupabase = window.supabase.createClient(
 let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
+let currentUser = null;
+let authMode = "login";
+let authIntent = "home";
 
 const SESSION_IMAGES_BUCKET = "session-images";
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
@@ -145,7 +148,7 @@ function stripSessionImageCaption(body) {
 
 
 async function saveSessionDate(sessionId, value) {
-  if (!value) return;
+  if (!isCurrentUserOwner() || !value) return;
   const { error } = await focusSupabase.from("sessions").update({ session_date: value }).eq("id", sessionId).eq("focus_id", currentFocusId);
   if (error) { console.error(error); alert("Could not save the session date."); return; }
   await loadSessions();
@@ -155,6 +158,7 @@ async function saveSessionDate(sessionId, value) {
 function readSessionTagsMap() { try { return JSON.parse(localStorage.getItem("focusPractice.sessionTags") || "{}") || {}; } catch { return {}; } }
 function getSessionTags(session) { const match = String(session.body || "").match(/(?:^|\n)\[focus-tags\]([\s\S]*?)\[\/focus-tags\]/i); try { if (match) { const parsed = JSON.parse(match[1]); if (Array.isArray(parsed)) return parsed; } } catch {} return readSessionTagsMap()[String(session.id)] || []; }
 async function saveSessionTags(sessionId, value) {
+  if (!isCurrentUserOwner()) return;
   const tags = [...new Set(String(value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
   const map = readSessionTagsMap(); map[String(sessionId)] = tags;
   try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(map)); } catch {}
@@ -262,12 +266,13 @@ function renderSessionCardVisual(session) {
 function renderSessionImages(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls : [];
   if (!urls.length) return "";
+  const canEdit = isCurrentUserOwner();
   return `<div class="session-images">${urls.map((url, imageIndex) => {
     if (!isSafeImageUrl(url)) return "";
     const isCover = currentFocus?.cover_image_url === url;
     return `<figure class="session-image-item">
       <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="Open session image in a new tab"><img src="${escapeHtml(url)}" alt="Image from session ${session.session_date ? escapeHtml(session.session_date) : ""}" loading="lazy"></a>
-      <figcaption><button type="button" class="image-cover-button ${isCover ? "is-cover" : ""}" onclick="setCoverImage('${escapeHtml(session.id)}', ${imageIndex})">${isCover ? "✓ Project cover" : "Use as cover"}</button></figcaption>
+      <figcaption><button type="button" class="image-cover-button ${canEdit ? "" : "hidden"} ${isCover ? "is-cover" : ""}" onclick="setCoverImage('${escapeHtml(session.id)}', ${imageIndex})">${isCover ? "✓ Project cover" : "Use as cover"}</button></figcaption>
     </figure>`;
   }).join("")}</div>`;
 }
@@ -362,25 +367,69 @@ function clearFocusUrl() {
 -------------------------------- */
 
 function updateNavigation() {
-
-  const currentFocusNav = $("currentFocusNav");
-
-  if (!currentFocusNav) return;
-
-  if (
-    currentFocus &&
-    currentFocus.status === "active"
-  ) {
-
-    currentFocusNav.classList.remove("hidden");
-
-  } else {
-
-    currentFocusNav.classList.add("hidden");
-
-  }
+  $("authNavLink")?.classList.toggle("hidden", Boolean(currentUser));
+  $("signOutNavLink")?.classList.toggle("hidden", !currentUser);
 }
-
+function isCurrentUserOwner() {
+  return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
+}
+function requireAuth(intent = "home") {
+  if (currentUser) return true;
+  authIntent = intent; showAuth(); return false;
+}
+function showAuth(intent) {
+  if (intent) authIntent = intent;
+  showOnly("authScreen"); renderAuthMode(); $("authEmail")?.focus();
+}
+function renderAuthMode() {
+  const signup = authMode === "signup";
+  $("authHeading").textContent = signup ? "Create your account" : "Log in";
+  $("authIntro").textContent = signup ? "Your focuses and logs will live in your own collection." : "Log in to start and manage your focuses.";
+  $("authSubmitButton").textContent = signup ? "Create account" : "Log in";
+  $("authPassword").autocomplete = signup ? "new-password" : "current-password";
+  $("authSwitchPrompt").textContent = signup ? "Already have an account?" : "New here?";
+  $("authSwitchButton").textContent = signup ? "Log in" : "Create an account";
+  $("forgotPasswordButton").classList.toggle("hidden", signup);
+  $("authMessage").textContent = "";
+}
+function toggleAuthMode() { authMode = authMode === "login" ? "signup" : "login"; renderAuthMode(); }
+async function submitAuth(event) {
+  event.preventDefault();
+  const email = $("authEmail").value.trim(), password = $("authPassword").value;
+  const button = $("authSubmitButton"), message = $("authMessage");
+  button.disabled = true; message.textContent = authMode === "signup" ? "Creating your account…" : "Logging in…";
+  const mode = authMode;
+  const result = mode === "signup"
+    ? await focusSupabase.auth.signUp({email,password})
+    : await focusSupabase.auth.signInWithPassword({email,password});
+  button.disabled = false;
+  if (result.error) { console.error(result.error); message.textContent = result.error.message || "Couldn't authenticate. Please try again."; return; }
+  if (mode === "signup" && !result.data.session) {
+    authMode = "login"; renderAuthMode();
+    $("authMessage").textContent = "Check your email to confirm your account, then log in here.";
+    return;
+  }
+  currentUser = result.data.user || result.data.session?.user || null;
+  updateNavigation(); await continueAfterAuth();
+}
+async function sendPasswordReset() {
+  const email = $("authEmail").value.trim();
+  if (!email) { $("authMessage").textContent = "Enter your email address first."; $("authEmail").focus(); return; }
+  const {error}=await focusSupabase.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin+window.location.pathname});
+  $("authMessage").textContent=error ? error.message : "If an account exists for that email, a password reset link is on its way.";
+}
+async function signOut() {
+  const {error}=await focusSupabase.auth.signOut();
+  if(error){console.error(error);alert("Couldn't log out. Please try again.");return;}
+  currentUser=null; currentFocus=null; currentFocusId=null; currentSessions=[];
+  clearFocusUrl(); updateNavigation(); await showHome();
+}
+async function continueAfterAuth() {
+  const intent=authIntent; authIntent="home"; authMode="login"; updateNavigation();
+  if(intent==="start-focus") await showCreateFocus();
+  else if(intent==="my-focuses") await showMyCollection();
+  else await showHome();
+}
 
 function goToCurrentFocus() {
 
@@ -410,14 +459,10 @@ function showHome() {
 }
 
 
-async function showCollection() {
-
-  clearFocusUrl();
-
-  showOnly("collectionScreen");
-
-  await loadCollection();
-
+async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("all"); }
+async function showMyCollection() {
+  if (!requireAuth("my-focuses")) return;
+  clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
 }
 
 
@@ -435,53 +480,24 @@ function showAbout() {
 -------------------------------- */
 
 async function loadHomeFocuses() {
-
-  const list = $("currentFocusHomeContent");
-
-  if (!list) return;
-
-  list.innerHTML =
-    `<p class="empty-state">Loading...</p>`;
-
-
-  /*
-    For now, all started focuses are visible.
-    We intentionally do NOT filter by is_public.
-  */
-
-  const { data, error } = await focusSupabase
-    .from("focuses")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("Home focus query failed:", error);
-    list.innerHTML = `<p class="empty-state">Couldn't load your focus. Please refresh and try again.</p>`;
-    return;
+  const list=$("currentFocusHomeContent"); if(!list)return;
+  list.innerHTML='<p class="empty-state">Loading...</p>';
+  if(!currentUser){
+    currentFocus=null;currentFocusId=null;updateNavigation();
+    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
+    list.innerHTML='<button class="primary-button home-start-focus" onclick="showAuth(\'start-focus\')">Start a focus</button>';return;
   }
-
-  // Prefer the active focus, but tolerate older records whose status value
-  // predates the current active/completed/abandoned convention.
-  const focuses = data || [];
-  const focusToShow =
-    focuses.find((focus) => focus.status === "active") ||
-    focuses.find((focus) => !["completed", "abandoned"].includes(String(focus.status || "").toLowerCase()));
-
-  if (!focusToShow) {
-    const home = document.querySelector(".current-focus-home");
-    if (home) home.classList.add("no-active-focus");
-    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
-    return;
+  const {data,error}=await focusSupabase.from("focuses").select("*").eq("owner_id",currentUser.id).order("created_at",{ascending:false});
+  if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load your focus. Please refresh and try again.</p>';return;}
+  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active");
+  if(!focusToShow){
+    currentFocus=null;currentFocusId=null;document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
+    list.innerHTML='<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';return;
   }
-
-  const home = document.querySelector(".current-focus-home");
-  if (home) home.classList.remove("no-active-focus");
-  currentFocus = focusToShow;
-  currentFocusId = currentFocus.id;
-  updateNavigation();
-  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1 aria-label="' + escapeHtml(currentFocus.title) + '">' + escapeHtml(currentFocus.title || "") + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
+  document.querySelector(".current-focus-home")?.classList.remove("no-active-focus");
+  currentFocus=focusToShow;currentFocusId=focusToShow.id;updateNavigation();
+  list.innerHTML='<button class="current-focus-card" onclick="openFocus(\''+escapeHtml(focusToShow.id)+'\')"><h1>'+escapeHtml(focusToShow.title||"")+'</h1><p>'+escapeHtml(focusToShow.goal||"Small steps. Big momentum. ♡")+'</p><span>Open your focus log ↗</span></button>';
 }
-
 
 function renderFocusCard(focus) {
 
@@ -548,83 +564,33 @@ function renderFocusCard(focus) {
    FOCUS COLLECTION
 -------------------------------- */
 
-async function loadCollection() {
-  const list = $("collectionList");
-  if (!list) return;
-
-  list.innerHTML = `<p class="empty-state">Loading...</p>`;
-
-  const { data, error } = await focusSupabase
-    .from("focuses")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error(error);
-    list.innerHTML = `<p class="empty-state">Couldn't load the Focus Collection.</p>`;
-    return;
-  }
-
-  const focuses = data || [];
-  const activeFocus = focuses.find((focus) => focus.status === "active");
-  const completedFocuses = focuses.filter((focus) => focus.status === "completed");
-  const abandonedFocuses = focuses.filter((focus) => focus.status === "abandoned");
-  const action = $("collectionFocusAction");
-
-  if (action) {
-    action.innerHTML = activeFocus
-      ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
-      : `<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>`;
-  }
-
-  const renderBoard = (focus) => `
-    <button class="focus-collection-board" onclick="openFocus('${focus.id}')" aria-label="Open ${escapeHtml(focus.title)} focus log">
-      <h2>${escapeHtml(focus.title || "Untitled focus")}</h2>
-    </button>
-  `;
-
-  const renderSection = (title, items) => items.length ? `
-    <section class="focus-collection-group">
-      <p class="eyebrow">${title}</p>
-      <div class="focus-collection-boards">${items.map(renderBoard).join("")}</div>
-    </section>
-  ` : "";
-
-  const sections = [
-    activeFocus ? renderSection("MY CURRENT FOCUS", [activeFocus]) : "",
-    renderSection("COMPLETED FOCUSES", completedFocuses),
-    renderSection("ABANDONED FOCUSES", abandonedFocuses)
-  ].filter(Boolean).join("");
-
-  // Collect tags across every focus so the collection has one searchable tag index.
-  let collectionTagsMarkup = "";
-  if (focuses.length) {
-    const focusIds = focuses.map(focus => focus.id);
-    const { data: sessions, error: sessionsError } = await focusSupabase
-      .from("sessions")
-      .select("id, focus_id, body, session_date, summary")
-      .in("focus_id", focusIds)
-      .order("session_date", { ascending: true });
-    if (sessionsError) {
-      console.error("Could not load collection tags:", sessionsError);
-    } else {
-      const seenTags = new Map();
-      (sessions || []).forEach(session => {
-        getSessionTags(session).forEach(tag => {
-          const key = tag.toLowerCase();
-          if (!seenTags.has(key)) seenTags.set(key, { label: tag, targets: [] });
-          seenTags.get(key).targets.push({ focusId: session.focus_id, sessionId: session.id });
-        });
-      });
-      const allTags = [...seenTags.values()].sort((a, b) => a.label.localeCompare(b.label));
-      collectionTagsMarkup = allTags.length ? `
-        <section class="collection-tag-index">
-          <p class="eyebrow">TAGS</p>
-          <div class="session-tag-cloud">${allTags.map(tag => `<button type="button" class="session-tag" onclick="openCollectionTagTarget('${escapeHtml(tag.targets[0].focusId)}','${escapeHtml(tag.targets[0].sessionId)}')">#${escapeHtml(tag.label)}</button>`).join("")}</div>
-        </section>` : "";
+async function loadCollection(scope="all") {
+  const list=$("collectionList");if(!list)return;
+  const mine=scope==="mine";const eyebrow=$("collectionEyebrow");
+  if(eyebrow)eyebrow.textContent=mine?"MY FOCUSES":"EXPLORE FOCUSES";
+  list.innerHTML='<p class="empty-state">Loading...</p>';
+  let query=focusSupabase.from("focuses").select("*").order("created_at",{ascending:false});
+  if(mine)query=query.eq("owner_id",currentUser.id);
+  const {data,error}=await query;
+  if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load the Focus Collection.</p>';return;}
+  const focuses=data||[],active=focuses.find(f=>f.status==="active"),completed=focuses.filter(f=>f.status==="completed"),abandoned=focuses.filter(f=>f.status==="abandoned");
+  const action=$("collectionFocusAction");
+  if(action)action.innerHTML=!mine?"":active
+    ? '<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>'+escapeHtml(active.title)+'</strong></p><button class="secondary-button" onclick="openFocus(\''+escapeHtml(active.id)+'\')">Return to your current focus ↗</button></div>'
+    : '<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>';
+  const board=f=>'<button class="focus-collection-board" onclick="openFocus(\''+escapeHtml(f.id)+'\')" aria-label="Open '+escapeHtml(f.title)+' focus log"><h2>'+escapeHtml(f.title||"Untitled focus")+'</h2></button>';
+  const section=(label,items)=>items.length?'<section class="focus-collection-group"><p class="eyebrow">'+label+'</p><div class="focus-collection-boards">'+items.map(board).join("")+'</div></section>':"";
+  const sections=[section(mine?"MY CURRENT FOCUS":"CURRENT FOCUSES",active?[active]:[]),section("COMPLETED FOCUSES",completed),section("ABANDONED FOCUSES",abandoned)].filter(Boolean).join("");
+  let tagsMarkup="";
+  if(mine&&focuses.length){
+    const {data:sessions,error:tagError}=await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id",focuses.map(f=>f.id)).order("session_date",{ascending:true});
+    if(tagError)console.error(tagError);else{
+      const seen=new Map();(sessions||[]).forEach(s=>getSessionTags(s).forEach(tag=>{const key=tag.toLowerCase();if(!seen.has(key))seen.set(key,{label:tag,targets:[]});seen.get(key).targets.push({focusId:s.focus_id,sessionId:s.id});}));
+      const all=[...seen.values()].sort((a,b)=>a.label.localeCompare(b.label));
+      if(all.length)tagsMarkup='<section class="collection-tag-index"><p class="eyebrow">TAGS</p><div class="session-tag-cloud">'+all.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.targets[0].focusId)+'\',\''+escapeHtml(t.targets[0].sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("")+'</div></section>';
     }
   }
-  list.innerHTML = (sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`) + collectionTagsMarkup;
+  list.innerHTML=(sections||'<p class="empty-state">'+(mine?"Your Focus Collection is empty. Start a focus to begin.":"No focuses have been shared yet.")+'</p>')+tagsMarkup;
 }
 
 async function openCollectionTagTarget(focusId, sessionId) {
@@ -645,10 +611,12 @@ async function openCollectionTagTarget(focusId, sessionId) {
 -------------------------------- */
 
 async function showCreateFocus() {
+  if (!requireAuth("start-focus")) return;
 
   const { data: activeFocus, error } = await focusSupabase
     .from("focuses")
     .select("*")
+    .eq("owner_id", currentUser.id)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -683,6 +651,7 @@ async function showCreateFocus() {
 
 
 async function startNewFocus() {
+  if (!requireAuth("start-focus")) return;
 
   const title = $("focusTitle").value.trim();
   const goal = $("focusGoalInput").value.trim() || null;
@@ -702,6 +671,7 @@ async function startNewFocus() {
   const { data: existingActiveFocus, error: activeCheckError } = await focusSupabase
     .from("focuses")
     .select("*")
+    .eq("owner_id", currentUser.id)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -731,6 +701,7 @@ async function startNewFocus() {
       title,
       goal,
       status: "active",
+      owner_id: currentUser.id,
 
       started_at:
         new Date().toISOString()
@@ -783,7 +754,7 @@ async function openFocus(focusId) {
 
 
 async function saveFocusGoal() {
-  if (!currentFocusId || !currentFocus) return;
+  if (!currentFocusId || !currentFocus || !isCurrentUserOwner()) return;
   const goal = $("focusGoalEdit").value.trim() || null;
   $("goalSaveStatus").textContent = "Saving…";
   const { data, error } = await focusSupabase.from("focuses").update({ goal }).eq("id", currentFocusId).select().single();
@@ -812,6 +783,7 @@ function renderFocusGoal() {
 }
 
 function editFocusGoal() {
+  if (!isCurrentUserOwner()) return;
   const editor = document.querySelector(".focus-goal-editor");
   if (!editor) return;
   $("focusGoalEdit").value = currentFocus?.goal || "";
@@ -826,6 +798,7 @@ function cancelEditFocusGoal() {
 }
 
 async function setCoverImage(sessionId, imageIndex) {
+  if (!isCurrentUserOwner()) return;
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   const url = session?.image_urls?.[imageIndex];
   if (!url || !currentFocusId) return;
@@ -876,10 +849,9 @@ async function showFocus() {
   currentFocus = data;
 
 
+  document.body.classList.toggle("editing-own-focus", isCurrentUserOwner());
   updateNavigation();
-
   renderFocusState();
-
   await loadSessions();
 }
 
@@ -897,6 +869,8 @@ function updateFocusCoverBanner() {
 
 function renderFocusState() {
   if (!currentFocus) return;
+  const canEdit=isCurrentUserOwner();
+  document.body.classList.toggle("editing-own-focus",canEdit);
 
   $("focusTitleDisplay").textContent = currentFocus.title;
   updateFocusCoverBanner();
@@ -923,12 +897,12 @@ function renderFocusState() {
   $("focusStatusLabel").textContent = statusLabel;
 
   const isActive = currentFocus.status === "active";
-  const canAddSteps = isActive || currentFocus.status === "completed";
-
-  // Completed focuses remain editable for now; abandoned focuses are read-only.
+  const canAddSteps = canEdit && (isActive || currentFocus.status === "completed");
   $("addSessionButton").classList.toggle("hidden", !canAddSteps);
-  $("focusEndingSection").classList.toggle("hidden", !isActive);
-  $("focusStepActions")?.classList.toggle("hidden", !isActive);
+  $("focusEndingSection").classList.toggle("hidden", !canEdit || !isActive);
+  $("focusStepActions")?.classList.toggle("hidden", !canEdit || !isActive);
+  $("deleteFocusButton")?.classList.toggle("hidden", !canEdit);
+  $("focusGoalDisplay")?.classList.toggle("goal-click-to-edit",canEdit);
 
   $("newSessionForm").classList.add("hidden");
   $("abandonFocusSection").classList.add("hidden");
@@ -940,7 +914,7 @@ function renderFocusState() {
 -------------------------------- */
 
 async function deleteCurrentFocus() {
-  if (!currentFocusId) return;
+  if (!currentFocusId || !isCurrentUserOwner()) return;
 
   const title = currentFocus?.title || "this Focus";
 
@@ -1114,6 +1088,7 @@ function renderSessions() {
     const visual = renderSessionCardVisual(session);
     const size = getSessionCardSize(session, index);
     const safeId = escapeHtml(session.id);
+    const canEdit = isCurrentUserOwner();
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
     const cardAngle = getSessionCardAngle(session.id);
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
@@ -1138,7 +1113,7 @@ function renderSessions() {
             
           </summary>
           <div class="session-expanded-content">
-            <div class="session-edit-controls">
+            <div class="session-edit-controls${canEdit ? "" : " read-only-hidden"}">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
               <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${cardStyle.showDate ? "" : "selected"}>Hidden</option><option value="on" ${cardStyle.showDate ? "selected" : ""}>Show date</option></select>
@@ -1150,7 +1125,7 @@ function renderSessions() {
               <button type="button" class="step-delete-button edit-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">Delete card</button>
               <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
             </div>
-            <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            <div class="session-main"><div class="session-body-content" contenteditable="${canEdit ? "true" : "false"}" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
             <div class="session-details">
               ${renderSessionDetail("Things accomplished", session.accomplished)}
               ${renderSessionDetail("Funny things that happened", session.funny)}
@@ -1202,6 +1177,7 @@ function updateSessionDateDisplay(sessionId, value) {
 }
 function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
 async function saveEditedSessionText(element) {
+  if (!isCurrentUserOwner()) return;
   const sessionId = element && element.dataset.sessionId;
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session || !element || element.dataset.saving === "true") return;
@@ -1227,6 +1203,7 @@ async function saveEditedSessionText(element) {
   await loadSessions();
 }
 async function saveSessionImageCaption(sessionId, value) {
+  if (!isCurrentUserOwner()) return;
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session) return;
   const oldBody = String(session.body || "");
@@ -1266,6 +1243,7 @@ function updateTextCardStyle(sessionId, key, value) {
 
 async function deleteSession(event, sessionId) {
   event.preventDefault();
+  if (!isCurrentUserOwner()) return;
   event.stopPropagation();
   if (!sessionId || !currentFocusId) return;
   if (!window.confirm("Delete this step? This can't be undone.")) return;
@@ -1549,6 +1527,7 @@ function closeSessionForm() {
 
 
 async function saveSession() {
+  if (!isCurrentUserOwner()) return;
 
   const date = $("sessionDate").value;
 
@@ -1691,8 +1670,7 @@ async function saveSession() {
 -------------------------------- */
 
 async function completeFocus() {
-
-  if (!currentFocusId) return;
+  if (!currentFocusId || !isCurrentUserOwner()) return;
 
 
   const confirmed = window.confirm(
@@ -1792,6 +1770,7 @@ function showAbandonFocus() {
 
 
 async function abandonFocus() {
+  if (!isCurrentUserOwner()) return;
 
   const learning =
     $("abandonLearning")
@@ -1863,59 +1842,14 @@ async function showPublicFocus(focusId) {
 -------------------------------- */
 
 async function initializeApp() {
-
-  const focusId =
-    getFocusIdFromUrl();
-
-
-  if (focusId) {
-
-    currentFocusId = focusId;
-
-    await showFocus();
-
-    return;
-  }
-
-
+  const {data:{session}}=await focusSupabase.auth.getSession();
+  currentUser=session?.user||null;
+  focusSupabase.auth.onAuthStateChange((_event,nextSession)=>{currentUser=nextSession?.user||null;updateNavigation();});
+  updateNavigation();
+  const focusId=getFocusIdFromUrl();
+  if(focusId){currentFocusId=focusId;await showFocus();return;}
   await showHome();
-
-
-  /*
-    If there is an active Focus in the database,
-    make it available in the persistent menu.
-  */
-
-  const {
-    data,
-    error
-  } = await focusSupabase
-    .from("focuses")
-    .select("*")
-    .eq("status", "active")
-    .order("created_at", {
-      ascending: false
-    })
-    .limit(1)
-    .maybeSingle();
-
-
-  if (!error && data) {
-
-    currentFocus = data;
-
-    currentFocusId = data.id;
-
-    updateNavigation();
-
-    /*
-      We don't change the page here.
-      The user remains on Home.
-    */
-
-  }
 }
-
 
 /*
   Browser back / forward support.
