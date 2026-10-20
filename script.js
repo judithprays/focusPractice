@@ -845,6 +845,8 @@ function renderFocusState() {
     currentFocus.title;
 
   updateFocusCoverBanner();
+  const boardTitle = $("focusTitleDisplay");
+  if (boardTitle) { boardTitle.textContent = currentFocus.title || ""; const angle = (Math.random() * 10 - 5).toFixed(2) + "deg"; boardTitle.style.setProperty("--board-angle", angle); }
 
   $("focusStarted").textContent =
     currentFocus.started_at
@@ -1052,13 +1054,7 @@ function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
   if (!section || !list) return;
-
-  if (currentSessions.length === 0) {
-    section.classList.add("hidden");
-    list.innerHTML = "";
-    return;
-  }
-
+  if (currentSessions.length === 0) { section.classList.add("hidden"); list.innerHTML = ""; return; }
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
@@ -1074,59 +1070,60 @@ function renderSessions() {
     const visual = renderSessionCardVisual(session);
     const size = getSessionCardSize(session, index);
     const safeId = escapeHtml(session.id);
-    const hasTldr = Boolean(emoji || summaryPreview);
-    const timeMarkup = timeSpent
-      ? `<span class="session-time">${escapeHtml(timeSpent)}</span>`
-      : "";
-    const tldr = hasTldr
-      ? `<div class="session-tldr">
-          ${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}
-          ${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}
-          <span class="session-expand-indicator" aria-hidden="true">＋</span>
-        </div>`
-      : "";
-
+    const cardStyle = readSessionCardStyles()[String(session.id)] || {};
+    const hasText = Boolean(bodyWithoutVideo.trim());
+    const isTextCard = !visual;
+    const textStyle = `--text-card-height:${Math.max(80, Math.min(420, Number(cardStyle.height) || 150)}px;--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22)}px;--text-card-font-family:${["Helvetica, Arial, sans-serif","Georgia, serif","'Courier New', monospace","Arial, sans-serif"].includes(cardStyle.fontFamily) ? cardStyle.fontFamily : "Georgia, serif"}`;
+    const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
+    const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
+    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
     return `
-      <div class="session-card-item" data-session-id="${safeId}" style="--session-card-width: ${size}%">
-      <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
-        <summary class="session-collapsed-header">
-          ${visual}
-          <div class="session-overlay-copy">
-          <div class="session-heading-top">
-            <span class="eyebrow session-number">STEP ${index + 1}</span>
-            <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
-            ${timeMarkup}
+      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%">
+        <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
+          <summary class="session-collapsed-header">
+            ${visual}
+            ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-heading-top"><span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>${timeMarkup}</div><div class="session-tldr">${visualSummary}<span class="session-expand-indicator" aria-hidden="true">＋</span></div></div>`}
+            ${isTextCard ? `<div class="text-card-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</div>` : ""}
+            <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">×</button>
+          </summary>
+          <div class="session-expanded-content">
+            <div class="session-edit-controls">
+              <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
+              <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
+              ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
+            </div>
+            <div class="session-main"><div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            <div class="session-details">
+              ${renderSessionDetail("Things accomplished", session.accomplished)}
+              ${renderSessionDetail("Funny things that happened", session.funny)}
+              ${renderSessionDetail("Excitements", session.excitements)}
+              ${renderSessionDetail("Mistakes", session.mistakes)}
+              ${renderSessionDetail("Things I learned", session.learned)}
+              ${renderSessionDetail("For next time", session.next_time)}
+            </div>
+            ${renderSessionImages(session)}
           </div>
-          ${tldr}
-          ${!hasTldr ? '<span class="session-expand-indicator session-expand-only" aria-hidden="true">＋</span>' : ""}
-          </div>
-          <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${escapeHtml(session.id)}')">×</button>
-        </summary>
-
-        <div class="session-expanded-content">
-          <div class="session-main">
-            <div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div>
-          </div>
-
-          <div class="session-details">
-            ${renderSessionDetail("Things accomplished", session.accomplished)}
-            ${renderSessionDetail("Funny things that happened", session.funny)}
-            ${renderSessionDetail("Excitements", session.excitements)}
-            ${renderSessionDetail("Mistakes", session.mistakes)}
-            ${renderSessionDetail("Things I learned", session.learned)}
-            ${renderSessionDetail("For next time", session.next_time)}
-          </div>
-
-          ${renderSessionImages(session)}
-        </div>
-      </details>
-      <div class="session-card-size-control">
-        <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value" for="sessionCardSize-${safeId}">${size}%</output></label>
-        <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width of step ${index + 1}" oninput="updateSessionCardSize('${safeId}', this.value)">
-      </div>
-      </div>
-    `;
+        </details>
+      </div>`;
   }).join("");
+}
+function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function updateTextCardStyle(sessionId, key, value) {
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = styles[String(sessionId)] || {};
+  styles[String(sessionId)][key] = key === "fontFamily" ? value : Number(value);
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId));
+  if (!item) return;
+  const style = styles[String(sessionId)];
+  const preview = item.querySelector(".text-card-preview");
+  if (preview) {
+    preview.style.setProperty("--text-card-height", (Number(style.height) || 150) + "px");
+    preview.style.setProperty("--text-card-font-size", (Number(style.fontSize) || 22) + "px");
+    preview.style.setProperty("--text-card-font-family", style.fontFamily || "Georgia, serif");
+  }
+  const output = item.querySelector(`#textCard${key === "height" ? "Height" : key === "fontSize" ? "FontSize" : "Font"}-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
+  if (output) output.textContent = key === "fontFamily" ? value : value + "px";
 }
 
 async function deleteSession(event, sessionId) {
