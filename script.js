@@ -112,17 +112,17 @@ function getSessionVideoUrl(body) {
 
 
 function getSessionLink(body) {
-  const match = String(body || "").match(/(?:^|\\n)Link:\\s*(https?:\\/\\/[^\\s]+)/i);
+  const match = String(body || "").match(/(?:^|\n)Link:\s*(https?:\/\/[^\s]+)/i);
   if (!match) return "";
   try { const url = new URL(match[1].replace(/[),.]+$/, "")); return ["http:", "https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; }
 }
 function getSessionLinkCaption(body) {
-  const match = String(body || "").match(/(?:^|\\n)\\[link-caption\\]([\\s\\S]*?)\\[\\/link-caption\\]/i);
+  const match = String(body || "").match(/(?:^|\n)\[link-caption\]([\s\S]*?)\[\/link-caption\]/i);
   return match ? match[1].trim() : "";
 }
 function renderSessionLink(session) {
   const url = getSessionLink(session.body); if (!url) return "";
-  let host = url; try { host = new URL(url).hostname.replace(/^www\\./, ""); } catch {}
+  let host = url; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
   const caption = getSessionLinkCaption(session.body);
   return '<a class="session-link-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || host) + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
 }
@@ -1147,6 +1147,7 @@ function renderSessions() {
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
+            ${linkUrl ? renderSessionLink(session) : ""}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
           </summary>
@@ -1213,6 +1214,8 @@ async function saveEditedSessionText(element) {
   const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
   const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
   const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
+  const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
+  const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
   const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
   let body = element.innerText.trim();
@@ -1220,6 +1223,8 @@ async function saveEditedSessionText(element) {
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
+  if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
+  if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
   if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
   if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
   if (oldLinkMatch) body += (body ? "\n\n" : "") + oldLinkMatch[1].trim();
