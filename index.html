@@ -13,8 +13,11 @@
   <header class="site-header">
     <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
     <nav>
-      <a href="#" onclick="showCollection(); return false;">Focus Collection</a>
+      <a href="#" onclick="showMyCollection(); return false;">My Focuses</a>
+      <a href="#" onclick="showCollection(); return false;">Explore</a>
       <a href="#" onclick="showAbout(); return false;">About</a>
+      <a href="#" id="authNavLink" onclick="showAuth(); return false;">Log in</a>
+      <a href="#" id="signOutNavLink" class="hidden" onclick="signOut(); return false;">Log out</a>
     </nav>
   </header>
 
@@ -23,6 +26,24 @@
 
     <!-- HOME: CURRENT FOCUS -->
     <section id="homeScreen" class="screen"><div class="current-focus-home"><div id="currentFocusHomeContent"><p class="empty-state">Finding your focus…</p></div></div></section>
+
+    <section id="authScreen" class="screen hidden">
+      <div class="page-section auth-page"><div class="auth-panel">
+        <p class="eyebrow">FOCUS PRACTICE</p><h1 id="authHeading">Log in</h1>
+        <p id="authIntro">Log in to start and manage your focuses.</p>
+        <form id="authForm" onsubmit="submitAuth(event)">
+          <label class="field-label" for="authEmail">Email</label>
+          <input id="authEmail" class="auth-input" type="email" autocomplete="email" required>
+          <label class="field-label" for="authPassword">Password</label>
+          <input id="authPassword" class="auth-input" type="password" autocomplete="current-password" minlength="8" required>
+          <button id="authSubmitButton" class="primary-button" type="submit">Log in</button>
+        </form>
+        <p id="authMessage" class="auth-message" role="status" aria-live="polite"></p>
+        <p class="auth-switch"><span id="authSwitchPrompt">New here?</span> <button id="authSwitchButton" type="button" class="text-button" onclick="toggleAuthMode()">Create an account</button></p>
+        <button id="forgotPasswordButton" type="button" class="text-button" onclick="sendPasswordReset()">Forgot password?</button>
+        <button type="button" class="text-button" onclick="showHome()">← Back home</button>
+      </div></div>
+    </section>
 
     <!-- CREATE FOCUS -->
     <section
@@ -283,7 +304,7 @@
         <div class="section-heading">
 
           <p class="eyebrow">
-            FOCUS COLLECTION
+            <span id="collectionEyebrow">EXPLORE FOCUSES</span>
           </p>
 
 
