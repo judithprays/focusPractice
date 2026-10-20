@@ -1000,7 +1000,7 @@ async function loadSessions() {
   }
 
 
-  currentSessions = applySavedSessionOrder(data || []);
+  currentSessions = data || [];
 
   updateFocusCoverBanner();
   renderSessions();
@@ -1019,14 +1019,7 @@ function formatSessionBody(value) {
 const SESSION_CARD_SIZES_KEY = "focusPractice.sessionCardSizes";
 const SESSION_CARD_ORDER_KEY = "focusPractice.sessionCardOrder";
 const SESSION_CARD_ANGLES_KEY = "focusPractice.sessionCardAngles";
-function readSessionCardOrder() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_ORDER_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
-function applySavedSessionOrder(sessions) { const all = readSessionCardOrder(); const saved = all[String(currentFocusId)] || []; if (!Array.isArray(saved) || !saved.length) return sessions; const rank = new Map(saved.map((id, index) => [String(id), index])); return [...sessions].sort((a, b) => { const ai = rank.has(String(a.id)) ? rank.get(String(a.id)) : Number.MAX_SAFE_INTEGER; const bi = rank.has(String(b.id)) ? rank.get(String(b.id)) : Number.MAX_SAFE_INTEGER; return ai - bi; }); }
-function persistSessionOrder() { const all = readSessionCardOrder(); all[String(currentFocusId)] = currentSessions.map(session => String(session.id)); try { localStorage.setItem(SESSION_CARD_ORDER_KEY, JSON.stringify(all)); } catch {} }
 function getSessionCardAngle(sessionId) { let angles = {}; try { angles = JSON.parse(localStorage.getItem(SESSION_CARD_ANGLES_KEY) || "{}") || {}; } catch {} const id = String(sessionId); if (!Number.isFinite(Number(angles[id]))) { angles[id] = Math.round((Math.random() * 10 - 5) * 10) / 10; try { localStorage.setItem(SESSION_CARD_ANGLES_KEY, JSON.stringify(angles)); } catch {} } return Number(angles[id]); }
-function dragSessionCard(event, sessionId) { if (event.target.closest("button, input, select, textarea, [contenteditable=true]")) { event.preventDefault(); return; } event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(sessionId)); event.currentTarget.classList.add("is-dragging"); }
-function finishSessionCardDrag(event) { event.currentTarget.classList.remove("is-dragging"); }
-function allowSessionCardDrop(event) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }
-function dropSessionCard(event, targetId) { event.preventDefault(); const sourceId = event.dataTransfer.getData("text/plain"); if (!sourceId || sourceId === String(targetId)) return; const from = currentSessions.findIndex(session => String(session.id) === sourceId); const to = currentSessions.findIndex(session => String(session.id) === String(targetId)); if (from < 0 || to < 0) return; const [moved] = currentSessions.splice(from, 1); currentSessions.splice(to, 0, moved); persistSessionOrder(); renderSessions(); }
 function readSessionCardSizes() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_SIZES_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
 function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [44, 46, 40, 48, 42][index % 5]; }
 function updateSessionCardSize(sessionId, value) { const size = Math.max(25, Math.min(100, Number(value) || 48)); const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId)); if (!item) return; item.style.setProperty("--session-card-width", size + "%"); const output = item.querySelector(".session-card-size-value"); if (output) output.textContent = size + "%"; const sizes = readSessionCardSizes(); sizes[String(sessionId)] = size; try { localStorage.setItem(SESSION_CARD_SIZES_KEY, JSON.stringify(sizes)); } catch {} }
@@ -1034,7 +1027,6 @@ function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
   if (!section || !list) return;
-  if (currentSessions.length === 0) { section.classList.add("hidden"); list.innerHTML = ""; return; }
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
@@ -1060,7 +1052,7 @@ function renderSessions() {
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
     return `
-      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" draggable="true" ondragstart="dragSessionCard(event, '${safeId}')" ondragend="finishSessionCardDrag(event)" ondragover="allowSessionCardDrop(event)" ondrop="dropSessionCard(event, '${safeId}')" style="--session-card-width:${size}%;${cardTiltStyle}">
+      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
@@ -1090,6 +1082,12 @@ function renderSessions() {
         </details>
       </div>`;
   }).join("");
+  const addButton = $("addSessionButton");
+  const composer = $("newSessionForm");
+  if (addButton && addButton.parentElement !== list) list.appendChild(addButton);
+  if (composer && composer.parentElement !== list) list.appendChild(composer);
+  if (addButton) list.appendChild(addButton);
+  if (composer) list.appendChild(composer);
 }
 function renderCaptionDisplayControl(sessionId, style) {
   const mode = style.captionDisplay || "below";
@@ -1334,14 +1332,14 @@ function focusSessionEmoji() {
 
 function openSessionForm() {
 
-  $("newSessionForm")
-    .classList.remove("hidden");
-
+  $("newSessionForm").classList.remove("hidden");
+  $("addSessionButton")?.classList.add("hidden");
 
   $("sessionDate").value = todayString();
   clearSessionDrawing();
   $("sessionImages").value = "";
   $("sessionImageCaption").value = "";
+  if ($("sessionImageFrame")) $("sessionImageFrame").value = "plain";
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
@@ -1363,9 +1361,8 @@ function openSessionForm() {
 
 function closeSessionForm() {
 
-  $("newSessionForm")
-    .classList.add("hidden");
-
+  $("newSessionForm").classList.add("hidden");
+  $("addSessionButton")?.classList.remove("hidden");
 
   $("sessionText").value = "";
   $("sessionImages").value = "";
@@ -1405,10 +1402,11 @@ function closeSessionForm() {
 
 async function saveSession() {
 
-  const date =
-    $("sessionDate").value;
+  const date = $("sessionDate").value;
 
-  let body = $("sessionText").value.trim();
+  // Read the note field at submit time, even if the toolbar hid it moments earlier.
+  const textField = $("sessionText");
+  let body = String(textField?.value || "").trim();
   const imageCaption = $("sessionImageCaption").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
@@ -1495,6 +1493,18 @@ async function saveSession() {
     console.error(error);
     alert("Couldn't save this session. Please try again.");
     return;
+  }
+
+  // Persist the image style chosen on the initial composer screen.
+  if (selectedImages.length) {
+    const styles = readSessionCardStyles();
+    styles[String(insertedSession.id)] = { ...(styles[String(insertedSession.id)] || {}), imageFrame: $("sessionImageFrame")?.value === "polaroid" ? "polaroid" : "plain" };
+    try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  }
+  // Ensure the initial note is persisted if the insert response differs from the submitted value.
+  if (body && String(insertedSession.body || "") !== body) {
+    const { error: bodySaveError } = await focusSupabase.from("sessions").update({ body }).eq("id", insertedSession.id);
+    if (bodySaveError) console.error("Could not confirm initial note save:", bodySaveError);
   }
 
   try {
