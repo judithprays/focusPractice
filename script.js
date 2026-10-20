@@ -903,6 +903,7 @@ function renderFocusState() {
   $("focusStepActions")?.classList.toggle("hidden", !canEdit || !isActive);
   $("deleteFocusButton")?.classList.toggle("hidden", !canEdit);
   $("focusGoalDisplay")?.classList.toggle("goal-click-to-edit",canEdit);
+  if ($("focusGoalDisplay")) $("focusGoalDisplay").disabled = !canEdit;
 
   $("newSessionForm").classList.add("hidden");
   $("abandonFocusSection").classList.add("hidden");
