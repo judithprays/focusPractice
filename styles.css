@@ -2263,3 +2263,6 @@ body.is-loading button {
 .focus-delete-bottom { position:fixed!important; right:22px!important; bottom:18px!important; z-index:50!important; margin:0!important; padding:0!important; border:0!important; justify-content:flex-end!important; }
 .focus-delete-bottom #deleteFocusButton { display:flex!important; align-items:center; justify-content:center; width:58px!important; height:58px!important; padding:0!important; border:0!important; border-radius:50%!important; background:#c83e36!important; color:#fff!important; text-decoration:none!important; box-shadow:0 3px 12px rgba(0,0,0,.2); overflow:hidden; font-size:0!important; }
 .focus-delete-bottom #deleteFocusButton::after { content:"😭"; font-size:27px; }
+
+.session-card-visual.image-frame-polaroid { width:100%!important; max-width:100%!important; height:auto!important; box-sizing:border-box!important; overflow:visible!important; transform:rotate(var(--session-card-tilt,0deg)); }
+.session-card-visual.image-frame-polaroid img { display:block!important; width:100%!important; max-width:100%!important; height:auto!important; max-height:none!important; aspect-ratio:auto!important; object-fit:contain!important; }
