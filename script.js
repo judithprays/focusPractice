@@ -188,6 +188,30 @@ async function saveSessionDate(sessionId, value) {
   await loadSessions();
 }
 
+
+function readSessionTagsMap() { try { return JSON.parse(localStorage.getItem("focusPractice.sessionTags") || "{}") || {}; } catch { return {}; } }
+function getSessionTags(session) { return readSessionTagsMap()[String(session.id)] || []; }
+async function saveSessionTags(sessionId, value) {
+  const tags = [...new Set(String(value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
+  const map = readSessionTagsMap(); map[String(sessionId)] = tags;
+  try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(map)); } catch {}
+  await loadSessions();
+}
+function renderSessionTags(session) {
+  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function renderSessionTagCloud() {
+  const cloud = $("sessionTagCloud"); if (!cloud) return;
+  const tags = [...new Set(currentSessions.flatMap(getSessionTags))].sort((a,b) => a.localeCompare(b));
+  cloud.innerHTML = tags.map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function openFirstSessionWithTag(tag) {
+  const target = currentSessions.find(session => getSessionTags(session).some(value => value.toLowerCase() === String(tag).toLowerCase()));
+  if (!target) return;
+  const card = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(target.id)) + '"] .session-card');
+  if (card) { card.open = true; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
@@ -1127,12 +1151,14 @@ function renderSessions() {
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
+            ${renderSessionTags(session)}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
           </summary>
           <div class="session-expanded-content">
             <div class="session-edit-controls">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
+              <label for="sessionTagsEdit-${safeId}">Tags (comma-separated)</label><input id="sessionTagsEdit-${safeId}" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="writing, research, breakthrough">
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
@@ -1154,6 +1180,7 @@ function renderSessions() {
         </details>
       </div>`;
   }).join("");
+  renderSessionTagCloud();
   const addButton = $("addSessionButton");
   const composer = $("newSessionForm");
   if (addButton && addButton.parentElement !== list) list.appendChild(addButton);
