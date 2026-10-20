@@ -1153,7 +1153,7 @@ function renderSessions() {
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
-    const pollMatch = String(session.body || "").match(/(?:^|\\n)\\[focus-poll\\]([\\s\\S]*?)\\[\\/focus-poll\\]/);
+    const pollMatch = String(session.body || "").match(/\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
     let pollQuestion = ""; try { pollQuestion = pollMatch ? (JSON.parse(pollMatch[1]).question || "") : ""; } catch {}
     const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(emptyPreview)}</div>`;
