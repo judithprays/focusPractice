@@ -1191,13 +1191,14 @@ function renderSessions() {
 function renderCaptionDisplayControl(sessionId, style) {
   const mode = style.captionDisplay || "below";
   const frame = style.imageFrame || "plain";
+  const flip = style.imageFlip || "none";
   return '<label for="captionDisplay-' + sessionId + '">Image caption</label><select id="captionDisplay-' + sessionId + '" onchange="updateSessionCaptionDisplay(\'' + sessionId + '\', this.value)">' +
     '<option value="below" ' + (mode === "below" ? "selected" : "") + '>Below image</option>' +
     '<option value="on-image" ' + (mode === "on-image" ? "selected" : "") + '>On image</option>' +
     '<option value="hover" ' + (mode === "hover" ? "selected" : "") + '>On hover</option></select>' +
     '<label for="imageFrame-' + sessionId + '">Image style</label><select id="imageFrame-' + sessionId + '" onchange="updateSessionImageFrame(\'' + sessionId + '\', this.value)">' +
     '<option value="plain" ' + (frame === "plain" ? "selected" : "") + '>Plain image</option>' +
-    '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>';
+    '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>' + '<label for="imageFlip-' + sessionId + '>Flip image</label><select id="imageFlip-' + sessionId + '" onchange="updateSessionImageFlip(\'' + sessionId + '\', this.value)"><option value="none" ' + (flip === "none" ? "selected" : "") + '>Original</option><option value="flip-horizontal" ' + (flip === "flip-horizontal" ? "selected" : "") + '>Flip horizontal</option><option value="flip-vertical" ' + (flip === "flip-vertical" ? "selected" : "") + '>Flip vertical</option><option value="flip-both" ' + (flip === "flip-both" ? "selected" : "") + '>Flip both</option></select>';
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
 function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
