@@ -1444,6 +1444,7 @@ function focusSessionEmoji() {
 }
 
 function openSessionForm() {
+  if (!isCurrentUserOwner()) return;
 
   $("newSessionForm").classList.remove("hidden");
   $("addSessionButton")?.classList.add("hidden");
