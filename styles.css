@@ -1906,9 +1906,7 @@ body.is-loading button {
   --board-frame: clamp(12px, 2.2vw, 22px);
   position: relative;
   isolation: isolate;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: min(100%, 560px);
   aspect-ratio: 1;
   margin: 0 0 30px;
