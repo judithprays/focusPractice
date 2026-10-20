@@ -190,7 +190,7 @@ p {
   border-radius: 100px;
   padding: 15px 24px;
   font-weight: 700;
-  transition: transform 150ms ease;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);\n  scroll-snap-align: start;
 }
 
 .primary-button {
@@ -1993,7 +1993,7 @@ body.is-loading button {
 @media (max-width: 700px) {
   .current-focus-card h1 {
     --board-frame: 11px;
-    width: min(100%, 440px);
+    flex: 0 0 min(100%, 340px);\n  width: min(100%, 340px);
     padding: calc(var(--board-frame) + 6%);
     font-size: clamp(21px, 6vw, 34px);
     line-height: 1.45;
@@ -2338,10 +2338,13 @@ body.is-loading button {
   margin-bottom: 22px;
 }
 .focus-collection-boards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  display: flex;
+  flex-flow: row nowrap;
   gap: 30px;
-  align-items: start;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 0 4px 18px;
+  scroll-snap-type: x proximity;
 }
 .focus-collection-board {
   --board-frame: clamp(12px, 2.2vw, 22px);
@@ -2367,12 +2370,6 @@ body.is-loading button {
 .focus-collection-board:hover {
   transform: rotate(-1deg) translateY(-3px);
 }
-.focus-collection-status {
-  margin-bottom: 12px;
-  font: 700 10px/1.2 "IBM Plex Mono", monospace;
-  letter-spacing: .12em;
-  opacity: .78;
-}
 .focus-collection-board h2 {
   margin: 0;
   color: inherit;
@@ -2382,24 +2379,8 @@ body.is-loading button {
   text-shadow: 1px 2px 0 #b7b2a2, 2px 3px 0 rgba(0,0,0,.45);
   overflow-wrap: anywhere;
 }
-.focus-collection-board p {
-  max-width: 100%;
-  margin: 14px 0 0;
-  color: #f7f1df;
-  font-size: 13px;
-  line-height: 1.4;
-  opacity: .88;
-}
-.focus-collection-board .focus-collection-note {
-  font-style: italic;
-}
-.focus-collection-board .focus-collection-open {
-  margin-top: 16px;
-  font-size: 11px;
-  opacity: .75;
-}
 @media (max-width: 600px) {
   .focus-collection-group { margin: 30px 0 42px; }
-  .focus-collection-boards { grid-template-columns: 1fr; }
-  .focus-collection-board { width: min(100%, 340px); }
+  .focus-collection-boards { gap: 18px; }
+  .focus-collection-board { flex-basis: min(82vw, 320px); width: min(82vw, 320px); }
 }
