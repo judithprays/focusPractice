@@ -212,6 +212,43 @@ function openFirstSessionWithTag(tag) {
   if (card) { card.open = true; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
 }
 
+
+function updateSessionImageFlip(sessionId, value) {
+  if (!["none", "flip-horizontal", "flip-vertical", "flip-both"].includes(value)) return;
+  const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFlip: value };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId));
+  const image = item && item.querySelector(".session-card-visual img");
+  if (image) image.className = value === "none" ? "" : value;
+}
+let sessionTimerSeconds = 0, sessionTimerStartedAt = null, sessionTimerInterval = null;
+function formatTimer(seconds) { return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0"); }
+function updateSessionTimerDisplay() { const el = $("sessionTimerReadout"); if (el) el.textContent = formatTimer(sessionTimerSeconds + (sessionTimerStartedAt ? Math.floor((Date.now() - sessionTimerStartedAt) / 1000) : 0)); }
+function toggleSessionTimer() { const panel = $("sessionTimerPanel"); if (panel) panel.classList.toggle("hidden"); updateSessionTimerDisplay(); }
+function startPauseSessionTimer() {
+  const button = $("sessionTimerPanel")?.querySelector("button.secondary-button");
+  if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; if (button) button.textContent = "Start"; }
+  else { sessionTimerStartedAt = Date.now(); sessionTimerInterval = setInterval(updateSessionTimerDisplay, 1000); if (button) button.textContent = "Pause"; }
+  updateSessionTimerDisplay();
+}
+function resetSessionTimer() { sessionTimerSeconds = 0; sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; const button = $("sessionTimerPanel")?.querySelector("button.secondary-button"); if (button) button.textContent = "Start"; updateSessionTimerDisplay(); }
+function togglePollComposer() { $("sessionPollPanel")?.classList.toggle("hidden"); }
+function attachSessionPoll() {
+  const question = $("sessionPollQuestion").value.trim();
+  const options = $("sessionPollOptions").value.split("\n").map(value => value.trim()).filter(Boolean);
+  if (!question || options.length < 2) { $("sessionPollStatus").textContent = "Add a question and at least two options."; return; }
+  $("sessionText").dataset.poll = JSON.stringify({ question, options });
+  $("sessionPollStatus").textContent = "Poll attached. Save this step to publish it.";
+}
+function renderSessionPoll(session) {
+  const match = String(session.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
+  let poll; try { poll = match ? JSON.parse(match[1]) : null; } catch {}
+  if (!poll || !poll.question || !Array.isArray(poll.options)) return "";
+  const votes = (() => { try { return JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch { return {}; } })();
+  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + poll.options.map((option, i) => '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" ' + (votes[String(session.id)] === i ? "checked" : "") + ' onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\',' + i + ')"> ' + escapeHtml(option) + '</label>').join("") + '</div>';
+}
+function voteInSessionPoll(sessionId, option) { let votes = {}; try { votes = JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch {} votes[String(sessionId)] = option; try { localStorage.setItem("focusPractice.pollVotes", JSON.stringify(votes)); } catch {} }
+
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
