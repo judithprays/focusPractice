@@ -2012,3 +2012,62 @@ body.is-loading button {
       repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0, rgba(255,255,255,.018) 1px, transparent 2px, transparent 4px);
   }
 }
+
+
+/* Focus board + canvas card refinements */
+.current-focus-home { min-height: calc(100vh - 90px); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 0 70px; }
+.current-focus-home > .eyebrow { align-self:flex-start; }
+.current-focus-card { width:100%; display:flex; flex-direction:column; align-items:center; text-align:center; }
+.current-focus-card h1 { width:min(100%,660px); max-width:660px; font-size:clamp(46px,8vw,80px); text-decoration:none!important; border-bottom:0!important; padding-bottom:0!important; }
+.current-focus-card h1 .letter-tile { text-decoration:none!important; border-bottom:0!important; box-shadow:none!important; }
+.current-focus-card > span { border-bottom:0!important; }
+.current-focus-card p { max-width:660px; text-align:center; }
+.current-focus-home .current-focus-card h1 { margin-left:auto; margin-right:auto; }
+.focus-cover-banner { position:relative; width:calc(100% + 100px); height:clamp(250px,35vw,400px); margin:-40px 0 0 -50px; overflow:visible; border-radius:0; }
+.focus-cover-banner::after { z-index:1; }
+.focus-cover-banner .focus-board-title { position:absolute; z-index:2; top:22px; left:clamp(18px,4vw,48px); bottom:auto; right:auto; width:min(55%,520px); aspect-ratio:1; display:flex; align-items:center; justify-content:center; margin:0; padding:8%; border:clamp(10px,1.6vw,18px) solid #c49a68; background:linear-gradient(135deg,#17472f,#0f3323); box-shadow:0 5px 12px rgba(0,0,0,.35),inset 0 0 0 2px rgba(255,255,255,.08); color:#f7f1df; font:900 clamp(20px,3.4vw,42px)/1.12 "Arial Black",Arial,sans-serif; letter-spacing:.06em; text-align:center; text-transform:uppercase; text-shadow:1px 2px 0 #b7b2a2,2px 3px 0 rgba(0,0,0,.45); transform:rotate(var(--board-angle, 0deg)); overflow-wrap:anywhere; }
+.focus-cover-banner .focus-board-title::before { content:""; position:absolute; inset:0; z-index:-1; background:repeating-linear-gradient(to bottom,transparent 0,transparent 25px,rgba(0,0,0,.17) 26px,rgba(255,255,255,.08) 28px); pointer-events:none; }
+.focus-header { position:relative!important; left:auto!important; right:auto!important; bottom:auto!important; max-width:none; padding:24px 0 36px; color:var(--black)!important; }
+.focus-header .eyebrow,.focus-header .focus-started,.focus-header .text-button { color:var(--black)!important; }
+.focus-header .focus-goal-display-row { margin-top:8px; }
+.focus-header .focus-goal-display { color:#171717!important; font-size:14px; }
+.focus-header .focus-goal-editor { max-width:600px; background:#fffefa; color:var(--black); }
+.focus-cover-banner.no-cover { background:linear-gradient(135deg,#d2c5b0,#8c826f); }
+.focus-cover-banner.no-cover .focus-board-title { left:clamp(18px,4vw,48px); }
+.sessions-list { columns:initial; display:flex; flex-wrap:wrap; align-items:flex-start; gap:18px; }
+.session-card-item { width:var(--session-card-width,48%); min-width:0; flex:0 0 var(--session-card-width,48%); }
+.session-card { width:100%; margin:0; border:0; border-radius:0; background:transparent; box-shadow:none; overflow:visible; }
+.session-card-item .session-card-size-control { display:none!important; }
+.session-card[open] .session-edit-controls { display:block; }
+.session-edit-controls { display:none; margin:0 0 18px; padding:14px; background:#f4f0e9; border-radius:6px; }
+.session-edit-controls label { display:flex; justify-content:space-between; gap:10px; margin:10px 0 5px; font-size:12px; color:#625b51; }
+.session-edit-controls input[type=range] { display:block; width:100%; accent-color:var(--green); margin:4px 0 14px; }
+.session-edit-controls select { width:100%; border:1px solid #d9d2c7; background:#fffefa; padding:9px; font:14px Helvetica,Arial,sans-serif; }
+.session-card.has-session-visual { width:100%; background:transparent; border:0; border-radius:0; overflow:visible; }
+.session-card.has-session-visual > .session-card-visual { width:100%; margin:0; overflow:hidden; background:transparent; }
+.session-card.has-session-visual > .session-card-visual img,
+.session-card.has-session-visual > .session-card-visual video { width:100%; height:auto; max-height:none; aspect-ratio:auto; object-fit:contain; display:block; }
+.session-card.has-session-visual > .session-collapsed-header { top:0; left:0; right:0; padding:18px; }
+.session-card.has-session-visual[open] > .session-collapsed-header { display:none; }
+.session-card.has-session-visual .session-expanded-content { padding:16px 0 0; }
+.session-card.has-session-visual .session-edit-controls { margin-top:0; }
+.session-card.text-only-step { padding:0; background:transparent; border:0; }
+.text-card-item .session-collapsed-header { position:relative; padding:0; background:transparent; cursor:pointer; }
+.text-card-preview { min-height:var(--text-card-height,150px); height:auto; padding:14px 0; background:transparent; color:var(--black); font:400 var(--text-card-font-size,22px)/1.35 var(--text-card-font-family,Georgia,serif); overflow-wrap:anywhere; white-space:normal; }
+.text-card-preview h3 { font:inherit; font-weight:700; margin:0 0 8px; }
+.text-card-preview blockquote { margin:0; padding-left:14px; border-left:2px solid #aaa; font-style:italic; }
+.text-card-date { padding:8px 0 12px; color:#777; font-size:12px; }
+.text-card-item .step-delete-button { top:4px; right:4px; opacity:0; transition:opacity .15s; }
+.text-card-item:hover .step-delete-button,.text-card-item .session-card[open] .step-delete-button { opacity:1; }
+.text-card-item .session-expanded-content { padding:0; }
+.text-card-item .session-main { padding:0 0 16px; }
+.session-card[open] .session-collapsed-header { display:none; }
+.session-card[open] .session-expanded-content { display:block; }
+@media(max-width:700px) {
+ .focus-cover-banner { width:calc(100% + 40px); height:240px; margin:-40px 0 0 -20px; }
+ .focus-cover-banner .focus-board-title { width:min(68%,300px); top:16px; left:14px; font-size:clamp(18px,5vw,30px); border-width:10px; }
+ .focus-header { padding:20px 0 30px; }
+ .sessions-list { gap:16px; }
+ .session-card-item { width:100%; flex-basis:100%; }
+ .current-focus-card h1 { font-size:clamp(36px,10vw,64px); }
+}
