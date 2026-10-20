@@ -1237,6 +1237,18 @@ async function saveEditedSessionText(element) {
   if (error) { console.error(error); alert("Could not save this text. Please try again."); return; }
   await loadSessions();
 }
+async function saveSessionImageCaption(sessionId, value) {
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (!session) return;
+  const oldBody = String(session.body || "");
+  const caption = String(value || "").trim();
+  const withoutCaption = oldBody.replace(/\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
+  const body = caption ? withoutCaption + (withoutCaption ? "\n\n" : "") + "[image-caption]" + caption + "[/image-caption]" : withoutCaption;
+  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId).eq("focus_id", currentFocusId);
+  if (error) { console.error(error); alert("Could not save the caption. Please try again."); return; }
+  await loadSessions();
+}
+
 function updateSessionCaptionDisplay(sessionId, value) {
   if (!["below", "on-image", "hover"].includes(value)) return;
   const styles = readSessionCardStyles();
