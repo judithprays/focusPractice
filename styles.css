@@ -2205,7 +2205,7 @@ body.is-loading button {
 .session-card-visual.image-frame-polaroid .session-image-caption.caption-below,
 .session-card-visual.image-frame-polaroid .session-image-caption.caption-on-image,
 .session-card-visual.image-frame-polaroid .session-image-caption.caption-hover { padding:5% 2% 7%!important; min-height:0; }
-.session-card-visual.image-frame-polaroid:not(:has(.session-image-caption)) { padding-bottom:4%!important; }
+.session-card-visual.image-frame-polaroid:not(:has(.session-image-caption)) { padding-bottom:14%!important; }
 .session-card-visual img.flip-horizontal { transform:scaleX(-1); }
 .session-card-visual img.flip-vertical { transform:scaleY(-1); }
 .session-card-visual img.flip-both { transform:scale(-1,-1); }
@@ -2241,7 +2241,7 @@ body.is-loading button {
 .session-link-domain { font:11px "Courier New",monospace; text-transform:uppercase; letter-spacing:.06em; color:#746c60; }
 .session-link-preview strong { font:600 17px "Courier New",monospace; }
 .session-link-url { font:12px Helvetica,Arial,sans-serif; color:#746c60; }
-.text-card-preview, .text-card-date, .focus-header .focus-goal-display, .focus-header .focus-started, .focus-header .goal-input, .focus-header input, .focus-header .focus-goal-label { font-family:"Courier New",Courier,monospace!important; }
+.text-card-date, .focus-header .focus-goal-display, .focus-header .focus-started, .focus-header .goal-input, .focus-header input, .focus-header .focus-goal-label { font-family:"Courier New",Courier,monospace!important; }
 
 /* Focus action placement and final touch-ups. */
 .focus-step-actions { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 28px; width:100%; }
