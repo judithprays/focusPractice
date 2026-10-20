@@ -98,6 +98,167 @@ function isSafeImageUrl(url) {
   return typeof url === "string" && /^https?:\/\//i.test(url);
 }
 
+
+function getSessionVideoUrl(body) {
+  const match = String(body || "").match(/(?:^|\n)Video:\s*(https?:\/\/[^\s]+)/i);
+  if (!match) return "";
+  try {
+    const url = new URL(match[1].replace(/[),.]+$/, ""));
+    return url.protocol === "https:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+
+function getSessionLink(body) {
+  const match = String(body || "").match(/(?:^|\n)Link:\s*(https?:\/\/[^\s]+)/i);
+  if (!match) return "";
+  try { const url = new URL(match[1].replace(/[),.]+$/, "")); return ["http:", "https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; }
+}
+function getSessionLinkCaption(body) {
+  const match = String(body || "").match(/(?:^|\n)\[link-caption\]([\s\S]*?)\[\/link-caption\]/i);
+  return match ? match[1].trim() : "";
+}
+function renderSessionLink(session) {
+  const url = getSessionLink(session.body); if (!url) return "";
+  let host = url; try { host = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+  const caption = getSessionLinkCaption(session.body);
+  return '<a class="session-link-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || host) + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
+}
+
+function renderSessionVideo(session) {
+  const url = getSessionVideoUrl(session.body); if (!url) return "";
+  const caption = getSessionImageCaption(session.body);
+  let host = url; try { host = new URL(url).hostname.replace(/^www\\./, ""); } catch {}
+  return '<a class="session-link-preview session-video-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">VIDEO · ' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || "Open video") + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
+}
+
+function getSessionImageCaption(body) {
+  const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)\[\/image-caption\]/i);
+  return match ? match[1].trim() : "";
+}
+
+function stripSessionImageCaption(body) {
+  return String(body || "").replace(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
+}
+
+
+async function saveSessionDate(sessionId, value) {
+  if (!value) return;
+  const { error } = await focusSupabase.from("sessions").update({ session_date: value }).eq("id", sessionId).eq("focus_id", currentFocusId);
+  if (error) { console.error(error); alert("Could not save the session date."); return; }
+  await loadSessions();
+}
+
+
+function readSessionTagsMap() { try { return JSON.parse(localStorage.getItem("focusPractice.sessionTags") || "{}") || {}; } catch { return {}; } }
+function getSessionTags(session) { const match = String(session.body || "").match(/(?:^|\n)\[focus-tags\]([\s\S]*?)\[\/focus-tags\]/i); try { if (match) { const parsed = JSON.parse(match[1]); if (Array.isArray(parsed)) return parsed; } } catch {} return readSessionTagsMap()[String(session.id)] || []; }
+async function saveSessionTags(sessionId, value) {
+  const tags = [...new Set(String(value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
+  const map = readSessionTagsMap(); map[String(sessionId)] = tags;
+  try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(map)); } catch {}
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (session) { const existing = String(session.body || "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, "").trim(); const body = tags.length ? existing + (existing ? "\n\n" : "") + "[focus-tags]" + JSON.stringify(tags) + "[/focus-tags]" : existing; const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId).eq("focus_id", currentFocusId); if (error) { console.error(error); alert("Could not save tags."); return; } }
+  await loadSessions();
+}
+function renderSessionTags(session) {
+  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" data-tag="' + escapeHtml(tag) + '" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(this.dataset.tag)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function renderSessionTagCloud() {
+  const cloud = $("sessionTagCloud"); if (!cloud) return;
+  const tags = [...new Set(currentSessions.flatMap(getSessionTags))].sort((a,b) => a.localeCompare(b));
+  cloud.innerHTML = tags.map(tag => '<button type="button" class="session-tag" data-tag="' + escapeHtml(tag) + '" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(this.dataset.tag)">#' + escapeHtml(tag) + '</button>').join("");
+}
+function openFirstSessionWithTag(tag) {
+  const target = currentSessions.find(session => getSessionTags(session).some(value => value.toLowerCase() === String(tag).toLowerCase()));
+  if (!target) return;
+  const card = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(target.id)) + '"] .session-card');
+  if (card) { card.open = false; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+}
+
+
+function updateSessionImageFlip(sessionId, value) {
+  if (!["none", "flip-horizontal", "flip-vertical", "flip-both"].includes(value)) return;
+  const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFlip: value };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId));
+  const image = item && item.querySelector(".session-card-visual img");
+  if (image) image.className = value === "none" ? "" : value;
+}
+let sessionTimerSeconds = 0, sessionTimerStartedAt = null, sessionTimerInterval = null;
+function formatTimer(seconds) { return String(Math.floor(seconds / 60)).padStart(2, "0") + ":" + String(seconds % 60).padStart(2, "0"); }
+function updateSessionTimerDisplay() { const el = $("sessionTimerReadout"); if (el) el.textContent = formatTimer(sessionTimerSeconds + (sessionTimerStartedAt ? Math.floor((Date.now() - sessionTimerStartedAt) / 1000) : 0)); }
+function toggleSessionTimer() { const panel = $("sessionTimerPanel"); if (panel) panel.classList.toggle("hidden"); updateSessionTimerDisplay(); }
+function startPauseSessionTimer() {
+  const button = $("sessionTimerPanel")?.querySelector("button.secondary-button");
+  if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; if (button) button.textContent = "Start"; }
+  else { sessionTimerStartedAt = Date.now(); sessionTimerInterval = setInterval(updateSessionTimerDisplay, 1000); if (button) button.textContent = "Pause"; }
+  updateSessionTimerDisplay();
+}
+function resetSessionTimer() { sessionTimerSeconds = 0; sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; const button = $("sessionTimerPanel")?.querySelector("button.secondary-button"); if (button) button.textContent = "Start"; updateSessionTimerDisplay(); }
+function togglePollComposer() { $("sessionPollPanel")?.classList.toggle("hidden"); }
+function attachSessionPoll() {
+  const question = $("sessionPollQuestion").value.trim();
+  const options = $("sessionPollOptions").value.split("\n").map(value => value.trim()).filter(Boolean);
+  if (!question || options.length < 2) { $("sessionPollStatus").textContent = "Add a question and at least two options."; return; }
+  $("sessionText").dataset.poll = JSON.stringify({ question, options });
+  $("sessionPollStatus").textContent = "Poll attached. Save this step to publish it.";
+}
+function renderSessionPoll(session) {
+  const match = String(session.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
+  let poll; try { poll = match ? JSON.parse(match[1]) : null; } catch {}
+  if (!poll || !poll.question || !Array.isArray(poll.options)) return "";
+  const votes = (() => { try { return JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch { return {}; } })();
+  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + poll.options.map((option, i) => '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" ' + (votes[String(session.id)] === i ? "checked" : "") + ' onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\',' + i + ')"> ' + escapeHtml(option) + '</label>').join("") + '</div>';
+}
+function voteInSessionPoll(sessionId, option) { let votes = {}; try { votes = JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch {} votes[String(sessionId)] = option; try { localStorage.setItem("focusPractice.pollVotes", JSON.stringify(votes)); } catch {} }
+
+function renderSessionCardVisual(session) {
+  const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
+  const visuals = [];
+  const image = urls[0];
+  const caption = getSessionImageCaption(session.body);
+  const style = readSessionCardStyles()[String(session.id)] || {};
+  const captionMode = style.captionDisplay || "below";
+  const flipClass = ["flip-horizontal", "flip-vertical", "flip-both"].includes(style.imageFlip) ? style.imageFlip : "";
+  if (image) {
+    const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
+    visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""} ${((readSessionCardStyles()[String(session.id)] || {}).imageFrame === "polaroid") ? "image-frame-polaroid" : ""}">
+      <img class="${flipClass}" src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
+      ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
+    </div>`);
+  }
+
+  const videoUrl = getSessionVideoUrl(session.body);
+  if (videoUrl) {
+    let embedUrl = "";
+    try {
+      const url = new URL(videoUrl);
+      if (url.hostname === "youtu.be") {
+        embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(url.pathname.slice(1));
+      } else if (["youtube.com", "www.youtube.com", "m.youtube.com"].includes(url.hostname)) {
+        const id = url.searchParams.get("v");
+        if (id) embedUrl = "https://www.youtube-nocookie.com/embed/" + encodeURIComponent(id);
+        else if (url.pathname.startsWith("/embed/")) embedUrl = "https://www.youtube-nocookie.com" + url.pathname;
+      } else if (["vimeo.com", "www.vimeo.com"].includes(url.hostname)) {
+        const id = url.pathname.split("/").filter(Boolean).pop();
+        if (id && /^\d+$/.test(id)) embedUrl = "https://player.vimeo.com/video/" + id;
+      } else if (/\.(mp4|webm|ogg)$/i.test(url.pathname)) {
+        visuals.push(`<div class="session-card-visual session-card-video"><video controls preload="metadata" playsinline src="${escapeHtml(videoUrl)}"></video></div>`);
+      }
+    } catch {}
+
+    if (embedUrl) {
+      visuals.push(`<div class="session-card-visual session-card-video"><iframe src="${escapeHtml(embedUrl)}" title="Video from this session" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`);
+    } else if (!visuals.some(markup => markup.includes("<video "))) {
+      visuals.push(`<a class="session-card-visual session-card-video-link" href="${escapeHtml(videoUrl)}" target="_blank" rel="noopener noreferrer"><span>▶</span><strong>Watch this session video</strong><span class="video-link-arrow">↗</span></a>`);
+    }
+  }
+
+  return visuals.join("");
+}
+
 function renderSessionImages(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls : [];
   if (!urls.length) return "";
@@ -111,12 +272,39 @@ function renderSessionImages(session) {
   }).join("")}</div>`;
 }
 
+async function prepareSessionImage(file) {
+  const extension = String(file.name || "").split(".").pop().toLowerCase();
+  const mimeType = String(file.type || "").toLowerCase();
+  const isHeic = ["heic", "heif"].includes(extension) || ["image/heic", "image/heif", "image/heic-sequence", "image/heif-sequence"].includes(mimeType);
+
+  if (!isHeic) {
+    if (!mimeType.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
+    return file;
+  }
+
+  // Allow a larger original HEIC file because conversion usually makes it smaller.
+  // Keep a generous input limit to avoid trying to decode extremely large files.
+  if (file.size > 25 * 1024 * 1024) throw new Error(`"${file.name}" is larger than 25 MB. Please choose a smaller photo.`);
+  if (typeof window.HeicTo !== "function") throw new Error("HEIC conversion couldn't load. Refresh the page and try again, or export the photo as JPEG.");
+
+  try {
+    const converted = await window.HeicTo({ blob: file, type: "image/jpeg", quality: 0.9 });
+    const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+    if (!jpegBlob || typeof jpegBlob.size !== "number") throw new Error("The converter did not return a JPEG image.");
+    return new File([jpegBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), { type: "image/jpeg", lastModified: Date.now() });
+  } catch (error) {
+    console.error("HEIC conversion failed:", error);
+    throw new Error(`Couldn't convert "${file.name}" to JPEG. Try another photo or export it as JPEG. ${error?.message ? `Details: ${error.message}` : ""}`.trim());
+  }
+}
+
 async function uploadSessionImages(files, sessionId) {
   const urls = [];
-  for (const file of Array.from(files || [])) {
-    if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" is not an image.`);
-    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${file.name}" is larger than 8 MB. Please choose a smaller image.`);
-    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+  for (const originalFile of Array.from(files || [])) {
+    const file = await prepareSessionImage(originalFile);
+    if (file.size > MAX_IMAGE_SIZE_BYTES) throw new Error(`"${originalFile.name}" is larger than 8 MB after conversion. Please choose a smaller image.`);
+    const safeName = file.name.normalize("NFKD").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "image.jpg";
     const path = `${currentFocusId}/${sessionId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
     const { error } = await focusSupabase.storage.from(SESSION_IMAGES_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
     if (error) throw error;
@@ -248,7 +436,7 @@ function showAbout() {
 
 async function loadHomeFocuses() {
 
-  const list = $("publicFocusesList");
+  const list = $("currentFocusHomeContent");
 
   if (!list) return;
 
@@ -264,38 +452,34 @@ async function loadHomeFocuses() {
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
-
+    .order("created_at", { ascending: false });
 
   if (error) {
-
-    console.error(error);
-
-    list.innerHTML =
-      `<p class="empty-state">
-        Couldn't load Focuses.
-      </p>`;
-
+    console.error("Home focus query failed:", error);
+    list.innerHTML = `<p class="empty-state">Couldn't load your focus. Please refresh and try again.</p>`;
     return;
   }
 
+  // Prefer the active focus, but tolerate older records whose status value
+  // predates the current active/completed/abandoned convention.
+  const focuses = data || [];
+  const focusToShow =
+    focuses.find((focus) => focus.status === "active") ||
+    focuses.find((focus) => !["completed", "abandoned"].includes(String(focus.status || "").toLowerCase()));
 
-  if (!data || data.length === 0) {
-
-    list.innerHTML =
-      `<p class="empty-state">
-        No Focuses yet. Start one.
-      </p>`;
-
+  if (!focusToShow) {
+    const home = document.querySelector(".current-focus-home");
+    if (home) home.classList.add("no-active-focus");
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Find your focus</button>';
     return;
   }
 
-
-  list.innerHTML = data
-    .map(renderFocusCard)
-    .join("");
+  const home = document.querySelector(".current-focus-home");
+  if (home) home.classList.remove("no-active-focus");
+  currentFocus = focusToShow;
+  currentFocusId = currentFocus.id;
+  updateNavigation();
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1 aria-label="' + escapeHtml(currentFocus.title) + '">' + escapeHtml(currentFocus.title || "") + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
 
 
@@ -395,6 +579,14 @@ async function loadCollection() {
   }
 
 
+  const activeFocus = (data || []).find((focus) => focus.status === "active");
+  const action = $("collectionFocusAction");
+  if (action) {
+    action.innerHTML = activeFocus
+      ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
+      : `<button class="primary-button" onclick="showCreateFocus()">+ Start a new focus</button>`;
+  }
+
   if (!data || data.length === 0) {
 
     list.innerHTML =
@@ -456,7 +648,30 @@ async function loadCollection() {
    CREATE FOCUS
 -------------------------------- */
 
-function showCreateFocus() {
+async function showCreateFocus() {
+
+  const { data: activeFocus, error } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (activeFocus) {
+    currentFocus = activeFocus;
+    currentFocusId = activeFocus.id;
+    setFocusUrl(activeFocus.id);
+    await showFocus();
+    alert("Finish or abandon your current focus before starting another one.");
+    return;
+  }
 
   clearFocusUrl();
 
@@ -486,6 +701,32 @@ async function startNewFocus() {
 
   setLoading(true);
 
+  // Re-check immediately before inserting so a second active focus cannot
+  // be started from another tab or a stale collection page.
+  const { data: existingActiveFocus, error: activeCheckError } = await focusSupabase
+    .from("focuses")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (activeCheckError) {
+    setLoading(false);
+    console.error(activeCheckError);
+    alert("Couldn't check whether you already have an active focus. Please try again.");
+    return;
+  }
+
+  if (existingActiveFocus) {
+    setLoading(false);
+    currentFocus = existingActiveFocus;
+    currentFocusId = existingActiveFocus.id;
+    setFocusUrl(existingActiveFocus.id);
+    await showFocus();
+    alert("You already have an active focus. Finish or abandon it before starting another.");
+    return;
+  }
 
   const { data, error } = await focusSupabase
     .from("focuses")
@@ -563,13 +804,12 @@ function renderFocusGoal() {
   const goal = currentFocus?.goal?.trim() || "";
   const display = $("focusGoalDisplay");
   const editor = document.querySelector(".focus-goal-editor");
-  const editButton = $("editGoalButton");
   const cancelButton = $("cancelGoalButton");
-  if (!display || !editor || !editButton) return;
+  if (!display || !editor) return;
 
-  display.textContent = goal ? `Goal: ${goal}` : "";
-  display.classList.toggle("hidden", !goal);
-  editButton.classList.toggle("hidden", !goal);
+  display.textContent = goal || "Add a goal";
+  display.classList.toggle("hidden", false);
+  display.classList.toggle("is-empty-goal", !goal);
   editor.classList.toggle("hidden", Boolean(goal));
   if (cancelButton) cancelButton.classList.add("hidden");
   $("goalSaveStatus").textContent = "";
@@ -580,7 +820,6 @@ function editFocusGoal() {
   if (!editor) return;
   $("focusGoalEdit").value = currentFocus?.goal || "";
   editor.classList.remove("hidden");
-  $("editGoalButton").classList.add("hidden");
   $("cancelGoalButton").classList.remove("hidden");
   $("focusGoalEdit").focus();
 }
@@ -655,38 +894,10 @@ async function showFocus() {
 
 function updateFocusCoverBanner() {
   const coverBanner = $("focusCoverBanner");
-  const coverImage = $("focusCoverImage");
-  if (!coverBanner || !coverImage) return;
-
-  // Prefer a cover the user explicitly selected. Otherwise, use the newest
-  // photo in this project's session log automatically.
-  let coverUrl = isSafeImageUrl(currentFocus?.cover_image_url)
-    ? currentFocus.cover_image_url
-    : "";
-
-  if (!coverUrl) {
-    for (let sessionIndex = currentSessions.length - 1; sessionIndex >= 0 && !coverUrl; sessionIndex--) {
-      const urls = Array.isArray(currentSessions[sessionIndex].image_urls)
-        ? currentSessions[sessionIndex].image_urls
-        : [];
-      for (let imageIndex = urls.length - 1; imageIndex >= 0; imageIndex--) {
-        if (isSafeImageUrl(urls[imageIndex])) {
-          coverUrl = urls[imageIndex];
-          break;
-        }
-      }
-    }
-  }
-
-  if (coverUrl) {
-    if (coverImage.src !== coverUrl) coverImage.src = coverUrl;
-    coverBanner.classList.remove("hidden");
-  } else {
-    coverImage.removeAttribute("src");
-    coverBanner.classList.add("hidden");
-  }
+  if (!coverBanner) return;
+  coverBanner.classList.remove("no-cover");
+  coverBanner.classList.remove("hidden");
 }
-
 
 function renderFocusState() {
 
@@ -697,6 +908,8 @@ function renderFocusState() {
     currentFocus.title;
 
   updateFocusCoverBanner();
+  const boardTitle = $("focusTitleDisplay");
+  if (boardTitle) { boardTitle.textContent = currentFocus.title || ""; const angle = (Math.random() * 10 - 5).toFixed(2) + "deg"; boardTitle.style.setProperty("--board-angle", angle); }
 
   $("focusStarted").textContent =
     currentFocus.started_at
@@ -887,62 +1100,208 @@ async function loadSessions() {
 }
 
 
+function formatSessionBody(value) {
+  const safe = escapeHtml(value || "");
+  return safe.split("\n").map(line => {
+    if (line.startsWith("## ")) return "<h3>" + line.slice(3) + "</h3>";
+    if (line.startsWith("> ")) return "<blockquote>" + line.slice(2) + "</blockquote>";
+    return line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  }).join("<br>");
+}
+
+const SESSION_CARD_SIZES_KEY = "focusPractice.sessionCardSizes";
+const SESSION_CARD_ORDER_KEY = "focusPractice.sessionCardOrder";
+const SESSION_CARD_ANGLES_KEY = "focusPractice.sessionCardAngles";
+function getSessionCardAngle(sessionId) { let angles = {}; try { angles = JSON.parse(localStorage.getItem(SESSION_CARD_ANGLES_KEY) || "{}") || {}; } catch {} const id = String(sessionId); if (!Number.isFinite(Number(angles[id]))) { angles[id] = Math.round((Math.random() * 10 - 5) * 10) / 10; try { localStorage.setItem(SESSION_CARD_ANGLES_KEY, JSON.stringify(angles)); } catch {} } return Number(angles[id]); }
+function readSessionCardSizes() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_SIZES_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [44, 46, 40, 48, 42][index % 5]; }
+function updateSessionCardSize(sessionId, value) { const size = Math.max(25, Math.min(100, Number(value) || 48)); const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId)); if (!item) return; item.style.setProperty("--session-card-width", size + "%"); const output = item.querySelector(".session-card-size-value"); if (output) output.textContent = size + "%"; const sizes = readSessionCardSizes(); sizes[String(sessionId)] = size; try { localStorage.setItem(SESSION_CARD_SIZES_KEY, JSON.stringify(sizes)); } catch {} }
 function renderSessions() {
   const section = $("sessionLogSection");
   const list = $("sessionsList");
   if (!section || !list) return;
+  section.classList.remove("hidden");
+  const addButton = $("addSessionButton");
+  const composer = $("newSessionForm");
+  const focusStepActions = $("focusStepActions");
+  let actionStack = $("focusActionStack");
+  if (!actionStack) {
+    actionStack = document.createElement("div");
+    actionStack.id = "focusActionStack";
+    actionStack.className = "focus-action-stack";
+  }
+  list.innerHTML = currentSessions.map((session, index) => {
+    const videoUrl = getSessionVideoUrl(session.body);
+    const linkUrl = getSessionLink(session.body);
+    const bodyWithoutVideo = stripSessionImageCaption((videoUrl
+      ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
+      : session.body).replace(/(?:^|\n)Link:\s*https?:\/\/[^\s]+/i, "").replace(/(?:\n?\[link-caption\][\s\S]*?\[\/link-caption\])/ig, "").replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, ""));
+    const summary = (session.summary || bodyWithoutVideo || "").trim();
+    const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
+    const emoji = (session.summary_emoji || "").trim();
+    const dateLabel = formatDate(session.session_date);
+    const dayLabel = formatWeekday(session.session_date);
+    const timeSpent = (session.time_spent || "").trim();
+    const visual = renderSessionCardVisual(session);
+    const size = getSessionCardSize(session, index);
+    const safeId = escapeHtml(session.id);
+    const cardStyle = readSessionCardStyles()[String(session.id)] || {};
+    const cardAngle = getSessionCardAngle(session.id);
+    const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
+    const hasText = Boolean(bodyWithoutVideo.trim());
+    const isTextCard = !visual && !linkUrl && !videoUrl;
+    const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
+    const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
+    const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
+    const pollMatch = String(session.body || "").match(/\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
+    let pollQuestion = ""; try { pollQuestion = pollMatch ? (JSON.parse(pollMatch[1]).question || "") : ""; } catch {}
+    const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
+    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : (pollQuestion ? "" : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(timeSpent ? "⏱ " + timeSpent : "Add a note")}</div>`);
+    return `
+      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
+        <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
+          <summary class="session-collapsed-header">
+            ${visual}
+            ${videoUrl ? renderSessionVideo(session) : ""}
+            ${linkUrl ? renderSessionLink(session) : ""}
+            ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
+            
+          </summary>
+          <div class="session-expanded-content">
+            <div class="session-edit-controls">
+              <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
+              <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
+              <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
+              <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
+              ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
+              ${!isTextCard ? renderCaptionDisplayControl(safeId, cardStyle) : ""}
+              ${(Array.isArray(session.image_urls) && session.image_urls.some(isSafeImageUrl)) ? '<label for="sessionImageCaptionEdit-' + safeId + '">Caption</label><input id="sessionImageCaptionEdit-' + safeId + '" class="session-image-caption-edit" type="text" maxlength="300" value="' + escapeHtml(getSessionImageCaption(session.body)) + '" placeholder="Add a caption (optional)" onchange="saveSessionImageCaption(this.id.replace(\'sessionImageCaptionEdit-\', \'\'), this.value)">' : ""}
+              <button type="button" class="step-delete-button edit-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">Delete card</button>
+              <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
+            </div>
+            <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            <div class="session-details">
+              ${renderSessionDetail("Things accomplished", session.accomplished)}
+              ${renderSessionDetail("Funny things that happened", session.funny)}
+              ${renderSessionDetail("Excitements", session.excitements)}
+              ${renderSessionDetail("Mistakes", session.mistakes)}
+              ${renderSessionDetail("Things I learned", session.learned)}
+              ${renderSessionDetail("For next time", session.next_time)}
+            </div>
+            ${renderSessionImages(session)}
+          </div>
+        </details>
+        ${renderSessionPoll(session)}
+      </div>`;
+  }).join("");
+  renderSessionTagCloud();
+  if (actionStack.parentElement !== list) list.appendChild(actionStack);
+  if (addButton) actionStack.appendChild(addButton);
+  if (focusStepActions) actionStack.appendChild(focusStepActions);
+  if (composer && composer.parentElement !== list) list.appendChild(composer);
+  if (composer) list.appendChild(composer);
+  if (addButton) addButton.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active" || !composer.classList.contains("hidden"));
+  if (focusStepActions) focusStepActions.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active");
+}
+function renderCaptionDisplayControl(sessionId, style) {
+  const mode = style.captionDisplay || "below";
+  const frame = style.imageFrame || "plain";
+  const flip = style.imageFlip || "none";
+  return '<label for="captionDisplay-' + sessionId + '">Image caption</label><select id="captionDisplay-' + sessionId + '" onchange="updateSessionCaptionDisplay(\'' + sessionId + '\', this.value)">' +
+    '<option value="below" ' + (mode === "below" ? "selected" : "") + '>Below image</option>' +
+    '<option value="on-image" ' + (mode === "on-image" ? "selected" : "") + '>On image</option>' +
+    '<option value="hover" ' + (mode === "hover" ? "selected" : "") + '>On hover</option></select>' +
+    '<label for="imageFrame-' + sessionId + '">Image style</label><select id="imageFrame-' + sessionId + '" onchange="updateSessionImageFrame(\'' + sessionId + '\', this.value)">' +
+    '<option value="plain" ' + (frame === "plain" ? "selected" : "") + '>Plain image</option>' +
+    '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>' + '<label for="imageFlip-' + sessionId + '">Flip image</label><select id="imageFlip-' + sessionId + '" onchange="updateSessionImageFlip(\'' + sessionId + '\', this.value)"><option value="none" ' + (flip === "none" ? "selected" : "") + '>Original</option><option value="flip-horizontal" ' + (flip === "flip-horizontal" ? "selected" : "") + '>Flip horizontal</option><option value="flip-vertical" ' + (flip === "flip-vertical" ? "selected" : "") + '>Flip vertical</option><option value="flip-both" ' + (flip === "flip-both" ? "selected" : "") + '>Flip both</option></select>';
+}
+function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
+async function saveEditedSessionText(element) {
+  const sessionId = element && element.dataset.sessionId;
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (!session || !element || element.dataset.saving === "true") return;
+  const oldBody = String(session.body || "");
+  const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
+  const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
+  const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
+  const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
+  const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
+  const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
+  let body = element.innerText.trim();
+  if (pollMatch) body += (body ? "\n\n" : "") + pollMatch[1].trim();
+  if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
+  if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
+  if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
+  if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
+  if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
+  if (body === oldBody) return;
+  element.dataset.saving = "true";
+  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
+  delete element.dataset.saving;
+  if (error) { console.error(error); alert("Could not save this text. Please try again."); return; }
+  await loadSessions();
+}
+async function saveSessionImageCaption(sessionId, value) {
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (!session) return;
+  const oldBody = String(session.body || "");
+  const caption = String(value || "").trim();
+  const withoutCaption = oldBody.replace(/\[image-caption\][\s\S]*?\[\/image-caption\]/i, "").trim();
+  const body = caption ? withoutCaption + (withoutCaption ? "\n\n" : "") + "[image-caption]" + caption + "[/image-caption]" : withoutCaption;
+  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId).eq("focus_id", currentFocusId);
+  if (error) { console.error(error); alert("Could not save the caption. Please try again."); return; }
+  await loadSessions();
+}
 
-  if (currentSessions.length === 0) {
-    section.classList.add("hidden");
-    list.innerHTML = "";
+function updateSessionCaptionDisplay(sessionId, value) {
+  if (!["below", "on-image", "hover"].includes(value)) return;
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), captionDisplay: value };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId));
+  const caption = item && item.querySelector(".session-image-caption");
+  if (caption) caption.className = "session-image-caption caption-" + value;
+}
+function updateTextCardStyle(sessionId, key, value) {
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = styles[String(sessionId)] || {};
+  styles[String(sessionId)][key] = key === "fontFamily" ? value : Number(value);
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId));
+  if (!item) return;
+  const style = styles[String(sessionId)];
+  const preview = item.querySelector(".text-card-preview");
+  if (preview) {
+    preview.style.setProperty("--text-card-font-size", (Number(style.fontSize) || 22) + "px");
+    preview.style.setProperty("--text-card-font-family", style.fontFamily || "'Courier New', monospace");
+  }
+  const output = item.querySelector(`#textCardFontSize-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
+  if (output) output.textContent = value + "px";
+}
+
+async function deleteSession(event, sessionId) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (!sessionId || !currentFocusId) return;
+  if (!window.confirm("Delete this step? This can't be undone.")) return;
+
+  const { error } = await focusSupabase
+    .from("sessions")
+    .delete()
+    .eq("id", sessionId)
+    .eq("focus_id", currentFocusId);
+
+  if (error) {
+    console.error("Could not delete step:", error);
+    alert("Couldn't delete this step. Please try again.");
     return;
   }
 
-  section.classList.remove("hidden");
-  list.innerHTML = currentSessions.map((session, index) => {
-    const summary = (session.summary || session.body || "").trim();
-    const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
-    const emoji = session.summary_emoji || "📝";
-    const dateLabel = formatDate(session.session_date);
-    const dayLabel = formatWeekday(session.session_date);
-
-    return `
-      <details class="session-card">
-        <summary class="session-collapsed-header">
-          <div class="session-heading-top">
-            <span class="eyebrow session-number">SESSION ${index + 1}</span>
-            <span class="session-date">${escapeHtml(dayLabel)} · ${escapeHtml(dateLabel)}</span>
-            <span class="session-time">${escapeHtml(session.time_spent || "Time not logged")}</span>
-          </div>
-          <div class="session-tldr">
-            <span class="session-tldr-emoji">${escapeHtml(emoji)}</span>
-            <span class="session-tldr-text">${escapeHtml(summaryPreview || "Add a short summary next time.")}</span>
-            <span class="session-expand-indicator" aria-hidden="true">＋</span>
-          </div>
-        </summary>
-
-        <div class="session-expanded-content">
-          <div class="session-main">
-            <p>${escapeHtml(session.body)}</p>
-          </div>
-
-          <div class="session-details">
-            ${renderSessionDetail("Things accomplished", session.accomplished)}
-            ${renderSessionDetail("Funny things that happened", session.funny)}
-            ${renderSessionDetail("Excitements", session.excitements)}
-            ${renderSessionDetail("Mistakes", session.mistakes)}
-            ${renderSessionDetail("Things I learned", session.learned)}
-            ${renderSessionDetail("For next time", session.next_time)}
-          </div>
-
-          ${renderSessionImages(session)}
-        </div>
-      </details>
-    `;
-  }).join("");
+  currentSessions = currentSessions.filter(session => String(session.id) !== String(sessionId));
+  renderSessions();
+  updateFocusCoverBanner();
 }
-
-
 function renderSessionDetail(
   label,
   value
@@ -971,20 +1330,181 @@ function renderSessionDetail(
    SESSION FORM
 -------------------------------- */
 
+function updateSessionTimeLabel() {
+  const slider = $("sessionTimeSlider"), label = $("sessionTimeValue"), hidden = $("sessionTimeSpent");
+  if (!slider || !label || !hidden) return;
+  const minutes = Number(slider.value);
+  label.textContent = minutes >= 60 ? (Math.floor(minutes/60) + "h" + (minutes%60 ? " " + (minutes%60) + "m" : "")) : (minutes + " min");
+  hidden.value = label.textContent;
+}
+
+function hideSessionInputs(except) {
+  const inputs = {
+    text: $("sessionText"),
+    image: $("sessionImages"),
+    video: $("sessionVideoUrl"),
+    link: $("sessionLinkFields"),
+    time: $("composerTimeControl"),
+    emoji: $("composerEmojiControl"),
+    drawing: $("sessionDrawingPanel")
+  };
+  Object.entries(inputs).forEach(([key, element]) => {
+    if (!element || key === except) return;
+    if (key === "text") element.classList.add("hidden");
+    else if (key === "image" || key === "video" || key === "link") element.classList.remove("is-visible");
+    else if (key === "time" || key === "emoji") element.classList.remove("is-open");
+    else element.classList.add("hidden");
+  });
+  $("sessionImageCaption")?.classList.toggle("is-visible", except === "image" || except === "video");
+  $("sessionImageFrameWrap")?.classList.toggle("is-open", except === "image");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.toggle("is-open", except === "text");
+  $("sessionLinkFields")?.classList.toggle("is-visible", except === "link");
+  $("sessionTextFormatting")?.classList.toggle("hidden", except !== "text");
+}
+
+function focusSessionText() {
+  hideSessionInputs("text");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.add("is-open");
+  const field = $("sessionText");
+  field.classList.remove("hidden");
+  $("sessionTextFormatting")?.classList.remove("hidden");
+  field.focus();
+  field.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function formatSessionText(kind) {
+  const field = $("sessionText");
+  const start = field.selectionStart, end = field.selectionEnd;
+  const selected = field.value.slice(start, end) || "your text";
+  let before = "", after = "";
+  if (kind === "bold") { before = "**"; after = "**"; }
+  if (kind === "heading") before = "## ";
+  if (kind === "quote") before = "> ";
+  field.setRangeText(before + selected + after, start, end, "select");
+  field.focus();
+  resizeSessionTextarea(field);
+}
+
+function showSessionDrawing() {
+  hideSessionInputs("drawing");
+  $("sessionDrawingPanel").classList.remove("hidden");
+  initSessionDrawing();
+}
+
+function paintSessionDrawingBackground(ctx, canvas) {
+  ctx.fillStyle = "#fffefa";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#e8e2d8";
+  for (let x = 18; x < canvas.width; x += 24) {
+    for (let y = 18; y < canvas.height; y += 24) {
+      ctx.beginPath();
+      ctx.arc(x, y, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function initSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  if (!canvas || canvas.dataset.ready) return;
+  const ctx = canvas.getContext("2d");
+  paintSessionDrawingBackground(ctx, canvas);
+  ctx.strokeStyle = "#292720";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  let drawing = false;
+  const point = event => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: (event.clientX - rect.left) * canvas.width / rect.width, y: (event.clientY - rect.top) * canvas.height / rect.height };
+  };
+  canvas.addEventListener("pointerdown", event => {
+    drawing = true;
+    canvas.setPointerCapture(event.pointerId);
+    const p = point(event);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener("pointermove", event => {
+    if (!drawing) return;
+    const p = point(event);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  const stop = () => { drawing = false; };
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+  canvas.dataset.ready = "true";
+}
+
+function clearSessionDrawing() {
+  const canvas = $("sessionDrawingCanvas");
+  const ctx = canvas.getContext("2d");
+  paintSessionDrawingBackground(ctx, canvas);
+}
+
+function showSessionImages() {
+  hideSessionInputs("image");
+  $("sessionImageFrameWrap")?.classList.add("is-open");
+  const field = $("sessionImages");
+  field.classList.add("is-visible");
+  $("sessionImageCaption")?.classList.add("is-visible");
+  field.focus();
+}
+
+function focusSessionLink() {
+  hideSessionInputs("link");
+  $("sessionLinkFields")?.classList.add("is-visible");
+  $("sessionLinkUrl")?.focus();
+}
+
+function focusSessionVideo() {
+  hideSessionInputs("video");
+  $("sessionImageCaption")?.classList.add("is-visible");
+  const field = $("sessionVideoUrl");
+  field.classList.add("is-visible");
+  field.focus();
+}
+
+function focusSessionTime() {
+  const control = $("composerTimeControl");
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "time");
+  if (!wasOpen) { updateSessionTimeLabel(); control.classList.add("is-open"); $("sessionTimeSlider").focus(); }
+}
+
+function focusSessionEmoji() {
+  const control = $("composerEmojiControl");
+  const wasOpen = control.classList.contains("is-open");
+  hideSessionInputs(wasOpen ? "" : "emoji");
+  if (!wasOpen) { control.classList.add("is-open"); $("sessionSummaryEmoji").focus(); }
+}
+
 function openSessionForm() {
 
-  $("newSessionForm")
-    .classList.remove("hidden");
+  $("newSessionForm").classList.remove("hidden");
+  $("addSessionButton")?.classList.add("hidden");
 
-
-  $("sessionDate").value =
-    todayString();
-
-
-  setTimeout(() => {
-    $("sessionText").focus();
-  }, 50);
-
+  $("sessionDate").value = todayString();
+  if ($("sessionTagsInput")) $("sessionTagsInput").value = "";
+  if ($("sessionText")) delete $("sessionText").dataset.poll;
+  $("sessionPollPanel")?.classList.add("hidden"); $("sessionTimerPanel")?.classList.add("hidden"); resetSessionTimer();
+  clearSessionDrawing();
+  $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
+  $("sessionImageCaption")?.classList.remove("is-visible");
+  $("sessionImageFrameWrap")?.classList.remove("is-open");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.remove("is-open");
+  if ($("sessionImageFrame")) $("sessionImageFrame").value = "plain";
+  $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
+  $("sessionTimeSlider").value = "45";
+  updateSessionTimeLabel();
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   window.scrollTo({
     top:
@@ -996,12 +1516,28 @@ function openSessionForm() {
 
 function closeSessionForm() {
 
-  $("newSessionForm")
-    .classList.add("hidden");
-
+  $("newSessionForm").classList.add("hidden");
+  $("addSessionButton")?.classList.remove("hidden");
 
   $("sessionText").value = "";
+  delete $("sessionText").dataset.poll;
+  if ($("sessionTagsInput")) $("sessionTagsInput").value = "";
+  $("sessionPollPanel")?.classList.add("hidden"); $("sessionTimerPanel")?.classList.add("hidden"); resetSessionTimer();
   $("sessionImages").value = "";
+  $("sessionImageCaption").value = "";
+  $("sessionImageCaption")?.classList.remove("is-visible");
+  $("sessionImageFrameWrap")?.classList.remove("is-open");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.remove("is-open");
+  $("sessionLinkUrl").value = "";
+  $("sessionLinkCaption").value = "";
+  $("sessionLinkFields")?.classList.remove("is-visible");
+  $("sessionVideoUrl").value = "";
+  $("sessionImages").classList.remove("is-visible");
+  $("sessionText").classList.add("hidden");
+  $("sessionTextFormatting")?.classList.add("hidden");
+  $("sessionDrawingPanel")?.classList.add("hidden");
+  $("sessionPrompt").value = "";
+  if ($("sessionIncludePrompt")) $("sessionIncludePrompt").checked = false;
 
   $("sessionAccomplished").value = "";
 
@@ -1018,6 +1554,10 @@ function closeSessionForm() {
   $("sessionTimeSpent").value = "";
   $("sessionSummaryEmoji").value = "";
   $("sessionSummary").value = "";
+  $("sessionVideoUrl").value = "";
+  document.querySelector(".composer-extra-fields")?.classList.add("hidden");
+  document.getElementById("composerTimeControl")?.classList.remove("is-open");
+  document.getElementById("composerEmojiControl")?.classList.remove("is-open");
 
   $("sessionDate").value =
     todayString();
@@ -1026,11 +1566,28 @@ function closeSessionForm() {
 
 async function saveSession() {
 
-  const date =
-    $("sessionDate").value;
+  const date = $("sessionDate").value;
 
-  const body =
-    $("sessionText").value.trim();
+  // Read the note field at submit time, even if the toolbar hid it moments earlier.
+  const textField = $("sessionText");
+  let body = String(textField?.value || "").trim();
+  if (textField?.dataset.poll) body = body + (body ? "\n\n" : "") + "[focus-poll]" + textField.dataset.poll + "[/focus-poll]";
+  const tagValues = [...new Set(String($("sessionTagsInput")?.value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
+  if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
+  if (sessionTimerSeconds > 0) $("sessionTimeSpent").value = Math.max(1, Math.round(sessionTimerSeconds / 60)) + " min";
+  const imageCaption = $("sessionImageCaption").value.trim();
+  const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
+  const videoUrl = $("sessionVideoUrl").value.trim();
+  const linkUrl = $("sessionLinkUrl")?.value.trim() || "";
+  const linkCaption = $("sessionLinkCaption")?.value.trim() || "";
+  const prompt = $("sessionPrompt").value;
+  const includePrompt = $("sessionIncludePrompt")?.checked;
+  if (includePrompt && prompt && body) body = prompt + "\n\n" + body;
+  else if (includePrompt && prompt) body = prompt;
+  if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
+  if (linkUrl) { try { const parsedLink = new URL(linkUrl); if (!["http:", "https:"].includes(parsedLink.protocol)) throw new Error("bad protocol"); body = (body ? body + "\n\n" : "") + "Link: " + parsedLink.href; if (linkCaption) body += "\n[link-caption]" + linkCaption + "[/link-caption]"; } catch { $("sessionLinkUrl").focus(); alert("Please enter a valid http or https link."); return; } }
+  if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
+  if (tagValues.length) body = body + (body ? "\n\n" : "") + "[focus-tags]" + JSON.stringify(tagValues) + "[/focus-tags]";
 
 
   if (!date) {
@@ -1041,15 +1598,19 @@ async function saveSession() {
   }
 
 
-  if (!body) {
-
+  if (!body && !($("sessionImages").files || []).length && $("sessionDrawingPanel").classList.contains("hidden") && !$("sessionTimeSpent").value.trim()) {
     $("sessionText").focus();
-
     return;
   }
 
 
-  const selectedImages = $("sessionImages").files;
+  const selectedImages = Array.from($("sessionImages").files || []);
+  const drawingCanvas = $("sessionDrawingCanvas");
+  const drawingVisible = !$("sessionDrawingPanel").classList.contains("hidden");
+  if (drawingVisible && drawingCanvas) {
+    const drawingFile = await new Promise(resolve => drawingCanvas.toBlob(blob => resolve(blob ? new File([blob], "session-drawing.png", { type: "image/png" }) : null), "image/png"));
+    if (drawingFile) selectedImages.push(drawingFile);
+  }
   const session = {
     focus_id: currentFocusId,
 
@@ -1104,6 +1665,19 @@ async function saveSession() {
     console.error(error);
     alert("Couldn't save this session. Please try again.");
     return;
+  }
+
+  if (tagValues.length) { const tagMap = readSessionTagsMap(); tagMap[String(insertedSession.id)] = tagValues; try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(tagMap)); } catch {} }
+  // Persist the image style chosen on the initial composer screen.
+  if (selectedImages.length) {
+    const styles = readSessionCardStyles();
+    styles[String(insertedSession.id)] = { ...(styles[String(insertedSession.id)] || {}), imageFrame: $("sessionImageFrame")?.value === "polaroid" ? "polaroid" : "plain" };
+    try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  }
+  // Ensure the initial note is persisted if the insert response differs from the submitted value.
+  if (body && String(insertedSession.body || "") !== body) {
+    const { error: bodySaveError } = await focusSupabase.from("sessions").update({ body }).eq("id", insertedSession.id);
+    if (bodySaveError) console.error("Could not confirm initial note save:", bodySaveError);
   }
 
   try {
@@ -1410,4 +1984,34 @@ document.addEventListener("input", (event) => {
   if (event.target.matches(".new-session-form textarea")) {
     resizeSessionTextarea(event.target);
   }
+});
+
+document.addEventListener("change", (event) => {
+  if (event.target.id === "sessionPrompt" && event.target.value) {
+    focusSessionText();
+    $("sessionText").value = event.target.value + "\n";
+    resizeSessionTextarea($("sessionText"));
+    $("sessionText").setSelectionRange($("sessionText").value.length, $("sessionText").value.length);
+  }
+  if (event.target.id === "sessionImages") {
+    const existing = document.getElementById("sessionImageSelection");
+    if (existing) existing.remove();
+    if (event.target.files && event.target.files.length) {
+      const note = document.createElement("p");
+      note.id = "sessionImageSelection";
+      note.className = "composer-attachment-note";
+      note.textContent = event.target.files.length === 1
+        ? event.target.files[0].name
+        : event.target.files.length + " images selected";
+      event.target.closest(".session-composer").querySelector(".composer-attachments").prepend(note);
+    }
+  }
+});
+
+
+document.addEventListener("click", function(event) {
+  const insideCard = event.target.closest(".session-card");
+  document.querySelectorAll(".session-card[open]").forEach(function(card) {
+    if (card !== insideCard) card.removeAttribute("open");
+  });
 });
