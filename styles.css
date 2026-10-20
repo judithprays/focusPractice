@@ -2138,3 +2138,9 @@ body.is-loading button {
 .session-card .session-expand-indicator { display:none!important; }
 .session-card[open] .session-body-content[contenteditable="true"] { min-height:80px; padding:10px; border:1px dashed #c9c0b4; outline:none; white-space:pre-wrap; }
 .session-card[open] .session-body-content[contenteditable="true"]:focus { border-color:#777; background:#fffefa; }
+
+/* Text cards grow with their content; no clipping or fixed-height scrolling. */
+.text-card-preview { height:auto!important; min-height:0!important; max-height:none!important; overflow:visible!important; overflow-wrap:anywhere; white-space:pre-wrap; }
+.text-card-item .session-collapsed-header { height:auto!important; min-height:0!important; overflow:visible!important; }
+.session-body-content[contenteditable="true"] { white-space:pre-wrap; overflow-wrap:anywhere; min-height:2em; outline:none; }
+.session-body-content[contenteditable="true"]:focus { outline:1px dashed #c9c0b4; outline-offset:4px; }
