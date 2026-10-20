@@ -1092,7 +1092,7 @@ function renderSessions() {
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
             </div>
-            <div class="session-main"><div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            <div class="session-main">${isTextCard ? "" : `<div class="session-body-content">${formatSessionBody(bodyWithoutVideo)}</div>`}</div>
             <div class="session-details">
               ${renderSessionDetail("Things accomplished", session.accomplished)}
               ${renderSessionDetail("Funny things that happened", session.funny)}
@@ -1356,6 +1356,7 @@ function closeSessionForm() {
   $("sessionTextFormatting")?.classList.add("hidden");
   $("sessionDrawingPanel")?.classList.add("hidden");
   $("sessionPrompt").value = "";
+  if ($("sessionIncludePrompt")) $("sessionIncludePrompt").checked = false;
 
   $("sessionAccomplished").value = "";
 
@@ -1392,8 +1393,9 @@ async function saveSession() {
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
   const prompt = $("sessionPrompt").value;
-  if (prompt && body) body = prompt + "\n\n" + body;
-  else if (prompt) body = prompt;
+  const includePrompt = $("sessionIncludePrompt")?.checked;
+  if (includePrompt && prompt && body) body = prompt + "\n\n" + body;
+  else if (includePrompt && prompt) body = prompt;
   if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
   if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
 
@@ -1801,4 +1803,12 @@ document.addEventListener("change", (event) => {
       event.target.closest(".session-composer").querySelector(".composer-attachments").prepend(note);
     }
   }
+});
+
+
+document.addEventListener("click", function(event) {
+  const insideCard = event.target.closest(".session-card");
+  document.querySelectorAll(".session-card[open]").forEach(function(card) {
+    if (card !== insideCard) card.removeAttribute("open");
+  });
 });
