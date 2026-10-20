@@ -127,6 +127,13 @@ function renderSessionLink(session) {
   return '<a class="session-link-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || host) + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
 }
 
+function renderSessionVideo(session) {
+  const url = getSessionVideoUrl(session.body); if (!url) return "";
+  const caption = getSessionImageCaption(session.body);
+  let host = url; try { host = new URL(url).hostname.replace(/^www\\./, ""); } catch {}
+  return '<a class="session-link-preview session-video-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">VIDEO · ' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || "Open video") + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
+}
+
 function getSessionImageCaption(body) {
   const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)\[\/image-caption\]/i);
   return match ? match[1].trim() : "";
@@ -1137,8 +1144,8 @@ function renderSessions() {
     const cardAngle = getSessionCardAngle(session.id);
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
-    const isTextCard = !visual && !linkUrl;
-    const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "\\'Courier New\\', monospace")}`;
+    const isTextCard = !visual && !linkUrl && !videoUrl;
+    const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
@@ -1147,6 +1154,7 @@ function renderSessions() {
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
+            ${videoUrl ? renderSessionVideo(session) : ""}
             ${linkUrl ? renderSessionLink(session) : ""}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
