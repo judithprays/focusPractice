@@ -2278,3 +2278,9 @@ body.is-loading button {
 .session-tag-cloud { border:0!important; border-top:0!important; border-bottom:0!important; }
 .session-card-item > .session-poll-card { width:100%; }
 .focus-delete-bottom #deleteFocusButton::after { content:"🗑️😭"; font-size:21px; }
+
+.focus-action-stack { display:flex; flex:0 0 240px; flex-direction:column; align-items:stretch; gap:10px; width:min(100%,240px); align-self:flex-start; margin:8px 0 24px; }
+.focus-action-stack > .add-session-button { width:100%!important; min-height:72px; margin:0!important; }
+.focus-action-stack .focus-step-actions { width:100%; margin:0!important; }
+.focus-action-stack .focus-step-actions button { width:100%; }
+@media(max-width:700px) { .focus-action-stack { flex-basis:100%; width:100%; } }
