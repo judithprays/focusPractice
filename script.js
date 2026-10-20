@@ -129,11 +129,13 @@ async function saveSessionDate(sessionId, value) {
 
 
 function readSessionTagsMap() { try { return JSON.parse(localStorage.getItem("focusPractice.sessionTags") || "{}") || {}; } catch { return {}; } }
-function getSessionTags(session) { return readSessionTagsMap()[String(session.id)] || []; }
+function getSessionTags(session) { const match = String(session.body || "").match(/(?:^|\n)\[focus-tags\]([\s\S]*?)\[\/focus-tags\]/i); try { if (match) { const parsed = JSON.parse(match[1]); if (Array.isArray(parsed)) return parsed; } } catch {} return readSessionTagsMap()[String(session.id)] || []; }
 async function saveSessionTags(sessionId, value) {
   const tags = [...new Set(String(value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
   const map = readSessionTagsMap(); map[String(sessionId)] = tags;
   try { localStorage.setItem("focusPractice.sessionTags", JSON.stringify(map)); } catch {}
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  if (session) { const existing = String(session.body || "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, "").trim(); const body = tags.length ? existing + (existing ? "\n\n" : "") + "[focus-tags]" + JSON.stringify(tags) + "[/focus-tags]" : existing; const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId).eq("focus_id", currentFocusId); if (error) { console.error(error); alert("Could not save tags."); return; } }
   await loadSessions();
 }
 function renderSessionTags(session) {
@@ -1103,7 +1105,7 @@ function renderSessions() {
     const videoUrl = getSessionVideoUrl(session.body);
     const bodyWithoutVideo = stripSessionImageCaption((videoUrl
       ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
-      : session.body).replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, ""));
+      : session.body).replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, ""));
     const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
     const emoji = (session.summary_emoji || "").trim();
@@ -1186,12 +1188,14 @@ async function saveEditedSessionText(element) {
   if (!session || !element || element.dataset.saving === "true") return;
   const oldBody = String(session.body || "");
   const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
+  const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
   const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
   let body = element.innerText.trim();
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
   if (pollMatch) body += (body ? "\n\n" : "") + pollMatch[1].trim();
+  if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
   if (body === oldBody) return;
   element.dataset.saving = "true";
   const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
@@ -1506,6 +1510,7 @@ async function saveSession() {
   else if (includePrompt && prompt) body = prompt;
   if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
   if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
+  if (tagValues.length) body = body + (body ? "\n\n" : "") + "[focus-tags]" + JSON.stringify(tagValues) + "[/focus-tags]";
 
 
   if (!date) {
