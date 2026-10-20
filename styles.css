@@ -2266,3 +2266,8 @@ body.is-loading button {
 
 .session-card-visual.image-frame-polaroid { width:100%!important; max-width:100%!important; height:auto!important; box-sizing:border-box!important; overflow:visible!important; transform:rotate(var(--session-card-tilt,0deg)); }
 .session-card-visual.image-frame-polaroid img { display:block!important; width:100%!important; max-width:100%!important; height:auto!important; max-height:none!important; aspect-ratio:auto!important; object-fit:contain!important; }
+
+.session-poll-card { display:block; width:100%; box-sizing:border-box; margin:12px 0 0; padding:12px 14px; border:1px solid #ded6ca; background:#fffefa; }
+.session-poll-card strong { display:block; margin-bottom:10px; }
+.session-poll-option { display:flex; align-items:center; gap:8px; cursor:pointer; }
+.session-poll-option input { flex:0 0 auto; }
