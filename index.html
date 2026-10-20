@@ -22,7 +22,7 @@
   <main>
 
     <!-- HOME: CURRENT FOCUS -->
-    <section id="homeScreen" class="screen"><div class="current-focus-home"><p class="eyebrow">MY CURRENT FOCUS</p><div id="currentFocusHomeContent"><p class="empty-state">Finding your focus…</p></div></div></section>
+    <section id="homeScreen" class="screen"><div class="current-focus-home"><div id="currentFocusHomeContent"><p class="empty-state">Finding your focus…</p></div></div></section>
 
     <!-- CREATE FOCUS -->
     <section
@@ -78,7 +78,7 @@
           <h1 id="focusTitleDisplay" class="focus-board-title"></h1>
         </div>
         <div class="focus-header">
-          <p class="eyebrow focus-goal-label" id="focusStatusLabel">MY CURRENT FOCUS</p>
+          <p class="eyebrow focus-goal-label hidden" id="focusStatusLabel">MY CURRENT FOCUS</p>
           <p id="focusStarted" class="focus-started"></p>
           <div class="focus-goal-display-row">
             <p id="focusGoalDisplay" class="focus-started focus-goal-display hidden"></p>
@@ -141,6 +141,7 @@
                 <option value="What did you learn?">What did you learn?</option>
                 <option value="What will you try next time?">What will you try next time?</option>
               </select>
+              <label class="include-prompt-option"><input id="sessionIncludePrompt" type="checkbox"> Show prompt on card</label>
             </div>
           </div>
 
