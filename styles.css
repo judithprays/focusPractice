@@ -2053,7 +2053,7 @@ body.is-loading button {
 .session-card.has-session-visual .session-edit-controls { margin-top:0; }
 .session-card.text-only-step { padding:0; background:transparent; border:0; }
 .text-card-item .session-collapsed-header { position:relative; padding:0; background:transparent; cursor:pointer; }
-.text-card-preview { min-height:var(--text-card-height,150px); height:auto; padding:14px 0; background:transparent; color:var(--black); font:400 var(--text-card-font-size,22px)/1.35 var(--text-card-font-family,Georgia,serif); overflow-wrap:anywhere; white-space:normal; }
+.text-card-preview { min-height:var(--text-card-height,150px); height:var(--text-card-height,150px); padding:14px 0; background:transparent; color:var(--black); font:400 var(--text-card-font-size,22px)/1.35 var(--text-card-font-family,Georgia,serif); overflow:auto; overflow-wrap:anywhere; white-space:normal; }
 .text-card-preview h3 { font:inherit; font-weight:700; margin:0 0 8px; }
 .text-card-preview blockquote { margin:0; padding-left:14px; border-left:2px solid #aaa; font-style:italic; }
 .text-card-date { padding:8px 0 12px; color:#777; font-size:12px; }
