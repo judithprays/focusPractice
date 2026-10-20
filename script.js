@@ -139,12 +139,12 @@ async function saveSessionTags(sessionId, value) {
   await loadSessions();
 }
 function renderSessionTags(session) {
-  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" data-tag="' + escapeHtml(tag) + '" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(this.dataset.tag)">#' + escapeHtml(tag) + '</button>').join("");
 }
 function renderSessionTagCloud() {
   const cloud = $("sessionTagCloud"); if (!cloud) return;
   const tags = [...new Set(currentSessions.flatMap(getSessionTags))].sort((a,b) => a.localeCompare(b));
-  cloud.innerHTML = tags.map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+  cloud.innerHTML = tags.map(tag => '<button type="button" class="session-tag" data-tag="' + escapeHtml(tag) + '" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(this.dataset.tag)">#' + escapeHtml(tag) + '</button>').join("");
 }
 function openFirstSessionWithTag(tag) {
   const target = currentSessions.find(session => getSessionTags(session).some(value => value.toLowerCase() === String(tag).toLowerCase()));
