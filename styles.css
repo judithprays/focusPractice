@@ -2352,7 +2352,8 @@ body.is-loading button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: min(100%, 440px);
+  flex: 0 0 min(100%, 340px);
+  width: min(100%, 340px);
   aspect-ratio: 1;
   margin: 0 auto;
   padding: calc(var(--board-frame) + 7%);
@@ -2365,7 +2366,8 @@ body.is-loading button {
   color: #f7f1df;
   cursor: pointer;
   text-align: center;
-  transition: transform 150ms ease;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  scroll-snap-align: start;
 }
 .focus-collection-board:hover {
   transform: rotate(-1deg) translateY(-3px);
