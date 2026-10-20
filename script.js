@@ -127,7 +127,7 @@ function renderSessionCardVisual(session) {
   const captionMode = (readSessionCardStyles()[String(session.id)] || {}).captionDisplay || "below";
   if (image) {
     const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
-    visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
+    visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""} ${((readSessionCardStyles()[String(session.id)] || {}).imageFrame === "polaroid") ? "image-frame-polaroid" : ""}">
       <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
       ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
     </div>`);
@@ -1000,7 +1000,7 @@ async function loadSessions() {
   }
 
 
-  currentSessions = data || [];
+  currentSessions = applySavedSessionOrder(data || []);
 
   updateFocusCoverBanner();
   renderSessions();
@@ -1017,6 +1017,16 @@ function formatSessionBody(value) {
 }
 
 const SESSION_CARD_SIZES_KEY = "focusPractice.sessionCardSizes";
+const SESSION_CARD_ORDER_KEY = "focusPractice.sessionCardOrder";
+const SESSION_CARD_ANGLES_KEY = "focusPractice.sessionCardAngles";
+function readSessionCardOrder() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_ORDER_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function applySavedSessionOrder(sessions) { const all = readSessionCardOrder(); const saved = all[String(currentFocusId)] || []; if (!Array.isArray(saved) || !saved.length) return sessions; const rank = new Map(saved.map((id, index) => [String(id), index])); return [...sessions].sort((a, b) => { const ai = rank.has(String(a.id)) ? rank.get(String(a.id)) : Number.MAX_SAFE_INTEGER; const bi = rank.has(String(b.id)) ? rank.get(String(b.id)) : Number.MAX_SAFE_INTEGER; return ai - bi; }); }
+function persistSessionOrder() { const all = readSessionCardOrder(); all[String(currentFocusId)] = currentSessions.map(session => String(session.id)); try { localStorage.setItem(SESSION_CARD_ORDER_KEY, JSON.stringify(all)); } catch {} }
+function getSessionCardAngle(sessionId) { let angles = {}; try { angles = JSON.parse(localStorage.getItem(SESSION_CARD_ANGLES_KEY) || "{}") || {}; } catch {} const id = String(sessionId); if (!Number.isFinite(Number(angles[id]))) { angles[id] = Math.round((Math.random() * 10 - 5) * 10) / 10; try { localStorage.setItem(SESSION_CARD_ANGLES_KEY, JSON.stringify(angles)); } catch {} } return Number(angles[id]); }
+function dragSessionCard(event, sessionId) { if (event.target.closest("button, input, select, textarea, [contenteditable=true]")) { event.preventDefault(); return; } event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(sessionId)); event.currentTarget.classList.add("is-dragging"); }
+function finishSessionCardDrag(event) { event.currentTarget.classList.remove("is-dragging"); }
+function allowSessionCardDrop(event) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }
+function dropSessionCard(event, targetId) { event.preventDefault(); const sourceId = event.dataTransfer.getData("text/plain"); if (!sourceId || sourceId === String(targetId)) return; const from = currentSessions.findIndex(session => String(session.id) === sourceId); const to = currentSessions.findIndex(session => String(session.id) === String(targetId)); if (from < 0 || to < 0) return; const [moved] = currentSessions.splice(from, 1); currentSessions.splice(to, 0, moved); persistSessionOrder(); renderSessions(); }
 function readSessionCardSizes() { try { const value = JSON.parse(localStorage.getItem(SESSION_CARD_SIZES_KEY) || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
 function getSessionCardSize(session, index) { const saved = readSessionCardSizes()[String(session.id)]; if (Number.isFinite(Number(saved)) && saved >= 25 && saved <= 100) return Number(saved); return [44, 46, 40, 48, 42][index % 5]; }
 function updateSessionCardSize(sessionId, value) { const size = Math.max(25, Math.min(100, Number(value) || 48)); const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId)); if (!item) return; item.style.setProperty("--session-card-width", size + "%"); const output = item.querySelector(".session-card-size-value"); if (output) output.textContent = size + "%"; const sizes = readSessionCardSizes(); sizes[String(sessionId)] = size; try { localStorage.setItem(SESSION_CARD_SIZES_KEY, JSON.stringify(sizes)); } catch {} }
@@ -1041,6 +1051,8 @@ function renderSessions() {
     const size = getSessionCardSize(session, index);
     const safeId = escapeHtml(session.id);
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
+    const cardAngle = getSessionCardAngle(session.id);
+    const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual;
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px`;
@@ -1048,13 +1060,12 @@ function renderSessions() {
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
     return `
-      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%">
+      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" draggable="true" ondragstart="dragSessionCard(event, '${safeId}')" ondragend="finishSessionCardDrag(event)" ondragover="allowSessionCardDrop(event)" ondrop="dropSessionCard(event, '${safeId}')" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
-            <button type="button" class="step-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">×</button>
           </summary>
           <div class="session-expanded-content">
             <div class="session-edit-controls">
@@ -1062,6 +1073,7 @@ function renderSessions() {
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
               ${!isTextCard ? renderCaptionDisplayControl(safeId, cardStyle) : ""}
+              <button type="button" class="step-delete-button edit-delete-button" aria-label="Delete step ${index + 1}" title="Delete step" onclick="deleteSession(event, '${safeId}')">Delete card</button>
               <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
             </div>
             <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
@@ -1081,12 +1093,17 @@ function renderSessions() {
 }
 function renderCaptionDisplayControl(sessionId, style) {
   const mode = style.captionDisplay || "below";
+  const frame = style.imageFrame || "plain";
   return '<label for="captionDisplay-' + sessionId + '">Image caption</label><select id="captionDisplay-' + sessionId + '" onchange="updateSessionCaptionDisplay(\'' + sessionId + '\', this.value)">' +
     '<option value="below" ' + (mode === "below" ? "selected" : "") + '>Below image</option>' +
     '<option value="on-image" ' + (mode === "on-image" ? "selected" : "") + '>On image</option>' +
-    '<option value="hover" ' + (mode === "hover" ? "selected" : "") + '>On hover</option></select>';
+    '<option value="hover" ' + (mode === "hover" ? "selected" : "") + '>On hover</option></select>' +
+    '<label for="imageFrame-' + sessionId + '">Image style</label><select id="imageFrame-' + sessionId + '" onchange="updateSessionImageFrame(\'' + sessionId + '\', this.value)">' +
+    '<option value="plain" ' + (frame === "plain" ? "selected" : "") + '>Plain image</option>' +
+    '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>';
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
 async function saveEditedSessionText(element) {
   const sessionId = element && element.dataset.sessionId;
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
