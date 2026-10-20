@@ -2328,3 +2328,78 @@ body.is-loading button {
 }
 .current-focus-card h1::before, .current-focus-card h1::after { display:none!important; }
 .current-focus-card h1 { transform:rotate(var(--board-angle,0deg)); }
+
+
+/* Focus collection groups and boards reuse the green felt letter-board look. */
+.focus-collection-group {
+  margin: 42px 0 56px;
+}
+.focus-collection-group > .eyebrow {
+  margin-bottom: 22px;
+}
+.focus-collection-boards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 30px;
+  align-items: start;
+}
+.focus-collection-board {
+  --board-frame: clamp(12px, 2.2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 440px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  padding: calc(var(--board-frame) + 7%);
+  border: clamp(10px, 1.6vw, 18px) solid #c49a68;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(5,25,16,.9) 28px, rgba(5,25,16,.9) 30px, rgba(255,255,255,.08) 31px, transparent 33px),
+    linear-gradient(135deg, #17472f, #0f3323);
+  box-shadow: 0 5px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.08);
+  color: #f7f1df;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 150ms ease;
+}
+.focus-collection-board:hover {
+  transform: rotate(-1deg) translateY(-3px);
+}
+.focus-collection-status {
+  margin-bottom: 12px;
+  font: 700 10px/1.2 "IBM Plex Mono", monospace;
+  letter-spacing: .12em;
+  opacity: .78;
+}
+.focus-collection-board h2 {
+  margin: 0;
+  color: inherit;
+  font: 900 clamp(20px, 3vw, 34px)/1.15 "Arial Black", Arial, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-shadow: 1px 2px 0 #b7b2a2, 2px 3px 0 rgba(0,0,0,.45);
+  overflow-wrap: anywhere;
+}
+.focus-collection-board p {
+  max-width: 100%;
+  margin: 14px 0 0;
+  color: #f7f1df;
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: .88;
+}
+.focus-collection-board .focus-collection-note {
+  font-style: italic;
+}
+.focus-collection-board .focus-collection-open {
+  margin-top: 16px;
+  font-size: 11px;
+  opacity: .75;
+}
+@media (max-width: 600px) {
+  .focus-collection-group { margin: 30px 0 42px; }
+  .focus-collection-boards { grid-template-columns: 1fr; }
+  .focus-collection-board { width: min(100%, 340px); }
+}
