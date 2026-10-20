@@ -1230,8 +1230,6 @@ async function saveEditedSessionText(element) {
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
   if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
   if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
-  if (oldLinkMatch) body += (body ? "\n\n" : "") + oldLinkMatch[1].trim();
-  if (oldLinkCaption) body += (body ? "\n\n" : "") + oldLinkCaption[1].trim();
   if (body === oldBody) return;
   element.dataset.saving = "true";
   const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
