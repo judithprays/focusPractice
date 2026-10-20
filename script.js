@@ -479,11 +479,7 @@ async function loadHomeFocuses() {
   currentFocus = focusToShow;
   currentFocusId = currentFocus.id;
   updateNavigation();
-  const titleLetters = Array.from(currentFocus.title || "").map((character) => {
-    if (character === " ") return '<span class="letter-tile letter-space" aria-hidden="true"> </span>';
-    return '<span class="letter-tile">' + escapeHtml(character) + '</span>';
-  }).join("");
-  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1 aria-label="' + escapeHtml(currentFocus.title) + '">' + titleLetters + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1 aria-label="' + escapeHtml(currentFocus.title) + '">' + escapeHtml(currentFocus.title || "") + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
 
 
@@ -1125,6 +1121,15 @@ function renderSessions() {
   const list = $("sessionsList");
   if (!section || !list) return;
   section.classList.remove("hidden");
+  const addButton = $("addSessionButton");
+  const composer = $("newSessionForm");
+  const focusStepActions = $("focusStepActions");
+  let actionStack = $("focusActionStack");
+  if (!actionStack) {
+    actionStack = document.createElement("div");
+    actionStack.id = "focusActionStack";
+    actionStack.className = "focus-action-stack";
+  }
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
     const linkUrl = getSessionLink(session.body);
@@ -1148,7 +1153,10 @@ function renderSessions() {
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
-    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
+    const pollMatch = String(session.body || "").match(/(?:^|\\n)\\[focus-poll\\]([\\s\\S]*?)\\[\\/focus-poll\\]/);
+    let pollQuestion = ""; try { pollQuestion = pollMatch ? (JSON.parse(pollMatch[1]).question || "") : ""; } catch {}
+    const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
+    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(emptyPreview)}</div>`;
     return `
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
@@ -1187,15 +1195,6 @@ function renderSessions() {
       </div>`;
   }).join("");
   renderSessionTagCloud();
-  const addButton = $("addSessionButton");
-  const composer = $("newSessionForm");
-  const focusStepActions = $("focusStepActions");
-  let actionStack = $("focusActionStack");
-  if (!actionStack) {
-    actionStack = document.createElement("div");
-    actionStack.id = "focusActionStack";
-    actionStack.className = "focus-action-stack";
-  }
   if (actionStack.parentElement !== list) list.appendChild(actionStack);
   if (addButton) actionStack.appendChild(addButton);
   if (focusStepActions) actionStack.appendChild(focusStepActions);
@@ -1470,7 +1469,7 @@ function focusSessionTime() {
   const control = $("composerTimeControl");
   const wasOpen = control.classList.contains("is-open");
   hideSessionInputs(wasOpen ? "" : "time");
-  if (!wasOpen) { control.classList.add("is-open"); $("sessionTimeSlider").focus(); }
+  if (!wasOpen) { updateSessionTimeLabel(); control.classList.add("is-open"); $("sessionTimeSlider").focus(); }
 }
 
 function focusSessionEmoji() {
@@ -1599,7 +1598,7 @@ async function saveSession() {
   }
 
 
-  if (!body && !($("sessionImages").files || []).length && $("sessionDrawingPanel").classList.contains("hidden")) {
+  if (!body && !($("sessionImages").files || []).length && $("sessionDrawingPanel").classList.contains("hidden") && !$("sessionTimeSpent").value.trim()) {
     $("sessionText").focus();
     return;
   }
