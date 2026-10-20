@@ -2218,3 +2218,27 @@ body.is-loading button {
 .session-timer-readout { font:24px 'Courier New',monospace; margin:8px 0; }
 .session-poll-card { margin:14px 0; padding:14px; border:1px solid #ded6ca; background:#fffefa; }
 .session-poll-option { display:block; margin:8px 0; }
+
+/* Refinements: edit-only tag chips, succinct conditional fields, and typewriter defaults. */
+.session-edit-tags { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 8px; }
+.session-edit-tags .session-tag { display:inline-flex; }
+.session-tags-input { margin-bottom:10px; }
+.session-card-visual.image-frame-polaroid { padding:4% 4% 0!important; }
+.session-card-visual.image-frame-polaroid .session-image-caption,
+.session-card-visual.image-frame-polaroid .session-image-caption.caption-below,
+.session-card-visual.image-frame-polaroid .session-image-caption.caption-on-image,
+.session-card-visual.image-frame-polaroid .session-image-caption.caption-hover { padding:5% 2% 14%!important; min-height:0; }
+.session-card-visual.image-frame-polaroid:not(:has(.session-image-caption)) { padding-bottom:4%!important; }
+.composer-prompt { display:none; }
+.composer-prompt.is-open { display:block; }
+.session-image-caption-input { display:none; }
+.session-image-caption-input.is-visible { display:block; }
+.session-image-frame-wrap { display:none; }
+.session-image-frame-wrap.is-open { display:block; }
+.session-link-fields { display:none; }
+.session-link-fields.is-visible { display:block; }
+.session-link-preview { display:flex; flex-direction:column; gap:7px; max-width:100%; padding:16px; margin:12px 0; border:1px solid #d9d2c7; background:#fffefa; color:inherit; text-decoration:none; overflow-wrap:anywhere; }
+.session-link-domain { font:11px "Courier New",monospace; text-transform:uppercase; letter-spacing:.06em; color:#746c60; }
+.session-link-preview strong { font:600 17px "Courier New",monospace; }
+.session-link-url { font:12px Helvetica,Arial,sans-serif; color:#746c60; }
+.text-card-preview, .text-card-date, .focus-header .focus-goal-display, .focus-header .focus-started, .focus-header .goal-input, .focus-header input, .focus-header .focus-goal-label { font-family:"Courier New",Courier,monospace!important; }
