@@ -2019,7 +2019,7 @@ body.is-loading button {
 .current-focus-home > .eyebrow { align-self:flex-start; }
 .current-focus-card { width:100%; display:flex; flex-direction:column; align-items:center; text-align:center; }
 .current-focus-card h1 { width:min(100%,660px); max-width:660px; font-size:clamp(46px,8vw,80px); text-decoration:none!important; border-bottom:0!important; padding-bottom:0!important; }
-.current-focus-card h1 .letter-tile { text-decoration:none!important; border-bottom:0!important; box-shadow:none!important; }
+.current-focus-card h1 .letter-tile { text-decoration:none!important; border-bottom:0!important; box-shadow:none!important; margin:0!important; padding:0 .015em!important; }
 .current-focus-card > span { border-bottom:0!important; }
 .current-focus-card p { max-width:660px; text-align:center; }
 .current-focus-home .current-focus-card h1 { margin-left:auto; margin-right:auto; }
@@ -2048,7 +2048,7 @@ body.is-loading button {
 .session-card.has-session-visual > .session-card-visual img,
 .session-card.has-session-visual > .session-card-visual video { width:100%; height:auto; max-height:none; aspect-ratio:auto; object-fit:contain; display:block; }
 .session-card.has-session-visual > .session-collapsed-header { top:0; left:0; right:0; padding:18px; }
-.session-card.has-session-visual[open] > .session-collapsed-header { display:none; }
+/* Keep the image and its overlay visible while its edit controls are open. */
 .session-card.has-session-visual .session-expanded-content { padding:16px 0 0; }
 .session-card.has-session-visual .session-edit-controls { margin-top:0; }
 .session-card.text-only-step { padding:0; background:transparent; border:0; }
@@ -2061,7 +2061,7 @@ body.is-loading button {
 .text-card-item:hover .step-delete-button,.text-card-item .session-card[open] .step-delete-button { opacity:1; }
 .text-card-item .session-expanded-content { padding:0; }
 .text-card-item .session-main { padding:0 0 16px; }
-.session-card[open] .session-collapsed-header { display:none; }
+.text-card-item .session-card[open] .text-card-preview { display:none; }
 .session-card[open] .session-expanded-content { display:block; }
 @media(max-width:700px) {
  .focus-cover-banner { width:calc(100% + 40px); height:240px; margin:-40px 0 0 -20px; }
@@ -2071,3 +2071,8 @@ body.is-loading button {
  .session-card-item { width:100%; flex-basis:100%; }
  .current-focus-card h1 { font-size:clamp(36px,10vw,64px); }
 }
+
+.text-card-item .session-card[open] .session-collapsed-header { display:block; }
+.text-card-item .session-card[open] .text-card-date { margin-bottom:8px; }
+.session-card.has-session-visual[open] > .session-collapsed-header { display:block; }
+.session-card.has-session-visual[open] > .session-collapsed-header .session-overlay-copy { pointer-events:none; }
