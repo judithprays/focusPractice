@@ -174,7 +174,7 @@ function openFirstSessionWithTag(tag) {
   const target = currentSessions.find(session => getSessionTags(session).some(value => value.toLowerCase() === String(tag).toLowerCase()));
   if (!target) return;
   const card = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(target.id)) + '"] .session-card');
-  if (card) { card.open = true; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  if (card) { card.open = false; card.scrollIntoView({ behavior: "smooth", block: "center" }); }
 }
 
 
