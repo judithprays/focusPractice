@@ -1189,11 +1189,17 @@ function renderSessions() {
   renderSessionTagCloud();
   const addButton = $("addSessionButton");
   const composer = $("newSessionForm");
-  if (addButton && addButton.parentElement !== list) list.appendChild(addButton);
-  if (composer && composer.parentElement !== list) list.appendChild(composer);
-  if (addButton) list.appendChild(addButton);
   const focusStepActions = $("focusStepActions");
-  if (focusStepActions) list.appendChild(focusStepActions);
+  let actionStack = $("focusActionStack");
+  if (!actionStack) {
+    actionStack = document.createElement("div");
+    actionStack.id = "focusActionStack";
+    actionStack.className = "focus-action-stack";
+  }
+  if (actionStack.parentElement !== list) list.appendChild(actionStack);
+  if (addButton) actionStack.appendChild(addButton);
+  if (focusStepActions) actionStack.appendChild(focusStepActions);
+  if (composer && composer.parentElement !== list) list.appendChild(composer);
   if (composer) list.appendChild(composer);
   if (addButton) addButton.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active" || !composer.classList.contains("hidden"));
   if (focusStepActions) focusStepActions.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active");
