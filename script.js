@@ -1123,7 +1123,7 @@ function renderSessions() {
     const linkUrl = getSessionLink(session.body);
     const bodyWithoutVideo = stripSessionImageCaption((videoUrl
       ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
-      : session.body).replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, ""));
+      : session.body).replace(/(?:^|\n)Link:\s*https?:\/\/[^\s]+/i, "").replace(/(?:\n?\[link-caption\][\s\S]*?\[\/link-caption\])/ig, "").replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, ""));
     const summary = (session.summary || bodyWithoutVideo || "").trim();
     const summaryPreview = summary.length > 180 ? summary.slice(0, 177).trimEnd() + "…" : summary;
     const emoji = (session.summary_emoji || "").trim();
@@ -1208,6 +1208,8 @@ async function saveEditedSessionText(element) {
   const oldLinkCaption = oldBody.match(/(?:^|\\n)(\\[link-caption\\][\\s\\S]*?\\[\\/link-caption\\])/i);
   const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
   const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
+  const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
+  const linkCaptionMatch = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
   const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
   let body = element.innerText.trim();
@@ -1215,6 +1217,8 @@ async function saveEditedSessionText(element) {
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
+  if (linkMatch) body += (body ? "\n\n" : "") + linkMatch[1].trim();
+  if (linkCaptionMatch) body += (body ? "\n\n" : "") + linkCaptionMatch[1].trim();
   if (oldLinkMatch) body += (body ? "\n\n" : "") + oldLinkMatch[1].trim();
   if (oldLinkCaption) body += (body ? "\n\n" : "") + oldLinkCaption[1].trim();
   if (body === oldBody) return;
@@ -1312,6 +1316,7 @@ function hideSessionInputs(except) {
     text: $("sessionText"),
     image: $("sessionImages"),
     video: $("sessionVideoUrl"),
+    link: $("sessionLinkFields"),
     time: $("composerTimeControl"),
     emoji: $("composerEmojiControl"),
     drawing: $("sessionDrawingPanel")
@@ -1319,11 +1324,14 @@ function hideSessionInputs(except) {
   Object.entries(inputs).forEach(([key, element]) => {
     if (!element || key === except) return;
     if (key === "text") element.classList.add("hidden");
-    else if (key === "image" || key === "video") element.classList.remove("is-visible");
+    else if (key === "image" || key === "video" || key === "link") element.classList.remove("is-visible");
     else if (key === "time" || key === "emoji") element.classList.remove("is-open");
     else element.classList.add("hidden");
   });
-  $("sessionImageCaption")?.classList.toggle("is-visible", except === "image");
+  $("sessionImageCaption")?.classList.toggle("is-visible", except === "image" || except === "video");
+  $("sessionImageFrameWrap")?.classList.toggle("is-open", except === "image");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.toggle("is-open", except === "text");
+  $("sessionLinkFields")?.classList.toggle("is-visible", except === "link");
   $("sessionTextFormatting")?.classList.toggle("hidden", except !== "text");
 }
 
