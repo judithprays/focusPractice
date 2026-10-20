@@ -381,7 +381,11 @@ async function loadHomeFocuses() {
   const home = document.querySelector(".current-focus-home");
   if (home) home.classList.remove("no-active-focus");
   currentFocus = data[0]; currentFocusId = currentFocus.id; updateNavigation();
-  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1>' + escapeHtml(currentFocus.title) + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
+  const titleLetters = Array.from(currentFocus.title || "").map((character) => {
+    if (character === " ") return '<span class="letter-tile letter-space" aria-hidden="true"> </span>';
+    return '<span class="letter-tile">' + escapeHtml(character) + '</span>';
+  }).join("");
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + currentFocus.id + '\')"><h1 aria-label="' + escapeHtml(currentFocus.title) + '">' + titleLetters + '</h1><p>' + escapeHtml(currentFocus.goal || "Small steps. Big momentum. ♡") + '</p><span>Open your focus log ↗</span></button>';
 }
 
 
