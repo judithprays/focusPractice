@@ -75,17 +75,10 @@
 
         <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Current focus banner">
           <img id="focusCoverImage" alt="">
-          <div class="focus-header">
-
-          <p
-            class="eyebrow focus-goal-label"
-            id="focusStatusLabel"
-          >
-            MY CURRENT FOCUS
-          </p>
-
-          <h1 id="focusTitleDisplay"></h1>
-
+          <h1 id="focusTitleDisplay" class="focus-board-title"></h1>
+        </div>
+        <div class="focus-header">
+          <p class="eyebrow focus-goal-label" id="focusStatusLabel">MY CURRENT FOCUS</p>
           <p id="focusStarted" class="focus-started"></p>
           <div class="focus-goal-display-row">
             <p id="focusGoalDisplay" class="focus-started focus-goal-display hidden"></p>
@@ -99,8 +92,6 @@
               <button id="cancelGoalButton" class="text-button hidden" onclick="cancelEditFocusGoal()">Cancel</button>
               <span id="goalSaveStatus" class="save-status" aria-live="polite"></span>
             </div>
-          </div>
-
           </div>
         </div>
 
