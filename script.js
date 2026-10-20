@@ -1208,8 +1208,8 @@ async function saveEditedSessionText(element) {
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session || !element || element.dataset.saving === "true") return;
   const oldBody = String(session.body || "");
-  const oldLinkMatch = oldBody.match(/(?:^|\\n)(Link:\\s*https?:\\/\\/[^\\s]+)/i);
-  const oldLinkCaption = oldBody.match(/(?:^|\\n)(\\[link-caption\\][\\s\\S]*?\\[\\/link-caption\\])/i);
+  const oldLinkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
+  const oldLinkCaption = oldBody.match(/(?:^|\n)(\[link-caption\][\s\S]*?\[\/link-caption\])/i);
   const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
   const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
   const linkMatch = oldBody.match(/(?:^|\n)(Link:\s*https?:\/\/[^\s]+)/i);
