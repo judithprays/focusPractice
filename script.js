@@ -1105,9 +1105,7 @@ function updateTextCardStyle(sessionId, key, value) {
   const style = styles[String(sessionId)];
   const preview = item.querySelector(".text-card-preview");
   if (preview) {
-    preview.style.setProperty("--text-card-height", (Number(style.height) || 150) + "px");
     preview.style.setProperty("--text-card-font-size", (Number(style.fontSize) || 22) + "px");
-    preview.style.setProperty("--text-card-font-family", style.fontFamily || "Georgia, serif");
   }
   const output = item.querySelector(`#textCard${key === "height" ? "Height" : key === "fontSize" ? "FontSize" : "Font"}-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
   if (output) output.textContent = key === "fontFamily" ? value : value + "px";
