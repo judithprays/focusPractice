@@ -1130,7 +1130,6 @@ function renderSessions() {
           <summary class="session-collapsed-header">
             ${visual}
             ${renderSessionTags(session)}
-            ${renderSessionPoll(session)}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
           </summary>
@@ -1146,6 +1145,7 @@ function renderSessions() {
               <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
             </div>
             <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
+            ${renderSessionPoll(session)}
             <div class="session-details">
               ${renderSessionDetail("Things accomplished", session.accomplished)}
               ${renderSessionDetail("Funny things that happened", session.funny)}
