@@ -2121,3 +2121,20 @@ body.is-loading button {
 .session-card.has-session-visual[open] .session-edit-controls { display:flex; flex-direction:column; align-items:flex-start; gap:8px; margin:0 0 16px!important; }
 .session-card.has-session-visual[open] .session-edit-controls input[type=range] { width:100%; }
 @media(max-width:700px) { #focusCoverBanner .focus-board-title { width:min(78vw,300px)!important; } .session-card-item { flex-basis:100%!important; width:100%!important; } }
+
+
+/* Focus log refinements */
+.focus-cover-banner::after { display:none!important; background:none!important; }
+#focusCoverBanner.focus-cover-banner { background:transparent!important; box-shadow:none!important; }
+.focus-header { display:flex!important; flex-direction:column!important; align-items:center!important; gap:8px!important; }
+.focus-goal-display-row { order:0!important; margin:0!important; }
+#focusStarted { order:1!important; margin:0!important; }
+.goal-click-to-edit { display:block; border:0; padding:4px 8px; margin:0 auto; background:transparent; font:inherit; font-size:16px; line-height:1.5; cursor:pointer; }
+.goal-click-to-edit:hover { text-decoration:underline; text-decoration-style:dotted; text-underline-offset:4px; }
+.goal-click-to-edit.is-empty-goal { color:#777!important; font-style:italic; }
+.focus-goal-editor { order:0!important; }
+.focus-goal-editor label { display:none!important; }
+.session-overlay-copy { display:none!important; }
+.session-card .session-expand-indicator { display:none!important; }
+.session-card[open] .session-body-content[contenteditable="true"] { min-height:80px; padding:10px; border:1px dashed #c9c0b4; outline:none; white-space:pre-wrap; }
+.session-card[open] .session-body-content[contenteditable="true"]:focus { border-color:#777; background:#fffefa; }
