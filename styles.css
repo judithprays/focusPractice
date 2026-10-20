@@ -2242,3 +2242,10 @@ body.is-loading button {
 .session-link-preview strong { font:600 17px "Courier New",monospace; }
 .session-link-url { font:12px Helvetica,Arial,sans-serif; color:#746c60; }
 .text-card-preview, .text-card-date, .focus-header .focus-goal-display, .focus-header .focus-started, .focus-header .goal-input, .focus-header input, .focus-header .focus-goal-label { font-family:"Courier New",Courier,monospace!important; }
+
+/* Focus action placement and final touch-ups. */
+.focus-step-actions { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 28px; width:100%; }
+.focus-step-actions button { border-radius:999px!important; padding:10px 18px!important; }
+.focus-delete-bottom { display:flex; justify-content:flex-start; margin:36px 0 12px; padding-top:18px; border-top:1px solid #ddd5ca; }
+.focus-delete-bottom #deleteFocusButton { border-radius:999px; }
+.session-link-preview { grid-column:1/-1; }
