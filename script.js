@@ -1192,9 +1192,9 @@ async function saveEditedSessionText(element) {
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
   const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
   let body = element.innerText.trim();
+  if (pollMatch) body += (body ? "\n\n" : "") + pollMatch[1].trim();
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
-  if (pollMatch) body += (body ? "\n\n" : "") + pollMatch[1].trim();
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
   if (body === oldBody) return;
   element.dataset.saving = "true";
