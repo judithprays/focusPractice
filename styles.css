@@ -2386,3 +2386,12 @@ body.is-loading button {
   .focus-collection-boards { gap: 18px; }
   .focus-collection-board { flex-basis: min(82vw, 320px); width: min(82vw, 320px); }
 }
+
+
+/* Keep collection sections stacked vertically; each status gets its own row. */
+.collection-list { display: block; }
+.focus-collection-group { display: block; width: 100%; clear: both; }
+.focus-collection-boards { width: 100%; min-width: 0; max-width: 100%; }
+.collection-tag-index { margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--light-gray); }
+.collection-tag-index .session-tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+.session-card-date { display: block; margin: 0 0 12px; color: var(--gray); font-size: 12px; letter-spacing: .04em; }
