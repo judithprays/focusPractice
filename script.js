@@ -470,7 +470,7 @@ async function loadHomeFocuses() {
   if (!focusToShow) {
     const home = document.querySelector(".current-focus-home");
     if (home) home.classList.add("no-active-focus");
-    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Find your focus</button>';
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
     return;
   }
 
@@ -549,98 +549,58 @@ function renderFocusCard(focus) {
 -------------------------------- */
 
 async function loadCollection() {
-
   const list = $("collectionList");
-
   if (!list) return;
 
-  list.innerHTML =
-    `<p class="empty-state">Loading...</p>`;
-
+  list.innerHTML = `<p class="empty-state">Loading...</p>`;
 
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
-
+    .order("created_at", { ascending: false });
 
   if (error) {
-
     console.error(error);
-
-    list.innerHTML =
-      `<p class="empty-state">
-        Couldn't load the Focus Collection.
-      </p>`;
-
+    list.innerHTML = `<p class="empty-state">Couldn't load the Focus Collection.</p>`;
     return;
   }
 
-
-  const activeFocus = (data || []).find((focus) => focus.status === "active");
+  const focuses = data || [];
+  const activeFocus = focuses.find((focus) => focus.status === "active");
+  const completedFocuses = focuses.filter((focus) => focus.status === "completed");
+  const abandonedFocuses = focuses.filter((focus) => focus.status === "abandoned");
   const action = $("collectionFocusAction");
+
   if (action) {
     action.innerHTML = activeFocus
       ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
-      : `<button class="primary-button" onclick="showCreateFocus()">+ Start a new focus</button>`;
+      : `<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>`;
   }
 
-  if (!data || data.length === 0) {
+  const renderBoard = (focus, statusLabel) => `
+    <button class="focus-collection-board" onclick="openFocus('${focus.id}')" aria-label="Open ${escapeHtml(focus.title)} focus log">
+      <span class="focus-collection-status">${statusLabel}</span>
+      <h2>${escapeHtml(focus.title || "Untitled focus")}</h2>
+      ${focus.goal ? `<p>${escapeHtml(focus.goal)}</p>` : ""}
+      ${focus.completion_text ? `<p class="focus-collection-note">${escapeHtml(focus.completion_text)}</p>` : ""}
+      <span class="focus-collection-open">Open focus log ↗</span>
+    </button>
+  `;
 
-    list.innerHTML =
-      `<p class="empty-state">
-        Your Focus Collection is empty.
-      </p>`;
+  const renderSection = (title, items, statusLabel) => items.length ? `
+    <section class="focus-collection-group">
+      <p class="eyebrow">${title}</p>
+      <div class="focus-collection-boards">${items.map((focus) => renderBoard(focus, statusLabel)).join("")}</div>
+    </section>
+  ` : "";
 
-    return;
-  }
+  const sections = [
+    activeFocus ? renderSection("MY CURRENT FOCUS", [activeFocus], "ACTIVE") : "",
+    renderSection("COMPLETED FOCUSES", completedFocuses, "COMPLETED"),
+    renderSection("ABANDONED FOCUSES", abandonedFocuses, "ABANDONED")
+  ].filter(Boolean).join("");
 
-
-  list.innerHTML = data
-    .map((focus) => {
-
-      const statusLabel =
-        focus.status === "completed"
-          ? "COMPLETED"
-          : focus.status === "abandoned"
-            ? "ABANDONED"
-            : "ACTIVE";
-
-
-      const cover = isSafeImageUrl(focus.cover_image_url)
-        ? `<div class="collection-cover" style="background-image: linear-gradient(0deg, rgba(0,0,0,.66), rgba(0,0,0,0) 72%), url('${escapeHtml(focus.cover_image_url)}')"><h3>${escapeHtml(focus.title)}</h3></div>`
-        : `<div class="collection-cover collection-cover-empty"><h3>${escapeHtml(focus.title)}</h3></div>`;
-
-      return `
-        <button class="collection-card" onclick="openFocus('${focus.id}')">
-          ${cover}
-          <p class="focus-status ${focus.status}">
-            ${statusLabel}
-          </p>
-          <p class="collection-meta">
-            Started ${formatDate(
-              focus.started_at
-                ? focus.started_at.split("T")[0]
-                : ""
-            )}
-          </p>
-
-          ${
-            focus.completion_text
-              ? `
-                <p>
-                  ${escapeHtml(focus.completion_text)}
-                </p>
-              `
-              : ""
-          }
-
-        </button>
-      `;
-    })
-    .join("");
+  list.innerHTML = sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`;
 }
 
 
@@ -900,69 +860,42 @@ function updateFocusCoverBanner() {
 }
 
 function renderFocusState() {
-
   if (!currentFocus) return;
 
-
-  $("focusTitleDisplay").textContent =
-    currentFocus.title;
-
+  $("focusTitleDisplay").textContent = currentFocus.title;
   updateFocusCoverBanner();
   const boardTitle = $("focusTitleDisplay");
-  if (boardTitle) { boardTitle.textContent = currentFocus.title || ""; const angle = (Math.random() * 10 - 5).toFixed(2) + "deg"; boardTitle.style.setProperty("--board-angle", angle); }
+  if (boardTitle) {
+    boardTitle.textContent = currentFocus.title || "";
+    const angle = (Math.random() * 10 - 5).toFixed(2) + "deg";
+    boardTitle.style.setProperty("--board-angle", angle);
+  }
 
-  $("focusStarted").textContent =
-    currentFocus.started_at
-      ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
-      : "";
+  $("focusStarted").textContent = currentFocus.started_at
+    ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
+    : "";
 
   $("focusGoalEdit").value = currentFocus.goal || "";
   renderFocusGoal();
 
-  const statusLabel =
-    currentFocus.status === "completed"
-      ? "COMPLETED"
-      : currentFocus.status === "abandoned"
-        ? "ABANDONED"
-        : "MY CURRENT FOCUS";
+  const statusLabel = currentFocus.status === "completed"
+    ? "COMPLETED"
+    : currentFocus.status === "abandoned"
+      ? "ABANDONED"
+      : "MY CURRENT FOCUS";
 
+  $("focusStatusLabel").textContent = statusLabel;
 
-  $("focusStatusLabel").textContent =
-    statusLabel;
+  const isActive = currentFocus.status === "active";
+  const canAddSteps = isActive || currentFocus.status === "completed";
 
+  // Completed focuses remain editable for now; abandoned focuses are read-only.
+  $("addSessionButton").classList.toggle("hidden", !canAddSteps);
+  $("focusEndingSection").classList.toggle("hidden", !isActive);
+  $("focusStepActions")?.classList.toggle("hidden", !isActive);
 
-  /*
-    Only active focuses can be worked on.
-  */
-
-  const isActive =
-    currentFocus.status === "active";
-
-
-  if (isActive) {
-
-    $("addSessionButton")
-      .classList.remove("hidden");
-
-    $("focusEndingSection")
-      .classList.remove("hidden");
-
-  } else {
-
-    $("addSessionButton")
-      .classList.add("hidden");
-
-    $("focusEndingSection")
-      .classList.add("hidden");
-
-  }
-
-
-  $("newSessionForm")
-    .classList.add("hidden");
-
-  $("abandonFocusSection")
-    .classList.add("hidden");
+  $("newSessionForm").classList.add("hidden");
+  $("abandonFocusSection").classList.add("hidden");
 }
 
 
