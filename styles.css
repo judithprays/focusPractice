@@ -2395,3 +2395,7 @@ body.is-loading button {
 .collection-tag-index { margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--light-gray); }
 .collection-tag-index .session-tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
 .session-card-date { display: block; margin: 0 0 12px; color: var(--gray); font-size: 12px; letter-spacing: .04em; }
+
+
+/* Account screen and read-only public focus view */
+.auth-page{display:flex;justify-content:center;align-items:flex-start}.auth-panel{width:100%;max-width:520px;padding:50px 0}.auth-panel h1{font-size:clamp(42px,7vw,64px);margin-bottom:18px}.auth-panel>p:not(.eyebrow){color:var(--gray)}.auth-input{display:block;width:100%;border:1px solid var(--light-gray);background:white;padding:14px;margin:8px 0 22px}.auth-panel form .primary-button{margin-top:8px}.auth-message{min-height:1.5em;margin-top:18px;font-size:14px}.auth-switch{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}.auth-switch .text-button{padding:4px 0}.session-edit-controls.read-only-hidden{display:none!important}body:not(.editing-own-focus) .focus-goal-display{pointer-events:none;cursor:default;text-decoration:none}body:not(.editing-own-focus) #addSessionButton,body:not(.editing-own-focus) #focusStepActions,body:not(.editing-own-focus) #focusEndingSection,body:not(.editing-own-focus) #deleteFocusButton{display:none!important}body:not(.editing-own-focus) .session-body-content[contenteditable="false"]{cursor:default;outline:none}@media(max-width:700px){.site-header nav{gap:10px}.auth-panel{padding-top:30px}}
