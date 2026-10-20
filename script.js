@@ -596,7 +596,47 @@ async function loadCollection() {
     renderSection("ABANDONED FOCUSES", abandonedFocuses)
   ].filter(Boolean).join("");
 
-  list.innerHTML = sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`;
+  // Collect tags across every focus so the collection has one searchable tag index.
+  let collectionTagsMarkup = "";
+  if (focuses.length) {
+    const focusIds = focuses.map(focus => focus.id);
+    const { data: sessions, error: sessionsError } = await focusSupabase
+      .from("sessions")
+      .select("id, focus_id, body, session_date, summary")
+      .in("focus_id", focusIds)
+      .order("session_date", { ascending: true });
+    if (sessionsError) {
+      console.error("Could not load collection tags:", sessionsError);
+    } else {
+      const seenTags = new Map();
+      (sessions || []).forEach(session => {
+        getSessionTags(session).forEach(tag => {
+          const key = tag.toLowerCase();
+          if (!seenTags.has(key)) seenTags.set(key, { label: tag, targets: [] });
+          seenTags.get(key).targets.push({ focusId: session.focus_id, sessionId: session.id });
+        });
+      });
+      const allTags = [...seenTags.values()].sort((a, b) => a.label.localeCompare(b.label));
+      collectionTagsMarkup = allTags.length ? `
+        <section class="collection-tag-index">
+          <p class="eyebrow">TAGS</p>
+          <div class="session-tag-cloud">${allTags.map(tag => `<button type="button" class="session-tag" onclick="openCollectionTagTarget('${escapeHtml(tag.targets[0].focusId)}','${escapeHtml(tag.targets[0].sessionId)}')">#${escapeHtml(tag.label)}</button>`).join("")}</div>
+        </section>` : "";
+    }
+  }
+  list.innerHTML = (sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`) + collectionTagsMarkup;
+}
+
+async function openCollectionTagTarget(focusId, sessionId) {
+  await openFocus(focusId);
+  requestAnimationFrame(() => {
+    const item = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(sessionId)) + '"]');
+    const card = item?.querySelector(".session-card");
+    if (card) {
+      card.open = true;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
 }
 
 
@@ -1090,6 +1130,7 @@ function renderSessions() {
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
+            ${cardStyle.showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
             ${visual}
             ${videoUrl ? renderSessionVideo(session) : ""}
             ${linkUrl ? renderSessionLink(session) : ""}
@@ -1100,6 +1141,7 @@ function renderSessions() {
             <div class="session-edit-controls">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
+              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${cardStyle.showDate ? "" : "selected"}>Hidden</option><option value="on" ${cardStyle.showDate ? "selected" : ""}>Show date</option></select>
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
@@ -1145,6 +1187,19 @@ function renderCaptionDisplayControl(sessionId, style) {
     '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>' + '<label for="imageFlip-' + sessionId + '">Flip image</label><select id="imageFlip-' + sessionId + '" onchange="updateSessionImageFlip(\'' + sessionId + '\', this.value)"><option value="none" ' + (flip === "none" ? "selected" : "") + '>Original</option><option value="flip-horizontal" ' + (flip === "flip-horizontal" ? "selected" : "") + '>Flip horizontal</option><option value="flip-vertical" ' + (flip === "flip-vertical" ? "selected" : "") + '>Flip vertical</option><option value="flip-both" ' + (flip === "flip-both" ? "selected" : "") + '>Flip both</option></select>';
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function updateSessionDateDisplay(sessionId, value) {
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), showDate: value === "on" };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId));
+  const session = currentSessions.find(entry => String(entry.id) === String(sessionId));
+  const summary = item?.querySelector(".session-collapsed-header");
+  if (summary && session) {
+    const existing = summary.querySelector(".session-card-date");
+    if (value === "on" && !existing) summary.insertAdjacentHTML("afterbegin", '<span class="session-card-date">' + escapeHtml(formatDate(session.session_date) || "Date not set") + '</span>');
+    if (value !== "on" && existing) existing.remove();
+  }
+}
 function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
 async function saveEditedSessionText(element) {
   const sessionId = element && element.dataset.sessionId;
