@@ -110,6 +110,23 @@ function getSessionVideoUrl(body) {
   }
 }
 
+
+function getSessionLink(body) {
+  const match = String(body || "").match(/(?:^|\\n)Link:\\s*(https?:\\/\\/[^\\s]+)/i);
+  if (!match) return "";
+  try { const url = new URL(match[1].replace(/[),.]+$/, "")); return ["http:", "https:"].includes(url.protocol) ? url.href : ""; } catch { return ""; }
+}
+function getSessionLinkCaption(body) {
+  const match = String(body || "").match(/(?:^|\\n)\\[link-caption\\]([\\s\\S]*?)\\[\\/link-caption\\]/i);
+  return match ? match[1].trim() : "";
+}
+function renderSessionLink(session) {
+  const url = getSessionLink(session.body); if (!url) return "";
+  let host = url; try { host = new URL(url).hostname.replace(/^www\\./, ""); } catch {}
+  const caption = getSessionLinkCaption(session.body);
+  return '<a class="session-link-preview" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer"><span class="session-link-domain">' + escapeHtml(host) + '</span><strong>' + escapeHtml(caption || host) + '</strong><span class="session-link-url">' + escapeHtml(url) + '</span></a>';
+}
+
 function getSessionImageCaption(body) {
   const match = String(body || "").match(/(?:^|\n)\[image-caption\]([\s\S]*?)\[\/image-caption\]/i);
   return match ? match[1].trim() : "";
@@ -1103,6 +1120,7 @@ function renderSessions() {
   section.classList.remove("hidden");
   list.innerHTML = currentSessions.map((session, index) => {
     const videoUrl = getSessionVideoUrl(session.body);
+    const linkUrl = getSessionLink(session.body);
     const bodyWithoutVideo = stripSessionImageCaption((videoUrl
       ? String(session.body || "").replace(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i, "")
       : session.body).replace(/(?:\n?\[focus-poll\][\s\S]*?\[\/focus-poll\])/ig, "").replace(/(?:\n?\[focus-tags\][\s\S]*?\[\/focus-tags\])/ig, ""));
@@ -1129,14 +1147,13 @@ function renderSessions() {
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${visual}
-            ${renderSessionTags(session)}
             ${isTextCard ? textSummary : `<div class="session-overlay-copy"><div class="session-tldr">${visualSummary}</div></div>`}
             
           </summary>
           <div class="session-expanded-content">
             <div class="session-edit-controls">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
-              <label for="sessionTagsEdit-${safeId}">Tags (comma-separated)</label><input id="sessionTagsEdit-${safeId}" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="writing, research, breakthrough">
+              <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
@@ -1187,6 +1204,8 @@ async function saveEditedSessionText(element) {
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
   if (!session || !element || element.dataset.saving === "true") return;
   const oldBody = String(session.body || "");
+  const oldLinkMatch = oldBody.match(/(?:^|\\n)(Link:\\s*https?:\\/\\/[^\\s]+)/i);
+  const oldLinkCaption = oldBody.match(/(?:^|\\n)(\\[link-caption\\][\\s\\S]*?\\[\\/link-caption\\])/i);
   const pollMatch = oldBody.match(/(?:^|\n)(\[focus-poll\][\s\S]*?\[\/focus-poll\])/i);
   const tagsMatch = oldBody.match(/(?:^|\n)(\[focus-tags\][\s\S]*?\[\/focus-tags\])/i);
   const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
@@ -1196,6 +1215,8 @@ async function saveEditedSessionText(element) {
   if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
   if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
   if (tagsMatch) body += (body ? "\n\n" : "") + tagsMatch[1].trim();
+  if (oldLinkMatch) body += (body ? "\n\n" : "") + oldLinkMatch[1].trim();
+  if (oldLinkCaption) body += (body ? "\n\n" : "") + oldLinkCaption[1].trim();
   if (body === oldBody) return;
   element.dataset.saving = "true";
   const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
@@ -1308,6 +1329,7 @@ function hideSessionInputs(except) {
 
 function focusSessionText() {
   hideSessionInputs("text");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.add("is-open");
   const field = $("sessionText");
   field.classList.remove("hidden");
   $("sessionTextFormatting")?.classList.remove("hidden");
@@ -1387,14 +1409,22 @@ function clearSessionDrawing() {
 
 function showSessionImages() {
   hideSessionInputs("image");
+  $("sessionImageFrameWrap")?.classList.add("is-open");
   const field = $("sessionImages");
   field.classList.add("is-visible");
   $("sessionImageCaption")?.classList.add("is-visible");
   field.focus();
 }
 
+function focusSessionLink() {
+  hideSessionInputs("link");
+  $("sessionLinkFields")?.classList.add("is-visible");
+  $("sessionLinkUrl")?.focus();
+}
+
 function focusSessionVideo() {
   hideSessionInputs("video");
+  $("sessionImageCaption")?.classList.add("is-visible");
   const field = $("sessionVideoUrl");
   field.classList.add("is-visible");
   field.focus();
@@ -1426,6 +1456,9 @@ function openSessionForm() {
   clearSessionDrawing();
   $("sessionImages").value = "";
   $("sessionImageCaption").value = "";
+  $("sessionImageCaption")?.classList.remove("is-visible");
+  $("sessionImageFrameWrap")?.classList.remove("is-open");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.remove("is-open");
   if ($("sessionImageFrame")) $("sessionImageFrame").value = "plain";
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
@@ -1457,6 +1490,12 @@ function closeSessionForm() {
   $("sessionPollPanel")?.classList.add("hidden"); $("sessionTimerPanel")?.classList.add("hidden"); resetSessionTimer();
   $("sessionImages").value = "";
   $("sessionImageCaption").value = "";
+  $("sessionImageCaption")?.classList.remove("is-visible");
+  $("sessionImageFrameWrap")?.classList.remove("is-open");
+  $("sessionPrompt").closest(".composer-prompt")?.classList.remove("is-open");
+  $("sessionLinkUrl").value = "";
+  $("sessionLinkCaption").value = "";
+  $("sessionLinkFields")?.classList.remove("is-visible");
   $("sessionVideoUrl").value = "";
   $("sessionImages").classList.remove("is-visible");
   $("sessionText").classList.add("hidden");
@@ -1504,11 +1543,14 @@ async function saveSession() {
   const imageCaption = $("sessionImageCaption").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
+  const linkUrl = $("sessionLinkUrl")?.value.trim() || "";
+  const linkCaption = $("sessionLinkCaption")?.value.trim() || "";
   const prompt = $("sessionPrompt").value;
   const includePrompt = $("sessionIncludePrompt")?.checked;
   if (includePrompt && prompt && body) body = prompt + "\n\n" + body;
   else if (includePrompt && prompt) body = prompt;
   if (videoUrl) body = (body ? body + "\n\n" : "") + "Video: " + videoUrl;
+  if (linkUrl) { try { const parsedLink = new URL(linkUrl); if (!["http:", "https:"].includes(parsedLink.protocol)) throw new Error("bad protocol"); body = (body ? body + "\n\n" : "") + "Link: " + parsedLink.href; if (linkCaption) body += "\n[link-caption]" + linkCaption + "[/link-caption]"; } catch { $("sessionLinkUrl").focus(); alert("Please enter a valid http or https link."); return; } }
   if (imageCaption) body = (body ? body + "\n\n" : "") + "[image-caption]" + imageCaption + "[/image-caption]";
   if (tagValues.length) body = body + (body ? "\n\n" : "") + "[focus-tags]" + JSON.stringify(tagValues) + "[/focus-tags]";
 
