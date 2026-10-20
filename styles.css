@@ -1982,6 +1982,14 @@ body.is-loading button {
   transform: rotate(var(--letter-tilt, 0deg));
   transform-origin: 50% 85%;
 }
+.current-focus-card h1 .letter-space { width: .28em; }
+
+/* A few letters sit a little crooked, as if placed by hand. */
+.current-focus-card h1 .letter-tile:nth-child(5n + 1) { --letter-tilt: -3deg; }
+.current-focus-card h1 .letter-tile:nth-child(7n + 3) { --letter-tilt: 2.5deg; }
+.current-focus-card h1 .letter-tile:nth-child(11n + 5) { --letter-tilt: -2deg; }
+.current-focus-card h1 .letter-tile:nth-child(13n + 8) { --letter-tilt: 3.5deg; }
+.current-focus-card h1 .letter-tile:nth-child(17n + 4) { --letter-tilt: 0deg; }
 
 /* Keep the object square and tactile without letting it overwhelm small screens. */
 @media (max-width: 700px) {
