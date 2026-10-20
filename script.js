@@ -573,14 +573,14 @@ async function loadCollection(scope="all") {
   if(mine)query=query.eq("owner_id",currentUser.id);
   const {data,error}=await query;
   if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load the Focus Collection.</p>';return;}
-  const focuses=data||[],active=focuses.find(f=>f.status==="active"),completed=focuses.filter(f=>f.status==="completed"),abandoned=focuses.filter(f=>f.status==="abandoned");
+  const focuses=data||[],ongoing=focuses.filter(f=>!["completed","abandoned"].includes(String(f.status||"").toLowerCase())),active=ongoing.find(f=>f.status==="active")||ongoing[0],completed=focuses.filter(f=>f.status==="completed"),abandoned=focuses.filter(f=>f.status==="abandoned");
   const action=$("collectionFocusAction");
   if(action)action.innerHTML=!mine?"":active
     ? '<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>'+escapeHtml(active.title)+'</strong></p><button class="secondary-button" onclick="openFocus(\''+escapeHtml(active.id)+'\')">Return to your current focus ↗</button></div>'
     : '<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>';
   const board=f=>'<button class="focus-collection-board" onclick="openFocus(\''+escapeHtml(f.id)+'\')" aria-label="Open '+escapeHtml(f.title)+' focus log"><h2>'+escapeHtml(f.title||"Untitled focus")+'</h2></button>';
   const section=(label,items)=>items.length?'<section class="focus-collection-group"><p class="eyebrow">'+label+'</p><div class="focus-collection-boards">'+items.map(board).join("")+'</div></section>':"";
-  const sections=[section(mine?"MY CURRENT FOCUS":"CURRENT FOCUSES",active?[active]:[]),section("COMPLETED FOCUSES",completed),section("ABANDONED FOCUSES",abandoned)].filter(Boolean).join("");
+  const sections=[section(mine?"CURRENT FOCUSES":"CURRENT FOCUSES",ongoing),section("COMPLETED FOCUSES",completed),section("ABANDONED FOCUSES",abandoned)].filter(Boolean).join("");
   let tagsMarkup="";
   if(mine&&focuses.length){
     const {data:sessions,error:tagError}=await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id",focuses.map(f=>f.id)).order("session_date",{ascending:true});
