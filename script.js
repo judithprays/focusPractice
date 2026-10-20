@@ -1081,11 +1081,19 @@ function readSessionCardStyles() { try { const value = JSON.parse(localStorage.g
 async function saveEditedSessionText(element) {
   const sessionId = element && element.dataset.sessionId;
   const session = currentSessions.find(item => String(item.id) === String(sessionId));
-  if (!session || !element) return;
-  const body = element.innerText.trim();
+  if (!session || !element || element.dataset.saving === "true") return;
+  const oldBody = String(session.body || "");
+  const videoMatch = oldBody.match(/(?:^|\n)Video:\s*https?:\/\/[^\s]+/i);
+  const captionMatch = oldBody.match(/(?:^|\n)\[image-caption\][\s\S]*?\[\/image-caption\]/i);
+  let body = element.innerText.trim();
+  if (videoMatch) body += (body ? "\n\n" : "") + videoMatch[0].trim();
+  if (captionMatch) body += (body ? "\n\n" : "") + captionMatch[0].trim();
+  if (body === oldBody) return;
+  element.dataset.saving = "true";
   const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
+  delete element.dataset.saving;
   if (error) { console.error(error); alert("Could not save this text. Please try again."); return; }
-  session.body = body;
+  await loadSessions();
 }
 function updateTextCardStyle(sessionId, key, value) {
   const styles = readSessionCardStyles();
