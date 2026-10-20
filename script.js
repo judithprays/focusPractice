@@ -1258,6 +1258,7 @@ function updateTextCardStyle(sessionId, key, value) {
   const preview = item.querySelector(".text-card-preview");
   if (preview) {
     preview.style.setProperty("--text-card-font-size", (Number(style.fontSize) || 22) + "px");
+    preview.style.setProperty("--text-card-font-family", style.fontFamily || "'Courier New', monospace");
   }
   const output = item.querySelector(`#textCardFontSize-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
   if (output) output.textContent = value + "px";
