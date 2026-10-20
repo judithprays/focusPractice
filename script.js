@@ -139,7 +139,7 @@ async function saveSessionTags(sessionId, value) {
   await loadSessions();
 }
 function renderSessionTags(session) {
-  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" onclick="openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
+  return getSessionTags(session).map(tag => '<button type="button" class="session-tag" onclick="event.preventDefault(); event.stopPropagation(); openFirstSessionWithTag(&quot;' + escapeHtml(tag) + '&quot;)">#' + escapeHtml(tag) + '</button>').join("");
 }
 function renderSessionTagCloud() {
   const cloud = $("sessionTagCloud"); if (!cloud) return;
@@ -1500,7 +1500,7 @@ async function saveSession() {
   if (textField?.dataset.poll) body = body + (body ? "\n\n" : "") + "[focus-poll]" + textField.dataset.poll + "[/focus-poll]";
   const tagValues = [...new Set(String($("sessionTagsInput")?.value || "").split(",").map(tag => tag.trim().replace(/^#/, "")).filter(Boolean))];
   if (sessionTimerStartedAt) { sessionTimerSeconds += Math.floor((Date.now() - sessionTimerStartedAt) / 1000); sessionTimerStartedAt = null; clearInterval(sessionTimerInterval); sessionTimerInterval = null; }
-  if (sessionTimerSeconds > 0 && !$("sessionTimeSpent").value.trim()) $("sessionTimeSpent").value = Math.max(1, Math.round(sessionTimerSeconds / 60)) + " min";
+  if (sessionTimerSeconds > 0) $("sessionTimeSpent").value = Math.max(1, Math.round(sessionTimerSeconds / 60)) + " min";
   const imageCaption = $("sessionImageCaption").value.trim();
   const hasImages = Boolean(($("sessionImages").files && $("sessionImages").files.length) || !$("sessionDrawingPanel").classList.contains("hidden"));
   const videoUrl = $("sessionVideoUrl").value.trim();
