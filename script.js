@@ -124,11 +124,12 @@ function renderSessionCardVisual(session) {
   const visuals = [];
   const image = urls[0];
   const caption = getSessionImageCaption(session.body);
+  const captionMode = (readSessionCardStyles()[String(session.id)] || {}).captionDisplay || "below";
   if (image) {
     const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
     visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""}">
       <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
-      ${caption ? `<p class="session-image-caption">${escapeHtml(caption)}</p>` : ""}
+      ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
     </div>`);
   }
 
@@ -1042,7 +1043,7 @@ function renderSessions() {
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual;
-    const textStyle = `--text-card-height:${Math.max(80, Math.min(420, Number(cardStyle.height) || 150))}px;--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${["Helvetica, Arial, sans-serif","Georgia, serif","'Courier New', monospace","Arial, sans-serif"].includes(cardStyle.fontFamily) ? cardStyle.fontFamily : "Georgia, serif"}`;
+    const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : '<div class="text-card-preview text-card-empty">Add a note</div>';
@@ -1060,6 +1061,7 @@ function renderSessions() {
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="Georgia, serif")?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${cardStyle.fontFamily==="'Courier New', monospace"?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
+              ${!isTextCard ? renderCaptionDisplayControl(safeId, cardStyle) : ""}
               <button type="button" class="session-save-button" onclick="this.closest(\'details\').removeAttribute(\'open\')">Save</button>
             </div>
             <div class="session-main"><div class="session-body-content" contenteditable="true" data-session-id="${safeId}" onblur="saveEditedSessionText(this)" aria-label="Edit session text">${formatSessionBody(bodyWithoutVideo)}</div></div>
@@ -1076,6 +1078,13 @@ function renderSessions() {
         </details>
       </div>`;
   }).join("");
+}
+function renderCaptionDisplayControl(sessionId, style) {
+  const mode = style.captionDisplay || "below";
+  return '<label for="captionDisplay-' + sessionId + '">Image caption</label><select id="captionDisplay-' + sessionId + '" onchange="updateSessionCaptionDisplay(\'' + sessionId + '\', this.value)">' +
+    '<option value="below" ' + (mode === "below" ? "selected" : "") + '>Below image</option>' +
+    '<option value="on-image" ' + (mode === "on-image" ? "selected" : "") + '>On image</option>' +
+    '<option value="hover" ' + (mode === "hover" ? "selected" : "") + '>On hover</option></select>';
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
 async function saveEditedSessionText(element) {
@@ -1095,6 +1104,15 @@ async function saveEditedSessionText(element) {
   if (error) { console.error(error); alert("Could not save this text. Please try again."); return; }
   await loadSessions();
 }
+function updateSessionCaptionDisplay(sessionId, value) {
+  if (!["below", "on-image", "hover"].includes(value)) return;
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), captionDisplay: value };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId));
+  const caption = item && item.querySelector(".session-image-caption");
+  if (caption) caption.className = "session-image-caption caption-" + value;
+}
 function updateTextCardStyle(sessionId, key, value) {
   const styles = readSessionCardStyles();
   styles[String(sessionId)] = styles[String(sessionId)] || {};
@@ -1107,8 +1125,8 @@ function updateTextCardStyle(sessionId, key, value) {
   if (preview) {
     preview.style.setProperty("--text-card-font-size", (Number(style.fontSize) || 22) + "px");
   }
-  const output = item.querySelector(`#textCard${key === "height" ? "Height" : key === "fontSize" ? "FontSize" : "Font"}-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
-  if (output) output.textContent = key === "fontFamily" ? value : value + "px";
+  const output = item.querySelector(`#textCardFontSize-${CSS.escape(String(sessionId))}`)?.previousElementSibling?.querySelector("output");
+  if (output) output.textContent = value + "px";
 }
 
 async function deleteSession(event, sessionId) {
