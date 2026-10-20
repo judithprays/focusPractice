@@ -186,11 +186,13 @@ function renderSessionCardVisual(session) {
   const visuals = [];
   const image = urls[0];
   const caption = getSessionImageCaption(session.body);
-  const captionMode = (readSessionCardStyles()[String(session.id)] || {}).captionDisplay || "below";
+  const style = readSessionCardStyles()[String(session.id)] || {};
+  const captionMode = style.captionDisplay || "below";
+  const flipClass = ["flip-horizontal", "flip-vertical", "flip-both"].includes(style.imageFlip) ? style.imageFlip : "";
   if (image) {
     const isDrawing = /session-drawing\.png(?:$|[?#])/i.test(image);
     visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""} ${((readSessionCardStyles()[String(session.id)] || {}).imageFrame === "polaroid") ? "image-frame-polaroid" : ""}">
-      <img src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
+      <img class="${flipClass}" src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
       ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
     </div>`);
   }
