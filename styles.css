@@ -190,7 +190,7 @@ p {
   border-radius: 100px;
   padding: 15px 24px;
   font-weight: 700;
-  transition: transform 150ms ease;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);\n  scroll-snap-align: start;
 }
 
 .primary-button {
@@ -1993,7 +1993,7 @@ body.is-loading button {
 @media (max-width: 700px) {
   .current-focus-card h1 {
     --board-frame: 11px;
-    width: min(100%, 440px);
+    flex: 0 0 min(100%, 340px);\n  width: min(100%, 340px);
     padding: calc(var(--board-frame) + 6%);
     font-size: clamp(21px, 6vw, 34px);
     line-height: 1.45;
@@ -2328,3 +2328,70 @@ body.is-loading button {
 }
 .current-focus-card h1::before, .current-focus-card h1::after { display:none!important; }
 .current-focus-card h1 { transform:rotate(var(--board-angle,0deg)); }
+
+
+/* Focus collection groups and boards reuse the green felt letter-board look. */
+.focus-collection-group {
+  margin: 42px 0 56px;
+}
+.focus-collection-group > .eyebrow {
+  margin-bottom: 22px;
+}
+.focus-collection-boards {
+  display: flex;
+  flex-flow: row nowrap;
+  gap: 30px;
+  align-items: flex-start;
+  overflow-x: auto;
+  padding: 0 4px 18px;
+  scroll-snap-type: x proximity;
+}
+.focus-collection-board {
+  --board-frame: clamp(12px, 2.2vw, 22px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 min(100%, 340px);
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  margin: 0 auto;
+  padding: calc(var(--board-frame) + 7%);
+  border: clamp(10px, 1.6vw, 18px) solid #c49a68;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(5,25,16,.9) 28px, rgba(5,25,16,.9) 30px, rgba(255,255,255,.08) 31px, transparent 33px),
+    linear-gradient(135deg, #17472f, #0f3323);
+  box-shadow: 0 5px 12px rgba(0,0,0,.35), inset 0 0 0 2px rgba(255,255,255,.08);
+  color: #f7f1df;
+  cursor: pointer;
+  text-align: center;
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  scroll-snap-align: start;
+}
+.focus-collection-board:hover {
+  transform: rotate(-1deg) translateY(-3px);
+}
+.focus-collection-board h2 {
+  margin: 0;
+  color: inherit;
+  font: 900 clamp(20px, 3vw, 34px)/1.15 "Arial Black", Arial, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-shadow: 1px 2px 0 #b7b2a2, 2px 3px 0 rgba(0,0,0,.45);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .focus-collection-group { margin: 30px 0 42px; }
+  .focus-collection-boards { gap: 18px; }
+  .focus-collection-board { flex-basis: min(82vw, 320px); width: min(82vw, 320px); }
+}
+
+
+/* Keep collection sections stacked vertically; each status gets its own row. */
+.collection-list { display: block; }
+.focus-collection-group { display: block; width: 100%; clear: both; }
+.focus-collection-boards { width: 100%; min-width: 0; max-width: 100%; }
+.collection-tag-index { margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--light-gray); }
+.collection-tag-index .session-tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+.session-card-date { display: block; margin: 0 0 12px; color: var(--gray); font-size: 12px; letter-spacing: .04em; }

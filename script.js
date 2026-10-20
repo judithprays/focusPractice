@@ -470,7 +470,7 @@ async function loadHomeFocuses() {
   if (!focusToShow) {
     const home = document.querySelector(".current-focus-home");
     if (home) home.classList.add("no-active-focus");
-    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Find your focus</button>';
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
     return;
   }
 
@@ -549,98 +549,94 @@ function renderFocusCard(focus) {
 -------------------------------- */
 
 async function loadCollection() {
-
   const list = $("collectionList");
-
   if (!list) return;
 
-  list.innerHTML =
-    `<p class="empty-state">Loading...</p>`;
-
+  list.innerHTML = `<p class="empty-state">Loading...</p>`;
 
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .order("created_at", {
-      ascending: false
-    });
-
+    .order("created_at", { ascending: false });
 
   if (error) {
-
     console.error(error);
-
-    list.innerHTML =
-      `<p class="empty-state">
-        Couldn't load the Focus Collection.
-      </p>`;
-
+    list.innerHTML = `<p class="empty-state">Couldn't load the Focus Collection.</p>`;
     return;
   }
 
-
-  const activeFocus = (data || []).find((focus) => focus.status === "active");
+  const focuses = data || [];
+  const activeFocus = focuses.find((focus) => focus.status === "active");
+  const completedFocuses = focuses.filter((focus) => focus.status === "completed");
+  const abandonedFocuses = focuses.filter((focus) => focus.status === "abandoned");
   const action = $("collectionFocusAction");
+
   if (action) {
     action.innerHTML = activeFocus
       ? `<div class="active-focus-notice"><p class="eyebrow">ONE FOCUS AT A TIME</p><p>You already have an active focus: <strong>${escapeHtml(activeFocus.title)}</strong></p><button class="secondary-button" onclick="openFocus('${activeFocus.id}')">Return to your current focus ↗</button></div>`
-      : `<button class="primary-button" onclick="showCreateFocus()">+ Start a new focus</button>`;
+      : `<button class="primary-button" onclick="showCreateFocus()">Start a focus</button>`;
   }
 
-  if (!data || data.length === 0) {
+  const renderBoard = (focus) => `
+    <button class="focus-collection-board" onclick="openFocus('${focus.id}')" aria-label="Open ${escapeHtml(focus.title)} focus log">
+      <h2>${escapeHtml(focus.title || "Untitled focus")}</h2>
+    </button>
+  `;
 
-    list.innerHTML =
-      `<p class="empty-state">
-        Your Focus Collection is empty.
-      </p>`;
+  const renderSection = (title, items) => items.length ? `
+    <section class="focus-collection-group">
+      <p class="eyebrow">${title}</p>
+      <div class="focus-collection-boards">${items.map(renderBoard).join("")}</div>
+    </section>
+  ` : "";
 
-    return;
+  const sections = [
+    activeFocus ? renderSection("MY CURRENT FOCUS", [activeFocus]) : "",
+    renderSection("COMPLETED FOCUSES", completedFocuses),
+    renderSection("ABANDONED FOCUSES", abandonedFocuses)
+  ].filter(Boolean).join("");
+
+  // Collect tags across every focus so the collection has one searchable tag index.
+  let collectionTagsMarkup = "";
+  if (focuses.length) {
+    const focusIds = focuses.map(focus => focus.id);
+    const { data: sessions, error: sessionsError } = await focusSupabase
+      .from("sessions")
+      .select("id, focus_id, body, session_date, summary")
+      .in("focus_id", focusIds)
+      .order("session_date", { ascending: true });
+    if (sessionsError) {
+      console.error("Could not load collection tags:", sessionsError);
+    } else {
+      const seenTags = new Map();
+      (sessions || []).forEach(session => {
+        getSessionTags(session).forEach(tag => {
+          const key = tag.toLowerCase();
+          if (!seenTags.has(key)) seenTags.set(key, { label: tag, targets: [] });
+          seenTags.get(key).targets.push({ focusId: session.focus_id, sessionId: session.id });
+        });
+      });
+      const allTags = [...seenTags.values()].sort((a, b) => a.label.localeCompare(b.label));
+      collectionTagsMarkup = allTags.length ? `
+        <section class="collection-tag-index">
+          <p class="eyebrow">TAGS</p>
+          <div class="session-tag-cloud">${allTags.map(tag => `<button type="button" class="session-tag" onclick="openCollectionTagTarget('${escapeHtml(tag.targets[0].focusId)}','${escapeHtml(tag.targets[0].sessionId)}')">#${escapeHtml(tag.label)}</button>`).join("")}</div>
+        </section>` : "";
+    }
   }
+  list.innerHTML = (sections || `<p class="empty-state">Your Focus Collection is empty. Start a focus to begin.</p>`) + collectionTagsMarkup;
+}
 
-
-  list.innerHTML = data
-    .map((focus) => {
-
-      const statusLabel =
-        focus.status === "completed"
-          ? "COMPLETED"
-          : focus.status === "abandoned"
-            ? "ABANDONED"
-            : "ACTIVE";
-
-
-      const cover = isSafeImageUrl(focus.cover_image_url)
-        ? `<div class="collection-cover" style="background-image: linear-gradient(0deg, rgba(0,0,0,.66), rgba(0,0,0,0) 72%), url('${escapeHtml(focus.cover_image_url)}')"><h3>${escapeHtml(focus.title)}</h3></div>`
-        : `<div class="collection-cover collection-cover-empty"><h3>${escapeHtml(focus.title)}</h3></div>`;
-
-      return `
-        <button class="collection-card" onclick="openFocus('${focus.id}')">
-          ${cover}
-          <p class="focus-status ${focus.status}">
-            ${statusLabel}
-          </p>
-          <p class="collection-meta">
-            Started ${formatDate(
-              focus.started_at
-                ? focus.started_at.split("T")[0]
-                : ""
-            )}
-          </p>
-
-          ${
-            focus.completion_text
-              ? `
-                <p>
-                  ${escapeHtml(focus.completion_text)}
-                </p>
-              `
-              : ""
-          }
-
-        </button>
-      `;
-    })
-    .join("");
+async function openCollectionTagTarget(focusId, sessionId) {
+  await openFocus(focusId);
+  requestAnimationFrame(() => {
+    const item = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(sessionId)) + '"]');
+    const card = item?.querySelector(".session-card");
+    if (card) {
+      card.open = true;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  });
 }
 
 
@@ -900,69 +896,42 @@ function updateFocusCoverBanner() {
 }
 
 function renderFocusState() {
-
   if (!currentFocus) return;
 
-
-  $("focusTitleDisplay").textContent =
-    currentFocus.title;
-
+  $("focusTitleDisplay").textContent = currentFocus.title;
   updateFocusCoverBanner();
   const boardTitle = $("focusTitleDisplay");
-  if (boardTitle) { boardTitle.textContent = currentFocus.title || ""; const angle = (Math.random() * 10 - 5).toFixed(2) + "deg"; boardTitle.style.setProperty("--board-angle", angle); }
+  if (boardTitle) {
+    boardTitle.textContent = currentFocus.title || "";
+    const angle = (Math.random() * 10 - 5).toFixed(2) + "deg";
+    boardTitle.style.setProperty("--board-angle", angle);
+  }
 
-  $("focusStarted").textContent =
-    currentFocus.started_at
-      ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
-      : "";
+  $("focusStarted").textContent = currentFocus.started_at
+    ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
+    : "";
 
   $("focusGoalEdit").value = currentFocus.goal || "";
   renderFocusGoal();
 
-  const statusLabel =
-    currentFocus.status === "completed"
-      ? "COMPLETED"
-      : currentFocus.status === "abandoned"
-        ? "ABANDONED"
-        : "MY CURRENT FOCUS";
+  const statusLabel = currentFocus.status === "completed"
+    ? "COMPLETED"
+    : currentFocus.status === "abandoned"
+      ? "ABANDONED"
+      : "MY CURRENT FOCUS";
 
+  $("focusStatusLabel").textContent = statusLabel;
 
-  $("focusStatusLabel").textContent =
-    statusLabel;
+  const isActive = currentFocus.status === "active";
+  const canAddSteps = isActive || currentFocus.status === "completed";
 
+  // Completed focuses remain editable for now; abandoned focuses are read-only.
+  $("addSessionButton").classList.toggle("hidden", !canAddSteps);
+  $("focusEndingSection").classList.toggle("hidden", !isActive);
+  $("focusStepActions")?.classList.toggle("hidden", !isActive);
 
-  /*
-    Only active focuses can be worked on.
-  */
-
-  const isActive =
-    currentFocus.status === "active";
-
-
-  if (isActive) {
-
-    $("addSessionButton")
-      .classList.remove("hidden");
-
-    $("focusEndingSection")
-      .classList.remove("hidden");
-
-  } else {
-
-    $("addSessionButton")
-      .classList.add("hidden");
-
-    $("focusEndingSection")
-      .classList.add("hidden");
-
-  }
-
-
-  $("newSessionForm")
-    .classList.add("hidden");
-
-  $("abandonFocusSection")
-    .classList.add("hidden");
+  $("newSessionForm").classList.add("hidden");
+  $("abandonFocusSection").classList.add("hidden");
 }
 
 
@@ -1161,6 +1130,7 @@ function renderSessions() {
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
+            ${cardStyle.showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
             ${visual}
             ${videoUrl ? renderSessionVideo(session) : ""}
             ${linkUrl ? renderSessionLink(session) : ""}
@@ -1171,6 +1141,7 @@ function renderSessions() {
             <div class="session-edit-controls">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
+              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${cardStyle.showDate ? "" : "selected"}>Hidden</option><option value="on" ${cardStyle.showDate ? "selected" : ""}>Show date</option></select>
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
@@ -1216,6 +1187,19 @@ function renderCaptionDisplayControl(sessionId, style) {
     '<option value="polaroid" ' + (frame === "polaroid" ? "selected" : "") + '>Polaroid with bottom caption</option></select>' + '<label for="imageFlip-' + sessionId + '">Flip image</label><select id="imageFlip-' + sessionId + '" onchange="updateSessionImageFlip(\'' + sessionId + '\', this.value)"><option value="none" ' + (flip === "none" ? "selected" : "") + '>Original</option><option value="flip-horizontal" ' + (flip === "flip-horizontal" ? "selected" : "") + '>Flip horizontal</option><option value="flip-vertical" ' + (flip === "flip-vertical" ? "selected" : "") + '>Flip vertical</option><option value="flip-both" ' + (flip === "flip-both" ? "selected" : "") + '>Flip both</option></select>';
 }
 function readSessionCardStyles() { try { const value = JSON.parse(localStorage.getItem("focusPractice.sessionCardStyles") || "{}"); return value && typeof value === "object" ? value : {}; } catch { return {}; } }
+function updateSessionDateDisplay(sessionId, value) {
+  const styles = readSessionCardStyles();
+  styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), showDate: value === "on" };
+  try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {}
+  const item = Array.from(document.querySelectorAll(".session-card-item")).find(element => element.dataset.sessionId === String(sessionId));
+  const session = currentSessions.find(entry => String(entry.id) === String(sessionId));
+  const summary = item?.querySelector(".session-collapsed-header");
+  if (summary && session) {
+    const existing = summary.querySelector(".session-card-date");
+    if (value === "on" && !existing) summary.insertAdjacentHTML("afterbegin", '<span class="session-card-date">' + escapeHtml(formatDate(session.session_date) || "Date not set") + '</span>');
+    if (value !== "on" && existing) existing.remove();
+  }
+}
 function updateSessionImageFrame(sessionId, value) { if (!["plain", "polaroid"].includes(value)) return; const styles = readSessionCardStyles(); styles[String(sessionId)] = { ...(styles[String(sessionId)] || {}), imageFrame: value }; try { localStorage.setItem("focusPractice.sessionCardStyles", JSON.stringify(styles)); } catch {} const item = Array.from(document.querySelectorAll(".session-card-item")).find(el => el.dataset.sessionId === String(sessionId)); const visual = item && item.querySelector(".session-card-visual"); if (visual) visual.classList.toggle("image-frame-polaroid", value === "polaroid"); }
 async function saveEditedSessionText(element) {
   const sessionId = element && element.dataset.sessionId;
