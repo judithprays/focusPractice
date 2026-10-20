@@ -1156,7 +1156,7 @@ function renderSessions() {
     const pollMatch = String(session.body || "").match(/\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
     let pollQuestion = ""; try { pollQuestion = pollMatch ? (JSON.parse(pollMatch[1]).question || "") : ""; } catch {}
     const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
-    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(emptyPreview)}</div>`;
+    const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : (pollQuestion ? "" : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(timeSpent ? "⏱ " + timeSpent : "Add a note")}</div>`);
     return `
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
