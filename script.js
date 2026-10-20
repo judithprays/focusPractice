@@ -354,33 +354,33 @@ async function loadHomeFocuses() {
   const { data, error } = await focusSupabase
     .from("focuses")
     .select("*")
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1);
-
+    .order("created_at", { ascending: false });
 
   if (error) {
-
-    console.error(error);
-
-    list.innerHTML =
-      `<p class="empty-state">
-        Couldn't load Focuses.
-      </p>`;
-
+    console.error("Home focus query failed:", error);
+    list.innerHTML = `<p class="empty-state">Couldn't load your focus. Please refresh and try again.</p>`;
     return;
   }
 
+  // Prefer the active focus, but tolerate older records whose status value
+  // predates the current active/completed/abandoned convention.
+  const focuses = data || [];
+  const focusToShow =
+    focuses.find((focus) => focus.status === "active") ||
+    focuses.find((focus) => !["completed", "abandoned"].includes(String(focus.status || "").toLowerCase()));
 
-  if (!data || data.length === 0) {
+  if (!focusToShow) {
     const home = document.querySelector(".current-focus-home");
     if (home) home.classList.add("no-active-focus");
-    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Find your focus</button>';
     return;
   }
+
   const home = document.querySelector(".current-focus-home");
   if (home) home.classList.remove("no-active-focus");
-  currentFocus = data[0]; currentFocusId = currentFocus.id; updateNavigation();
+  currentFocus = focusToShow;
+  currentFocusId = currentFocus.id;
+  updateNavigation();
   const titleLetters = Array.from(currentFocus.title || "").map((character) => {
     if (character === " ") return '<span class="letter-tile letter-space" aria-hidden="true"> </span>';
     return '<span class="letter-tile">' + escapeHtml(character) + '</span>';
