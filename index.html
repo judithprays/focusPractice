@@ -153,7 +153,7 @@
             <canvas id="sessionDrawingCanvas" width="900" height="540" aria-label="Drawing canvas"></canvas>
           </div>
           <div class="composer-attachments">
-            <div class="session-image-fields"><input id="sessionImages" class="session-image-input" type="file" accept="image/*,.heic,.heif" aria-label="Choose an image"><input id="sessionImageCaption" class="session-image-caption-input" type="text" maxlength="300" placeholder="Add a caption (optional)" aria-label="Image caption"></div>
+            <div class="session-image-fields"><input id="sessionImages" class="session-image-input" type="file" accept="image/*,.heic,.heif" aria-label="Choose an image"><input id="sessionImageCaption" class="session-image-caption-input" type="text" maxlength="300" placeholder="Add a caption (optional)" aria-label="Image caption"><label class="session-image-frame-label" for="sessionImageFrame">Image style</label><select id="sessionImageFrame" class="session-image-frame-input" aria-label="Image style"><option value="plain">Plain image</option><option value="polaroid">Polaroid with bottom caption</option></select></div>
             <input id="sessionVideoUrl" type="url" placeholder="Paste a video link" aria-label="Video URL">
             <div class="composer-time" id="composerTimeControl">
               <label for="sessionTimeSlider">Time spent <span id="sessionTimeValue">45 min</span></label>
