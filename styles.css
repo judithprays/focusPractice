@@ -2511,3 +2511,35 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 #exploreMoreFocuses .focus-collection-boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; overflow: visible; }
 .profile-edit-toggle { display: inline-flex!important; width: auto!important; height: auto!important; min-height: 0!important; padding: 8px 0!important; border: 0!important; border-radius: 0!important; background: transparent!important; color: var(--black)!important; font: 12px "Courier New", Courier, monospace!important; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; }
 .profile-edit-toggle:hover { background: transparent!important; border-color: transparent!important; text-decoration: underline; }
+
+
+/* Final Explore refinements */
+.explore-random > .explore-featured-eyebrow {
+  font-family: "Courier New", Courier, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+.explore-more-toggle,
+.profile-other-link { border-bottom-color: transparent; }
+.explore-more-toggle:hover,
+.profile-other-link:hover { border-bottom-color: var(--black); }
+#exploreMoreFocuses .focus-collection-boards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 12px;
+  overflow: visible;
+}
+#exploreMoreFocuses .focus-collection-board {
+  flex: 0 1 min(100%, 320px);
+  width: min(100%, 320px);
+  max-width: 320px;
+}
+.explore-random { overflow: visible; }
+.explore-random .focus-collection-board { position: relative; }
+.explore-random .focus-collection-board:hover { z-index: 2; }
