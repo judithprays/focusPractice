@@ -598,13 +598,6 @@ async function renderFocusCreator() {
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
-async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); const eyebrow=$("collectionEyebrow"); if(eyebrow)eyebrow.textContent="EXPLORE"; $("collectionFocusAction")?.replaceChildren(); await renderExploreHome($("collectionList")); }
-async function showMyCollection() {
-  if (!requireAuth("my-focuses")) return;
-  clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
-}
-
-
 function showAbout() {
 
   clearFocusUrl();
@@ -613,33 +606,6 @@ function showAbout() {
 
 }
 
-
-/* --------------------------------
-   HOME
--------------------------------- */
-
-async function loadHomeFocuses() {
-  const list = $("currentFocusHomeContent"); if (!list) return;
-  list.innerHTML = '<p class="empty-state">Loading…</p>';
-  if (!currentUser) {
-    currentFocus = null; currentFocusId = null; updateNavigation();
-    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
-    await renderExploreHome(list);
-    return;
-  }
-  const { data, error } = await focusSupabase.from("focuses").select("*").eq("owner_id", currentUser.id).order("created_at", { ascending: false });
-  if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load your focus. Please refresh and try again.</p>'; return; }
-  const focuses = data || [], active = focuses.find(f => f.status === "active");
-  if (!active) {
-    currentFocus = null; currentFocusId = null;
-    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
-    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a new focus</button>';
-    return;
-  }
-  document.querySelector(".current-focus-home")?.classList.remove("no-active-focus");
-  currentFocus = active; currentFocusId = active.id; updateNavigation();
-  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + escapeHtml(active.id) + '\')"><h1>' + escapeHtml(active.title || "Untitled focus") + '</h1><span>Open your focus log ↗</span></button>';
-}
 
 async function showCollection() {
   clearFocusUrl();
