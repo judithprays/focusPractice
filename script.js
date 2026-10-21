@@ -641,6 +641,8 @@ async function loadHomeFocuses() {
   list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + escapeHtml(active.id) + '\')"><h1>' + escapeHtml(active.title || "Untitled focus") + '</h1><span>Open your focus log ↗</span></button>';
 }
 
+function loadAnotherRandomFocus(button) { const list = button.closest("#currentFocusHomeContent, #collectionList"); if (list) renderExploreHome(list); }
+
 async function renderExploreHome(list) {
   const { data: focuses, error } = await focusSupabase.from("focuses").select("*").in("status", ["active", "completed"]).order("created_at", { ascending: false });
   if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load Explore.</p>'; return; }
@@ -653,7 +655,7 @@ async function renderExploreHome(list) {
   const tagMap = new Map();
   (sessions || []).forEach(session => getSessionTags(session).forEach(tag => { const key=tag.toLowerCase(); if(!tagMap.has(key)) tagMap.set(key,{label:tag,focusId:session.focus_id,sessionId:session.id,date:session.session_date||""}); }));
   const tags = [...tagMap.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,50);
-  list.innerHTML = '<div class="explore-random"><p class="eyebrow">SEE ' + escapeHtml(username) + '’S ' + escapeHtml(pick.status === "completed" ? "completed" : "active") + ' focus</p><div class="explore-random-row"><button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(pick.id) + '\')"><h2>' + escapeHtml(pick.title || "Untitled focus") + '</h2></button><button type="button" class="explore-next" onclick="showCollection()" aria-label="See another randomized focus" title="See another focus">→</button></div><div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.focusId)+'\',\''+escapeHtml(t.sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("") + '</div></div></div>';
+  list.innerHTML = '<div class="explore-random"><p class="eyebrow">SEE ' + escapeHtml(username) + '’S ' + escapeHtml(pick.status === "completed" ? "completed" : "active") + ' focus</p><div class="explore-random-row"><button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(pick.id) + '\')"><h2>' + escapeHtml(pick.title || "Untitled focus") + '</h2></button><button type="button" class="explore-next" onclick="loadAnotherRandomFocus(this)" aria-label="See another randomized focus" title="See another focus">→</button></div><div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.focusId)+'\',\''+escapeHtml(t.sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("") + '</div></div></div>';
 }
 
 function renderFocusCard(focus) {
