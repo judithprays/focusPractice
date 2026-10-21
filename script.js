@@ -569,15 +569,6 @@ async function saveProfile(event) {
   await showProfile(currentUser.id);
 }
 function showProfileFocuses() { $("profileOtherFocuses")?.classList.remove("hidden"); $("profileOtherFocuses")?.scrollIntoView({behavior:"smooth",block:"start"}); }
-async function saveProfile(event) {
-  event.preventDefault(); if(!currentUser)return;
-  const name=$("profileNameInput").value.trim(), avatar=$("profileAvatarInput").value.trim(), tags=[...new Set($("profileTagsInput").value.split(",").map(t=>t.trim().replace(/^#/,"")).filter(Boolean))];
-  if(avatar){try{const u=new URL(avatar);if(!["http:","https:"].includes(u.protocol))throw new Error("invalid URL");}catch{$("profileSaveStatus").textContent="Please enter a valid image URL.";return;}}
-  $("profileSaveStatus").textContent="Saving…";
-  const {error}=await focusSupabase.from("profiles").upsert({id:currentUser.id,display_name:name,avatar_url:avatar||null,tags,updated_at:new Date().toISOString()});
-  if(error){console.error(error);$("profileSaveStatus").textContent="Could not save. Make sure the profile migration has been run.";return;}
-  await refreshProfileNav(); await showProfile(currentUser.id);
-}
 async function renderFocusCreator() {
   const el=$("focusCreator"); if(!el||!currentFocus)return;
   const owner=currentFocus.owner_id;
