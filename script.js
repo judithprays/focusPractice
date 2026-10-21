@@ -652,12 +652,8 @@ async function renderExploreHome(list) {
   if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load Explore.</p>'; return; }
   const focuses = focusRows || [];
   const completed = focuses.filter(f => f.status === "completed").sort((a, b) => String(b.completed_at || b.created_at || "").localeCompare(String(a.completed_at || a.created_at || "")));
-  const active = focuses.filter(f => f.status === "active");
-  const abandoned = focuses.filter(f => f.status === "abandoned");
   const featured = completed[0] || null;
-  const board = f => '<button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(f.id) + '\')" aria-label="Open focus"><h2>' + escapeHtml(f.title || "Untitled focus") + '</h2></button>';
-  const section = (label, items) => items.length ? '<section class="focus-collection-group"><p class="eyebrow">' + label + '</p><div class="focus-collection-boards">' + items.map(board).join("") + '</div></section>' : "";
-  const more = focuses.length > (featured ? 1 : 0);
+  const board = f => '<button class="focus-collection-board" onclick="openFocus(\\'' + escapeHtml(f.id) + '\\')" aria-label="Open focus"><h2>' + escapeHtml(f.title || "Untitled focus") + '</h2></button>';
   const { data: sessions } = focuses.length
     ? await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id", focuses.map(f => f.id)).order("session_date", { ascending: false })
     : { data: [] };
@@ -671,13 +667,7 @@ async function renderExploreHome(list) {
     '<div class="explore-random">' +
       '<p class="eyebrow explore-featured-eyebrow">Most recently completed focus</p>' +
       (featured ? board(featured) : '<p class="empty-state">No completed focuses yet.</p>') +
-      (more ? '<button type="button" class="text-button profile-other-link explore-more-toggle" onclick="toggleExploreMore()" aria-expanded="false">Explore more ↓</button>' : '') +
-      '<section id="exploreMoreFocuses" class="profile-other-focuses hidden">' +
-        section("COMPLETED", completed.filter(f => f.id !== featured?.id)) +
-        section("ACTIVE", active) +
-        section("ABANDONED", abandoned) +
-      '</section>' +
-      (tags.length ? '<div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t => '<button type="button" class="session-tag" onclick="openCollectionTagTarget(\'' + escapeHtml(t.focusId) + '\',\'' + escapeHtml(t.sessionId) + '\')">#' + escapeHtml(t.label) + '</button>').join("") + '</div></div>' : '') +
+      (tags.length ? '<div class="explore-tags"><div class="hairline"></div><p class="eyebrow explore-tags-eyebrow">Explore tags</p><div class="session-tag-cloud">' + tags.map(t => '<button type="button" class="session-tag" onclick="openCollectionTagTarget(\\'' + escapeHtml(t.focusId) + '\\',\\'' + escapeHtml(t.sessionId) + '\\')">#' + escapeHtml(t.label) + '</button>').join("") + '</div></div>' : '') +
     '</div>';
 }
 
