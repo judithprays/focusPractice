@@ -524,7 +524,7 @@ async function showProfile(userId) {
   }
   const other = all.filter(f => f.id !== featured?.id);
   view.innerHTML =
-    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎ Edit</button>' : '') +
+    (own ? '<button type="button" class="text-button profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎ Edit profile</button>' : '') +
     (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
     '<section class="profile-current-focus"><p class="eyebrow profile-focus-eyebrow">' +
     (avatar ? '<img class="profile-eyebrow-avatar" src="' + escapeHtml(avatar) + '" alt="">' : '') +
@@ -641,21 +641,89 @@ async function loadHomeFocuses() {
   list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + escapeHtml(active.id) + '\')"><h1>' + escapeHtml(active.title || "Untitled focus") + '</h1><span>Open your focus log ↗</span></button>';
 }
 
-function loadAnotherRandomFocus(button) { const list = button.closest("#currentFocusHomeContent, #collectionList"); if (list) renderExploreHome(list); }
+async function showCollection() {
+  clearFocusUrl();
+  showOnly("collectionScreen");
+  $("collectionFocusAction")?.replaceChildren();
+  await renderExploreHome($("collectionList"));
+}
+async function showMyCollection() {
+  if (!requireAuth("my-focuses")) return;
+  clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
+}
+
+/* --------------------------------
+   HOME
+-------------------------------- */
+
+async function loadHomeFocuses() {
+  const list = $("currentFocusHomeContent"); if (!list) return;
+  list.innerHTML = '<p class="empty-state">Loading…</p>';
+  if (!currentUser) {
+    currentFocus = null; currentFocusId = null; updateNavigation();
+    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
+    await renderExploreHome(list);
+    return;
+  }
+  const { data, error } = await focusSupabase.from("focuses").select("*").eq("owner_id", currentUser.id).order("created_at", { ascending: false });
+  if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load your focus. Please refresh and try again.</p>'; return; }
+  const focuses = data || [], active = focuses.find(f => f.status === "active");
+  if (!active) {
+    currentFocus = null; currentFocusId = null;
+    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a new focus</button>';
+    return;
+  }
+  document.querySelector(".current-focus-home")?.classList.remove("no-active-focus");
+  currentFocus = active; currentFocusId = active.id; updateNavigation();
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + escapeHtml(active.id) + '\')"><h1>' + escapeHtml(active.title || "Untitled focus") + '</h1><span>Open your focus log ↗</span></button>';
+}
 
 async function renderExploreHome(list) {
-  const { data: focuses, error } = await focusSupabase.from("focuses").select("*").in("status", ["active", "completed"]).order("created_at", { ascending: false });
+  if (!list) return;
+  const { data: focusRows, error } = await focusSupabase.from("focuses").select("*").in("status", ["active", "completed", "abandoned"]).order("created_at", { ascending: false });
   if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load Explore.</p>'; return; }
-  const shared = focuses || [];
-  if (!shared.length) { list.innerHTML = '<button class="primary-button home-start-focus" onclick="showAuth(\'start-focus\')">Start a focus</button>'; return; }
-  const pick = shared[Math.floor(Math.random() * shared.length)];
-  const { data: profile } = await focusSupabase.from("profiles").select("display_name").eq("id", pick.owner_id).maybeSingle();
-  const username = profile?.display_name || "creator";
-  const { data: sessions } = await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id", shared.map(f => f.id)).order("session_date", { ascending: false });
+  const focuses = focusRows || [];
+  const completed = focuses.filter(f => f.status === "completed");
+  const active = focuses.filter(f => f.status === "active");
+  const abandoned = focuses.filter(f => f.status === "abandoned");
+  const featured = completed[0] || null;
+  const board = f => '<button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(f.id) + '\')" aria-label="Open focus"><h2>' + escapeHtml(f.title || "Untitled focus") + '</h2></button>';
+  const section = (label, items) => items.length ? '<section class="focus-collection-group"><p class="eyebrow">' + label + '</p><div class="focus-collection-boards">' + items.map(board).join("") + '</div></section>' : "";
+  const more = focuses.length > (featured ? 1 : 0);
+  const { data: sessions } = focuses.length
+    ? await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id", focuses.map(f => f.id)).order("session_date", { ascending: false })
+    : { data: [] };
   const tagMap = new Map();
-  (sessions || []).forEach(session => getSessionTags(session).forEach(tag => { const key=tag.toLowerCase(); if(!tagMap.has(key)) tagMap.set(key,{label:tag,focusId:session.focus_id,sessionId:session.id,date:session.session_date||""}); }));
-  const tags = [...tagMap.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,50);
-  list.innerHTML = '<div class="explore-random"><p class="eyebrow">SEE ' + escapeHtml(username) + '’S ' + escapeHtml(pick.status === "completed" ? "completed" : "active") + ' focus</p><div class="explore-random-row"><button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(pick.id) + '\')"><h2>' + escapeHtml(pick.title || "Untitled focus") + '</h2></button><button type="button" class="explore-next" onclick="loadAnotherRandomFocus(this)" aria-label="See another randomized focus" title="See another focus">→</button></div><div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.focusId)+'\',\''+escapeHtml(t.sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("") + '</div></div></div>';
+  (sessions || []).forEach(session => getSessionTags(session).forEach(tag => {
+    const key = tag.toLowerCase();
+    if (!tagMap.has(key)) tagMap.set(key, { label: tag, focusId: session.focus_id, sessionId: session.id, date: session.session_date || "" });
+  }));
+  const tags = [...tagMap.values()].sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,50);
+  list.innerHTML =
+    '<div class="explore-random">' +
+      '<p class="eyebrow explore-featured-eyebrow">Most recently completed focus</p>' +
+      (featured ? board(featured) : '<p class="empty-state">No completed focuses yet.</p>') +
+      (more ? '<button type="button" class="text-button profile-other-link explore-more-toggle" onclick="toggleExploreMore()" aria-expanded="false">Explore more ↓</button>' : '') +
+      '<section id="exploreMoreFocuses" class="profile-other-focuses hidden">' +
+        section("COMPLETED", completed.filter(f => f.id !== featured?.id)) +
+        section("ACTIVE", active) +
+        section("ABANDONED", abandoned) +
+      '</section>' +
+      (tags.length ? '<div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t => '<button type="button" class="session-tag" onclick="openCollectionTagTarget(\'' + escapeHtml(t.focusId) + '\',\'' + escapeHtml(t.sessionId) + '\')">#' + escapeHtml(t.label) + '</button>').join("") + '</div></div>' : '') +
+    '</div>';
+}
+
+function toggleExploreMore() {
+  const section = $("exploreMoreFocuses");
+  if (!section) return;
+  const opening = section.classList.contains("hidden");
+  section.classList.toggle("hidden", !opening);
+  const button = document.querySelector(".explore-more-toggle");
+  if (button) {
+    button.setAttribute("aria-expanded", String(opening));
+    button.textContent = opening ? "Explore more ↑" : "Explore more ↓";
+  }
 }
 
 function renderFocusCard(focus) {
