@@ -2543,3 +2543,22 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .explore-random { overflow: visible; }
 .explore-random .focus-collection-board { position: relative; }
 .explore-random .focus-collection-board:hover { z-index: 2; }
+
+
+/* Explore: use the site's standard eyebrow typography and keep board titles intact. */
+.explore-random > .explore-featured-eyebrow {
+  font-family: inherit;
+}
+.explore-random > .focus-collection-board {
+  padding: calc(var(--board-frame) + 3%);
+}
+.explore-random .focus-collection-board h2 {
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+.explore-tags-eyebrow {
+  margin: 0 0 12px;
+}
