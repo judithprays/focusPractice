@@ -13,6 +13,7 @@ const focusSupabase = window.supabase.createClient(
 let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
+let forceReadOnlyFocusView = false;
 let currentUser = null;
 let authMode = "login";
 let authIntent = "home";
@@ -388,7 +389,7 @@ async function refreshProfileNav() {
   if(image){image.src=data?.avatar_url||"";image.classList.toggle("hidden",!data?.avatar_url);}
 }
 function isCurrentUserOwner() {
-  return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
+  return Boolean(!forceReadOnlyFocusView && currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
 }
 function isCurrentUserOwner() {
   return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
@@ -506,36 +507,37 @@ async function showProfile(userId) {
   const own = Boolean(currentUser && String(currentUser.id) === String(userId));
   const name = profile?.display_name || (own ? currentUser.email?.split("@")[0] : "Focus creator");
   const avatar = profile?.avatar_url;
-  view.innerHTML = '<div class="profile-top"><div class="profile-avatar-large">' +
-    (avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture">' : '<span>' + escapeHtml((name[0] || "F").toUpperCase()) + '</span>') +
-    '</div><div class="profile-heading"><p class="eyebrow">PROFILE</p><h1>' + escapeHtml(name) + '</h1></div>' +
-    (own ? '<button type="button" class="profile-share-button" onclick="shareProfile(\'' + escapeHtml(userId) + '\')" aria-label="Share profile" title="Copy profile link">↗ Share</button><button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
-    '</div>' +
-    (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
-    '<section class="profile-current-focus"><p class="eyebrow">MOST RECENT FOCUS</p>' +
-    (featured ? '<button class="focus-collection-board profile-featured-board" onclick="openFocus(\'' + escapeHtml(featured.id) + '\')"><h2>' + escapeHtml(featured.title || "Untitled focus") + '</h2></button>' : '<p class="empty-state">No focuses yet.</p>') +
-    '</section><button class="text-button profile-other-link" onclick="showProfileFocuses()">Other focuses (' + all.filter(f => f.id !== featured?.id).length + ') →</button>' +
-    '<section id="profileOtherFocuses" class="profile-other-focuses hidden"><h2>Other focuses</h2><div class="collection-list">' +
-    (all.filter(f => f.id !== featured?.id).map(f => '<button class="collection-card" onclick="openFocus(\'' + escapeHtml(f.id) + '\')"><h3>' + escapeHtml(f.title || "Untitled focus") + '</h3><p class="public-focus-meta">' + escapeHtml(String(f.status || "").toUpperCase()) + '</p></button>').join('') || '<p>No other focuses yet.</p>') +
-    '</div></section>';
-}
-async function shareProfile(userId) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.hash = "";
-  url.searchParams.set("profile", userId);
-  try {
-    await navigator.clipboard.writeText(url.toString());
-    const button = document.querySelector(".profile-share-button");
-    if (button) {
-      const previous = button.textContent;
-      button.textContent = "Copied!";
-      window.setTimeout(() => { if (button.isConnected) button.textContent = previous; }, 1600);
+  let tagMarkup = "";
+  if (all.length) {
+    const { data: sessions, error: tagError } = await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id", all.map(f => f.id)).order("session_date", { ascending: false });
+    if (tagError) console.error(tagError);
+    else {
+      const seen = new Map();
+      (sessions || []).forEach(session => getSessionTags(session).forEach(tag => {
+        const key = tag.toLowerCase();
+        if (!seen.has(key)) seen.set(key, { label: tag, focusId: session.focus_id, sessionId: session.id, date: session.session_date || "" });
+      }));
+      const tags = [...seen.values()].sort((a,b) => String(b.date).localeCompare(String(a.date)));
+      if (tags.length) tagMarkup = '<section class="profile-tag-index"><p class="eyebrow">TAGS</p><div class="session-tag-cloud">' +
+        tags.map(t => '<button type="button" class="session-tag" onclick="openCollectionTagTarget(\'' + escapeHtml(t.focusId) + '\',\'' + escapeHtml(t.sessionId) + '\')">#' + escapeHtml(t.label) + '</button>').join("") +
+        '</div></section>';
     }
-  } catch (error) {
-    window.prompt("Copy your public profile link:", url.toString());
   }
+  const other = all.filter(f => f.id !== featured?.id);
+  view.innerHTML =
+    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
+    (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
+    '<section class="profile-current-focus"><p class="eyebrow profile-focus-eyebrow">' +
+    (avatar ? '<img class="profile-eyebrow-avatar" src="' + escapeHtml(avatar) + '" alt="">' : '') +
+    escapeHtml(name) + '’s ' + (active ? 'active' : 'most recent') + ' focus</p>' +
+    (featured ? '<button class="focus-collection-board profile-featured-board" onclick="openFocus(\'' + escapeHtml(featured.id) + '\')" aria-label="Open focus"><h2>' + escapeHtml(featured.title || "Untitled focus") + '</h2></button>' : '<p class="empty-state">No focuses yet.</p>') +
+    '</section>' +
+    (other.length ? '<button type="button" class="text-button profile-other-link" onclick="toggleProfileFocuses()" aria-expanded="false">Explore more (' + other.length + ') ↓</button>' : '') +
+    '<section id="profileOtherFocuses" class="profile-other-focuses hidden"><div class="focus-collection-boards">' +
+    other.map(f => '<button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(f.id) + '\')" aria-label="Open focus"><h2>' + escapeHtml(f.title || "Untitled focus") + '</h2></button>').join('') +
+    '</div></section>' + tagMarkup;
 }
+
 function toggleProfileEdit() {
   const form = $("profileEditForm");
   if (!form) return;
@@ -585,7 +587,7 @@ async function saveProfile(event) {
   await refreshProfileNav();
   await showProfile(currentUser.id);
 }
-function showProfileFocuses() { $("profileOtherFocuses")?.classList.remove("hidden"); $("profileOtherFocuses")?.scrollIntoView({behavior:"smooth",block:"start"}); }
+function toggleProfileFocuses() { const section=$("profileOtherFocuses"); if(!section)return; const opening=section.classList.contains("hidden"); section.classList.toggle("hidden",!opening); const button=document.querySelector(".profile-other-link"); if(button){button.setAttribute("aria-expanded",String(opening));button.textContent=opening?"Explore more ↑":"Explore more ↓";} }
 async function renderFocusCreator() {
   const el=$("focusCreator"); if(!el||!currentFocus)return;
   const owner=currentFocus.owner_id;
@@ -597,13 +599,6 @@ async function renderFocusCreator() {
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
-async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("all"); }
-async function showMyCollection() {
-  if (!requireAuth("my-focuses")) return;
-  clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
-}
-
-
 function showAbout() {
 
   clearFocusUrl();
@@ -613,28 +608,79 @@ function showAbout() {
 }
 
 
+async function showCollection() {
+  clearFocusUrl();
+  showOnly("collectionScreen");
+  $("collectionFocusAction")?.replaceChildren();
+  await renderExploreHome($("collectionList"));
+}
+async function showMyCollection() {
+  if (!requireAuth("my-focuses")) return;
+  clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
+}
+
 /* --------------------------------
    HOME
 -------------------------------- */
 
 async function loadHomeFocuses() {
-  const list=$("currentFocusHomeContent"); if(!list)return;
-  list.innerHTML='<p class="empty-state">Loading...</p>';
-  if(!currentUser){
-    currentFocus=null;currentFocusId=null;updateNavigation();
+  const list = $("currentFocusHomeContent"); if (!list) return;
+  list.innerHTML = '<p class="empty-state">Loading…</p>';
+  if (!currentUser) {
+    currentFocus = null; currentFocusId = null; updateNavigation();
     document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
-    list.innerHTML='<button class="primary-button home-start-focus" onclick="showAuth(\'start-focus\')">Start a focus</button>';return;
+    await renderExploreHome(list);
+    return;
   }
-  const {data,error}=await focusSupabase.from("focuses").select("*").eq("owner_id",currentUser.id).order("created_at",{ascending:false});
-  if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load your focus. Please refresh and try again.</p>';return;}
-  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active") || focuses[0] || null;
-  if(!focusToShow){
-    currentFocus=null;currentFocusId=null;document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
-    list.innerHTML='<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';return;
+  const { data, error } = await focusSupabase.from("focuses").select("*").eq("owner_id", currentUser.id).order("created_at", { ascending: false });
+  if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load your focus. Please refresh and try again.</p>'; return; }
+  const focuses = data || [], active = focuses.find(f => f.status === "active");
+  if (!active) {
+    currentFocus = null; currentFocusId = null;
+    document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
+    list.innerHTML = '<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a new focus</button>';
+    return;
   }
   document.querySelector(".current-focus-home")?.classList.remove("no-active-focus");
-  currentFocus=focusToShow;currentFocusId=focusToShow.id;updateNavigation();
-  list.innerHTML='<button class="current-focus-card" onclick="openFocus(\''+escapeHtml(focusToShow.id)+'\')"><h1>'+escapeHtml(focusToShow.title||"")+'</h1><p>'+escapeHtml(focusToShow.goal||"Small steps. Big momentum. ♡")+'</p><span>Open your focus log ↗</span></button>';
+  currentFocus = active; currentFocusId = active.id; updateNavigation();
+  list.innerHTML = '<button class="current-focus-card" onclick="openFocus(\'' + escapeHtml(active.id) + '\')"><h1>' + escapeHtml(active.title || "Untitled focus") + '</h1><span>Open your focus log ↗</span></button>';
+}
+
+async function renderExploreHome(list) {
+  if (!list) return;
+  const { data: focusRows, error } = await focusSupabase.from("focuses").select("*").in("status", ["active", "completed", "abandoned"]).order("created_at", { ascending: false });
+  if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load Explore.</p>'; return; }
+  const focuses = focusRows || [];
+  const completed = focuses.filter(f => f.status === "completed").sort((a, b) => String(b.completed_at || b.created_at || "").localeCompare(String(a.completed_at || a.created_at || "")));
+  const featured = completed[0] || null;
+  const board = f => `<button class="focus-collection-board" onclick="openFocus('${escapeHtml(f.id)}')" aria-label="Open focus"><h2>${escapeHtml(f.title || "Untitled focus")}</h2></button>`;
+  const { data: sessions } = focuses.length
+    ? await focusSupabase.from("sessions").select("id,focus_id,body,session_date,summary").in("focus_id", focuses.map(f => f.id)).order("session_date", { ascending: false })
+    : { data: [] };
+  const tagMap = new Map();
+  (sessions || []).forEach(session => getSessionTags(session).forEach(tag => {
+    const key = tag.toLowerCase();
+    if (!tagMap.has(key)) tagMap.set(key, { label: tag, focusId: session.focus_id, sessionId: session.id, date: session.session_date || "" });
+  }));
+  const tags = [...tagMap.values()].sort((a,b) => String(b.date).localeCompare(String(a.date))).slice(0,50);
+  list.innerHTML =
+    '<div class="explore-random">' +
+      '<p class="eyebrow explore-featured-eyebrow">Most recently completed focus</p>' +
+      (featured ? board(featured) : '<p class="empty-state">No completed focuses yet.</p>') +
+      (tags.length ? '<div class="explore-tags"><div class="hairline"></div><p class="eyebrow explore-tags-eyebrow">Explore tags</p><div class="session-tag-cloud">' + tags.map(t => `<button type="button" class="session-tag" onclick="openCollectionTagTarget('${escapeHtml(t.focusId)}','${escapeHtml(t.sessionId)}')">#${escapeHtml(t.label)}</button>`).join("") + '</div></div>' : '') +
+    '</div>';
+}
+
+function toggleExploreMore() {
+  const section = $("exploreMoreFocuses");
+  if (!section) return;
+  const opening = section.classList.contains("hidden");
+  section.classList.toggle("hidden", !opening);
+  const button = document.querySelector(".explore-more-toggle");
+  if (button) {
+    button.setAttribute("aria-expanded", String(opening));
+    button.textContent = opening ? "Explore more ↑" : "Explore more ↓";
+  }
 }
 
 function renderFocusCard(focus) {
@@ -732,7 +778,7 @@ async function loadCollection(scope="all") {
 }
 
 async function openCollectionTagTarget(focusId, sessionId) {
-  await openFocus(focusId);
+  await openFocus(focusId, true);
   requestAnimationFrame(() => {
     const item = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(sessionId)) + '"]');
     const card = item?.querySelector(".session-card");
@@ -880,8 +926,9 @@ async function startNewFocus() {
    OPEN FOCUS
 -------------------------------- */
 
-async function openFocus(focusId) {
+async function openFocus(focusId, readOnly = false) {
 
+  forceReadOnlyFocusView = Boolean(readOnly);
   currentFocusId = focusId;
 
   setFocusUrl(focusId);
