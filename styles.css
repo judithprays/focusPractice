@@ -2579,3 +2579,9 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
   white-space: normal;
   hyphens: none;
 }
+
+
+/* All eyebrow labels use uppercase styling consistently across the app. */
+[class*="eyebrow"] {
+  text-transform: uppercase;
+}
