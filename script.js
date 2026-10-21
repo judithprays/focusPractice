@@ -13,6 +13,7 @@ const focusSupabase = window.supabase.createClient(
 let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
+let forceReadOnlyFocusView = false;
 let currentUser = null;
 let authMode = "login";
 let authIntent = "home";
@@ -388,7 +389,7 @@ async function refreshProfileNav() {
   if(image){image.src=data?.avatar_url||"";image.classList.toggle("hidden",!data?.avatar_url);}
 }
 function isCurrentUserOwner() {
-  return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
+  return Boolean(!forceReadOnlyFocusView && currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
 }
 function isCurrentUserOwner() {
   return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
@@ -787,7 +788,7 @@ async function loadCollection(scope="all") {
 }
 
 async function openCollectionTagTarget(focusId, sessionId) {
-  await openFocus(focusId);
+  await openFocus(focusId, true);
   requestAnimationFrame(() => {
     const item = document.querySelector('.session-card-item[data-session-id="' + CSS.escape(String(sessionId)) + '"]');
     const card = item?.querySelector(".session-card");
@@ -935,8 +936,9 @@ async function startNewFocus() {
    OPEN FOCUS
 -------------------------------- */
 
-async function openFocus(focusId) {
+async function openFocus(focusId, readOnly = false) {
 
+  forceReadOnlyFocusView = Boolean(readOnly);
   currentFocusId = focusId;
 
   setFocusUrl(focusId);
