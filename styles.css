@@ -2428,3 +2428,8 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 
 
 .profile-featured-board{position:relative;min-height:0;padding:clamp(20px,5vw,42px)}.profile-featured-board p{max-width:100%;margin:18px 0 0;color:inherit;font:500 15px/1.5 Helvetica,Arial,sans-serif;letter-spacing:0;text-transform:none;text-shadow:none}.profile-featured-board .profile-board-open{margin-top:20px;font:600 12px/1.4 Helvetica,Arial,sans-serif;letter-spacing:.02em;color:inherit;text-transform:none;text-shadow:none}.profile-top{flex-wrap:wrap}.profile-share-button{flex:0 0 auto;padding:10px 13px;border:1px solid var(--light-gray);background:white;color:var(--black);font:600 13px Helvetica,Arial,sans-serif;cursor:pointer}.profile-share-button:hover{background:var(--paper)}@media(max-width:700px){.profile-share-button{margin-left:auto}}
+
+/* Profile's featured board uses the same title-only treatment as every other focus board. */
+.profile-current-focus > .eyebrow { text-align: center; margin: 0 0 22px; }
+.profile-featured-board { cursor: pointer; }
+.profile-featured-board h2 { margin: 0; }
