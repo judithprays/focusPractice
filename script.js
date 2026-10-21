@@ -524,7 +524,7 @@ async function showProfile(userId) {
   }
   const other = all.filter(f => f.id !== featured?.id);
   view.innerHTML =
-    (own ? '<button type="button" class="text-button profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎ Edit profile</button>' : '') +
+    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
     (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
     '<section class="profile-current-focus"><p class="eyebrow profile-focus-eyebrow">' +
     (avatar ? '<img class="profile-eyebrow-avatar" src="' + escapeHtml(avatar) + '" alt="">' : '') +
@@ -684,7 +684,7 @@ async function renderExploreHome(list) {
   const { data: focusRows, error } = await focusSupabase.from("focuses").select("*").in("status", ["active", "completed", "abandoned"]).order("created_at", { ascending: false });
   if (error) { console.error(error); list.innerHTML = '<p class="empty-state">Could not load Explore.</p>'; return; }
   const focuses = focusRows || [];
-  const completed = focuses.filter(f => f.status === "completed");
+  const completed = focuses.filter(f => f.status === "completed").sort((a, b) => String(b.completed_at || b.created_at || "").localeCompare(String(a.completed_at || a.created_at || "")));
   const active = focuses.filter(f => f.status === "active");
   const abandoned = focuses.filter(f => f.status === "abandoned");
   const featured = completed[0] || null;
