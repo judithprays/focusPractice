@@ -619,7 +619,7 @@ async function loadHomeFocuses() {
   }
   const {data,error}=await focusSupabase.from("focuses").select("*").eq("owner_id",currentUser.id).order("created_at",{ascending:false});
   if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load your focus. Please refresh and try again.</p>';return;}
-  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active");
+  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active") || focuses[0] || null;
   if(!focusToShow){
     currentFocus=null;currentFocusId=null;document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
     list.innerHTML='<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';return;
