@@ -2433,3 +2433,54 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .profile-current-focus > .eyebrow { text-align: center; margin: 0 0 22px; }
 .profile-featured-board { cursor: pointer; }
 .profile-featured-board h2 { margin: 0; }
+
+
+/* Polish branch: consistent square focus boards and compact profile/explore details. */
+.focus-collection-board,
+.profile-featured-board,
+.explore-random-row .focus-collection-board {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.focus-collection-board h2,
+.profile-featured-board h2,
+.explore-random-row .focus-collection-board h2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.current-focus-card {
+  aspect-ratio: 1 / 1;
+  width: min(100%, 520px);
+  overflow: hidden;
+}
+.current-focus-card h1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.explore-random { width: 100%; }
+.explore-random > .eyebrow { text-align: center; }
+.explore-random-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; }
+.explore-random-row .focus-collection-board { max-width: 520px; justify-self: center; }
+.explore-next { border: 0; background: transparent; font-size: 2rem; padding: .75rem; }
+.explore-tags { margin-top: 1.5rem; }
+.hairline { border-top: 1px solid var(--light-gray); margin-bottom: 1rem; }
+.profile-focus-eyebrow { display: flex; align-items: center; justify-content: center; gap: .5rem; text-align: center; }
+.profile-eyebrow-avatar { width: 1.5rem; height: 1.5rem; border-radius: 50%; object-fit: cover; }
+.profile-current-focus { display: flex; flex-direction: column; align-items: center; }
+.profile-featured-board { max-width: 520px; }
+.profile-other-focuses .focus-collection-boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 1rem; }
+.profile-tag-index { margin-top: 2rem; }
+.profile-edit-toggle { margin-bottom: 1rem; }
+@media (max-width: 560px) {
+  .explore-random-row { gap: .35rem; }
+  .explore-next { padding: .4rem; }
+}
