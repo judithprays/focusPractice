@@ -509,15 +509,32 @@ async function showProfile(userId) {
   view.innerHTML = '<div class="profile-top"><div class="profile-avatar-large">' +
     (avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture">' : '<span>' + escapeHtml((name[0] || "F").toUpperCase()) + '</span>') +
     '</div><div class="profile-heading"><p class="eyebrow">PROFILE</p><h1>' + escapeHtml(name) + '</h1></div>' +
-    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
+    (own ? '<button type="button" class="profile-share-button" onclick="shareProfile(\'' + escapeHtml(userId) + '\')" aria-label="Share profile" title="Copy profile link">↗ Share</button><button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
     '</div>' +
     (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
     '<section class="profile-current-focus"><p class="eyebrow">' + (active ? 'CURRENT FOCUS' : featured ? 'MOST RECENT FOCUS' : 'CURRENT FOCUS') + '</p>' +
-    (featured ? '<button class="profile-focus-board" onclick="openFocus(\'' + escapeHtml(featured.id) + '\')"><h2>' + escapeHtml(featured.title || "Untitled focus") + '</h2>' + (featured.goal ? '<p>' + escapeHtml(featured.goal) + '</p>' : '') + '<span class="profile-board-open">Open focus board ↗</span></button>' : '<p class="empty-state">No focuses yet.</p>') +
+    (featured ? '<button class="focus-collection-board profile-featured-board" onclick="openFocus(\'' + escapeHtml(featured.id) + '\')"><h2>' + escapeHtml(featured.title || "Untitled focus") + '</h2>' + (featured.goal ? '<p>' + escapeHtml(featured.goal) + '</p>' : '') + '<span class="profile-board-open">Open focus board ↗</span></button>' : '<p class="empty-state">No focuses yet.</p>') +
     '</section><button class="text-button profile-other-link" onclick="showProfileFocuses()">Other focuses (' + all.filter(f => f.id !== featured?.id).length + ') →</button>' +
     '<section id="profileOtherFocuses" class="profile-other-focuses hidden"><h2>Other focuses</h2><div class="collection-list">' +
     (all.filter(f => f.id !== featured?.id).map(f => '<button class="collection-card" onclick="openFocus(\'' + escapeHtml(f.id) + '\')"><h3>' + escapeHtml(f.title || "Untitled focus") + '</h3><p class="public-focus-meta">' + escapeHtml(String(f.status || "").toUpperCase()) + '</p></button>').join('') || '<p>No other focuses yet.</p>') +
     '</div></section>';
+}
+async function shareProfile(userId) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("profile", userId);
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    const button = document.querySelector(".profile-share-button");
+    if (button) {
+      const previous = button.textContent;
+      button.textContent = "Copied!";
+      window.setTimeout(() => { if (button.isConnected) button.textContent = previous; }, 1600);
+    }
+  } catch (error) {
+    window.prompt("Copy your public profile link:", url.toString());
+  }
 }
 function toggleProfileEdit() {
   const form = $("profileEditForm");
