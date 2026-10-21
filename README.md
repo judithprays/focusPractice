@@ -27,3 +27,8 @@ This is the process that is consistently working for me - and now I'm wondering 
 5. Verify the existing focuses open and are editable when signed in. Signed-out visitors and other accounts can view public focuses but cannot edit them.
 
 The legacy claim is deliberately manual so a random new account cannot claim your existing work.
+
+
+## Profile picture uploads
+
+After the shareability migration, run `supabase/migrations/20261020_profile_image_uploads.sql` in the Supabase SQL Editor. It creates the public `profile-images` storage bucket and limits uploads, replacements, and deletes to the signed-in owner. Profile pictures can then be uploaded from the profile's pencil/edit control.
