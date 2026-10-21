@@ -2562,3 +2562,20 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .explore-tags-eyebrow {
   margin: 0 0 12px;
 }
+
+
+/* Explore featured board: preserve a square shape while allowing natural word wrapping. */
+.explore-random > .focus-collection-board {
+  width: min(100%, 520px);
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  flex: 0 0 auto;
+}
+.explore-random > .focus-collection-board h2 {
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+  hyphens: none;
+}
