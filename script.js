@@ -538,8 +538,6 @@ async function showProfile(userId) {
 }
 
 function toggleProfileEdit() {
-
-function toggleProfileEdit() {
   const form = $("profileEditForm");
   if (!form) return;
   form.classList.toggle("hidden");
@@ -600,7 +598,7 @@ async function renderFocusCreator() {
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
-async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("all"); }
+async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); const eyebrow=$("collectionEyebrow"); if(eyebrow)eyebrow.textContent="EXPLORE"; $("collectionFocusAction")?.replaceChildren(); await renderExploreHome($("collectionList")); }
 async function showMyCollection() {
   if (!requireAuth("my-focuses")) return;
   clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("mine");
@@ -655,7 +653,7 @@ async function renderExploreHome(list) {
   const tagMap = new Map();
   (sessions || []).forEach(session => getSessionTags(session).forEach(tag => { const key=tag.toLowerCase(); if(!tagMap.has(key)) tagMap.set(key,{label:tag,focusId:session.focus_id,sessionId:session.id,date:session.session_date||""}); }));
   const tags = [...tagMap.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,50);
-  list.innerHTML = '<div class="explore-random"><p class="eyebrow">SEE ' + escapeHtml(username) + '’S ' + escapeHtml(pick.status === "completed" ? "completed" : "active") + ' focus</p><div class="explore-random-row"><button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(pick.id) + '\')"><h2>' + escapeHtml(pick.title || "Untitled focus") + '</h2></button><button type="button" class="explore-next" onclick="loadHomeFocuses()" aria-label="See another randomized focus" title="See another focus">→</button></div><div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.focusId)+'\',\''+escapeHtml(t.sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("") + '</div></div></div>';
+  list.innerHTML = '<div class="explore-random"><p class="eyebrow">SEE ' + escapeHtml(username) + '’S ' + escapeHtml(pick.status === "completed" ? "completed" : "active") + ' focus</p><div class="explore-random-row"><button class="focus-collection-board" onclick="openFocus(\'' + escapeHtml(pick.id) + '\')"><h2>' + escapeHtml(pick.title || "Untitled focus") + '</h2></button><button type="button" class="explore-next" onclick="showCollection()" aria-label="See another randomized focus" title="See another focus">→</button></div><div class="explore-tags"><div class="hairline"></div><div class="session-tag-cloud">' + tags.map(t=>'<button type="button" class="session-tag" onclick="openCollectionTagTarget(\''+escapeHtml(t.focusId)+'\',\''+escapeHtml(t.sessionId)+'\')">#'+escapeHtml(t.label)+'</button>').join("") + '</div></div></div>';
 }
 
 function renderFocusCard(focus) {
