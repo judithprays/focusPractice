@@ -333,6 +333,7 @@ function getFocusIdFromUrl() {
 function setFocusUrl(focusId) {
 
   const url = new URL(window.location.href);
+  url.searchParams.delete("profile");
 
   if (focusId) {
     url.searchParams.set("focus", focusId);
@@ -353,6 +354,7 @@ function clearFocusUrl() {
   const url = new URL(window.location.href);
 
   url.searchParams.delete("focus");
+  url.searchParams.delete("profile");
 
   window.history.pushState(
     {},
@@ -368,7 +370,25 @@ function clearFocusUrl() {
 
 function updateNavigation() {
   $("authNavLink")?.classList.toggle("hidden", Boolean(currentUser));
-  $("signOutNavLink")?.classList.toggle("hidden", !currentUser);
+  $("myFocusesNavLink")?.classList.toggle("hidden", !currentUser);
+  $("profileNavWrap")?.classList.toggle("hidden", !currentUser);
+  if (currentUser) refreshProfileNav();
+}
+function toggleProfileMenu() { $("profileNavMenu")?.classList.toggle("hidden"); }
+document.addEventListener("click", (event) => {
+  const wrap = $("profileNavWrap");
+  if (wrap && !wrap.contains(event.target)) $("profileNavMenu")?.classList.add("hidden");
+});
+async function refreshProfileNav() {
+  if (!currentUser) return;
+  const {data}=await focusSupabase.from("profiles").select("display_name,avatar_url").eq("id",currentUser.id).maybeSingle();
+  const name=data?.display_name || currentUser.email?.split("@")[0] || "Profile";
+  const image=$("profileNavAvatar"), initials=$("profileNavInitials");
+  if(initials){initials.textContent=(name.trim()[0]||"J").toUpperCase();initials.classList.toggle("hidden",Boolean(data?.avatar_url));}
+  if(image){image.src=data?.avatar_url||"";image.classList.toggle("hidden",!data?.avatar_url);}
+}
+function isCurrentUserOwner() {
+  return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
 }
 function isCurrentUserOwner() {
   return Boolean(currentUser && currentFocus && String(currentFocus.owner_id) === String(currentUser.id));
@@ -459,6 +479,124 @@ function showHome() {
 }
 
 
+async function showMyProfile() {
+  if (!currentUser) { showAuth(); return; }
+  $("profileNavMenu")?.classList.add("hidden");
+  await showProfile(currentUser.id);
+}
+async function showProfile(userId) {
+  clearFocusUrl();
+  const profileUrl = new URL(window.location.href);
+  profileUrl.searchParams.set("profile", userId);
+  window.history.pushState({}, "", profileUrl);
+  showOnly("profileScreen");
+  const view = $("profileView");
+  view.innerHTML = '<p class="empty-state">Loading profile…</p>';
+  const { data: profile, error } = await focusSupabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) {
+    console.error(error);
+    view.innerHTML = '<p class="empty-state">Could not load profile. Run the profile migration in Supabase, then refresh.</p>';
+    return;
+  }
+  const { data: focuses, error: focusError } = await focusSupabase.from("focuses").select("*").eq("owner_id", userId).order("created_at", { ascending: false });
+  if (focusError) console.error(focusError);
+  const all = focuses || [];
+  const active = all.find(f => f.status === "active");
+  const featured = active || all[0] || null;
+  const own = Boolean(currentUser && String(currentUser.id) === String(userId));
+  const name = profile?.display_name || (own ? currentUser.email?.split("@")[0] : "Focus creator");
+  const avatar = profile?.avatar_url;
+  view.innerHTML = '<div class="profile-top"><div class="profile-avatar-large">' +
+    (avatar ? '<img src="' + escapeHtml(avatar) + '" alt="Profile picture">' : '<span>' + escapeHtml((name[0] || "F").toUpperCase()) + '</span>') +
+    '</div><div class="profile-heading"><p class="eyebrow">PROFILE</p><h1>' + escapeHtml(name) + '</h1></div>' +
+    (own ? '<button type="button" class="profile-share-button" onclick="shareProfile(\'' + escapeHtml(userId) + '\')" aria-label="Share profile" title="Copy profile link">↗ Share</button><button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
+    '</div>' +
+    (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
+    '<section class="profile-current-focus"><p class="eyebrow">MOST RECENT FOCUS</p>' +
+    (featured ? '<button class="focus-collection-board profile-featured-board" onclick="openFocus(\'' + escapeHtml(featured.id) + '\')"><h2>' + escapeHtml(featured.title || "Untitled focus") + '</h2></button>' : '<p class="empty-state">No focuses yet.</p>') +
+    '</section><button class="text-button profile-other-link" onclick="showProfileFocuses()">Other focuses (' + all.filter(f => f.id !== featured?.id).length + ') →</button>' +
+    '<section id="profileOtherFocuses" class="profile-other-focuses hidden"><h2>Other focuses</h2><div class="collection-list">' +
+    (all.filter(f => f.id !== featured?.id).map(f => '<button class="collection-card" onclick="openFocus(\'' + escapeHtml(f.id) + '\')"><h3>' + escapeHtml(f.title || "Untitled focus") + '</h3><p class="public-focus-meta">' + escapeHtml(String(f.status || "").toUpperCase()) + '</p></button>').join('') || '<p>No other focuses yet.</p>') +
+    '</div></section>';
+}
+async function shareProfile(userId) {
+  const url = new URL(window.location.href);
+  url.search = "";
+  url.hash = "";
+  url.searchParams.set("profile", userId);
+  try {
+    await navigator.clipboard.writeText(url.toString());
+    const button = document.querySelector(".profile-share-button");
+    if (button) {
+      const previous = button.textContent;
+      button.textContent = "Copied!";
+      window.setTimeout(() => { if (button.isConnected) button.textContent = previous; }, 1600);
+    }
+  } catch (error) {
+    window.prompt("Copy your public profile link:", url.toString());
+  }
+}
+function toggleProfileEdit() {
+  const form = $("profileEditForm");
+  if (!form) return;
+  form.classList.toggle("hidden");
+  if (!form.classList.contains("hidden")) {
+    form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    $("profileNameInput")?.focus();
+  }
+}
+async function saveProfile(event) {
+  event.preventDefault();
+  if (!currentUser) return;
+  const name = $("profileNameInput").value.trim();
+  const status = $("profileSaveStatus");
+  const file = $("profileAvatarFile")?.files?.[0];
+  status.textContent = "Saving…";
+  let avatarUrl = null;
+  if (file) {
+    try {
+      const image = await prepareSessionImage(file);
+      if (image.size > MAX_IMAGE_SIZE_BYTES) throw new Error("Please choose an image smaller than 8 MB.");
+      const extension = (image.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+      const path = currentUser.id + "/avatar-" + Date.now() + "." + extension;
+      const { error: uploadError } = await focusSupabase.storage.from("profile-images").upload(path, image, {
+        cacheControl: "3600", upsert: true, contentType: image.type || "image/jpeg"
+      });
+      if (uploadError) throw uploadError;
+      avatarUrl = focusSupabase.storage.from("profile-images").getPublicUrl(path).data?.publicUrl || null;
+      if (!avatarUrl) throw new Error("Could not get the uploaded image URL.");
+    } catch (error) {
+      console.error(error);
+      status.textContent = error.message || "Could not upload your picture. Check the profile-images storage setup.";
+      return;
+    }
+  } else {
+    const { data: existing } = await focusSupabase.from("profiles").select("avatar_url").eq("id", currentUser.id).maybeSingle();
+    avatarUrl = existing?.avatar_url || null;
+  }
+  const { error } = await focusSupabase.from("profiles").upsert({
+    id: currentUser.id, display_name: name, avatar_url: avatarUrl, updated_at: new Date().toISOString()
+  });
+  if (error) {
+    console.error(error);
+    status.textContent = "Could not save. Make sure the profile migration has been run.";
+    return;
+  }
+  await refreshProfileNav();
+  await showProfile(currentUser.id);
+}
+function showProfileFocuses() { $("profileOtherFocuses")?.classList.remove("hidden"); $("profileOtherFocuses")?.scrollIntoView({behavior:"smooth",block:"start"}); }
+async function renderFocusCreator() {
+  const el=$("focusCreator"); if(!el||!currentFocus)return;
+  const owner=currentFocus.owner_id;
+  if(!owner){el.textContent="";return;}
+  const own=Boolean(currentUser&&String(currentUser.id)===String(owner));
+  let name=own?(currentUser.email?.split("@")[0]||"you"):"the creator";
+  const {data}=await focusSupabase.from("profiles").select("display_name").eq("id",owner).maybeSingle();
+  if(data?.display_name)name=data.display_name;
+  el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
+}
+
 async function showCollection() { clearFocusUrl(); showOnly("collectionScreen"); await loadCollection("all"); }
 async function showMyCollection() {
   if (!requireAuth("my-focuses")) return;
@@ -489,7 +627,7 @@ async function loadHomeFocuses() {
   }
   const {data,error}=await focusSupabase.from("focuses").select("*").eq("owner_id",currentUser.id).order("created_at",{ascending:false});
   if(error){console.error(error);list.innerHTML='<p class="empty-state">Could not load your focus. Please refresh and try again.</p>';return;}
-  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active");
+  const focuses=data||[], focusToShow=focuses.find(f=>f.status==="active") || focuses[0] || null;
   if(!focusToShow){
     currentFocus=null;currentFocusId=null;document.querySelector(".current-focus-home")?.classList.add("no-active-focus");
     list.innerHTML='<button class="primary-button home-start-focus" onclick="showCreateFocus()">Start a focus</button>';return;
@@ -884,6 +1022,7 @@ function renderFocusState() {
   $("focusStarted").textContent = currentFocus.started_at
     ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
     : "";
+  renderFocusCreator();
 
   $("focusGoalEdit").value = currentFocus.goal || "";
   renderFocusGoal();
@@ -1849,6 +1988,9 @@ async function initializeApp() {
   currentUser=session?.user||null;
   focusSupabase.auth.onAuthStateChange((_event,nextSession)=>{currentUser=nextSession?.user||null;updateNavigation();});
   updateNavigation();
+  const params=new URLSearchParams(window.location.search);
+  const profileId=params.get("profile");
+  if(profileId){await showProfile(profileId);return;}
   const focusId=getFocusIdFromUrl();
   if(focusId){currentFocusId=focusId;await showFocus();return;}
   await showHome();
@@ -1862,6 +2004,9 @@ window.addEventListener(
   "popstate",
   async () => {
 
+    const params=new URLSearchParams(window.location.search);
+    const profileId=params.get("profile");
+    if(profileId){await showProfile(profileId);return;}
     const focusId =
       getFocusIdFromUrl();
 

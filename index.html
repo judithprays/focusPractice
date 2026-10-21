@@ -13,11 +13,11 @@
   <header class="site-header">
     <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
     <nav>
-      <a href="#" onclick="showMyCollection(); return false;">My Focuses</a>
+      <a href="#" id="myFocusesNavLink" onclick="showMyCollection(); return false;">My Focuses</a>
       <a href="#" onclick="showCollection(); return false;">Explore</a>
       <a href="#" onclick="showAbout(); return false;">About</a>
       <a href="#" id="authNavLink" onclick="showAuth(); return false;">Log in</a>
-      <a href="#" id="signOutNavLink" class="hidden" onclick="signOut(); return false;">Log out</a>
+      <div id="profileNavWrap" class="profile-nav-wrap hidden"><button id="profileNavButton" class="profile-nav-button" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu"><img id="profileNavAvatar" alt="" class="profile-nav-avatar hidden"><span id="profileNavInitials">J</span></button><div id="profileNavMenu" class="profile-nav-menu hidden"><button type="button" onclick="showMyProfile()">Go to profile</button><button type="button" onclick="signOut()">Log out</button></div></div>
     </nav>
   </header>
 
@@ -102,7 +102,7 @@
           <div class="focus-goal-display-row">
             <button id="focusGoalDisplay" type="button" class="focus-started focus-goal-display goal-click-to-edit hidden" onclick="editFocusGoal()" aria-label="Edit goal"></button>
           </div>
-          <p id="focusStarted" class="focus-started"></p>
+          <p id="focusStarted" class="focus-started"></p><p id="focusCreator" class="focus-creator"></p>
           <div class="focus-goal-editor">
             <label for="focusGoalEdit">Goal of project</label>
             <textarea id="focusGoalEdit" rows="3" maxlength="2000" placeholder="What are you hoping to do, make, or discover?"></textarea>
@@ -322,6 +322,8 @@
 
     </section>
 
+
+    <section id="profileScreen" class="screen hidden"><div class="page-section profile-page"><div id="profileView"></div></div></section>
 
     <!-- ABOUT -->
     <section

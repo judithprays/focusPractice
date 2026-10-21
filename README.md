@@ -15,15 +15,21 @@ This is the process that is consistently working for me - and now I'm wondering 
 ## Shareable focuses MVP setup
 
 1. Run `supabase/migrations/20261020_shareable_focuses.sql` in the Supabase SQL Editor.
-2. Deploy the app and create Judith's account.
-3. Find the account UUID in Supabase SQL Editor:
+2. Run `supabase/migrations/20261020_profiles.sql` to create the public profile table and its access policies.
+3. Deploy the app and create Judith's account.
+4. Find the account UUID in Supabase SQL Editor:
    ```sql
    select id, email from auth.users where email = 'YOUR_ACCOUNT_EMAIL';
    ```
-4. Replace `YOUR_ACCOUNT_UUID` with that UUID and run this one-time claim to associate every existing focus (and therefore its logs) with your account:
+5. Replace `YOUR_ACCOUNT_UUID` with that UUID and run this one-time claim to associate every existing focus (and therefore its logs) with your account:
    ```sql
    update public.focuses set owner_id = 'YOUR_ACCOUNT_UUID' where owner_id is null;
    ```
-5. Verify the existing focuses open and are editable when signed in. Signed-out visitors and other accounts can view public focuses but cannot edit them.
+6. Verify the existing focuses open and are editable when signed in. Signed-out visitors and other accounts can view public focuses but cannot edit them.
 
 The legacy claim is deliberately manual so a random new account cannot claim your existing work.
+
+
+## Profile picture uploads
+
+Run `supabase/migrations/20261020_profile_image_uploads.sql` in the Supabase SQL Editor. It creates the public `profile-images` storage bucket and limits uploads, replacements, and deletes to the signed-in owner. Profile pictures can then be uploaded from the profile's pencil/edit control.
