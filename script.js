@@ -525,7 +525,7 @@ async function showProfile(userId) {
   }
   const other = all.filter(f => f.id !== featured?.id);
   view.innerHTML =
-    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
+    (own ? '<div class="profile-page-actions"><button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">Edit profile</button></div>' : '') +
     (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
     '<section class="profile-current-focus"><p class="eyebrow profile-focus-eyebrow">' +
     (avatar ? '<img class="profile-eyebrow-avatar" src="' + escapeHtml(avatar) + '" alt="">' : '') +
@@ -593,9 +593,21 @@ async function renderFocusCreator() {
   const owner=currentFocus.owner_id;
   if(!owner){el.textContent="";return;}
   const own=Boolean(currentUser&&String(currentUser.id)===String(owner));
-  let name=own?(currentUser.email?.split("@")[0]||"you"):"the creator";
-  const {data}=await focusSupabase.from("profiles").select("display_name").eq("id",owner).maybeSingle();
-  if(data?.display_name)name=data.display_name;
+  const ownUsername=own?(currentUser.email?.split("@")[0]||"you"):"";
+  let {data,error}=await focusSupabase.from("profiles").select("display_name").eq("id",owner).maybeSingle();
+  if(error)console.error("Could not load public focus creator profile:",error);
+  let name=data?.display_name?.trim()||"";
+  // Older accounts may not have a public profile row/name yet. Seed it from the
+  // owner's email prefix while authenticated so logged-out visitors can read it
+  // from the public profiles table; never expose another user's auth email.
+  if(own&&ownUsername&&(!name||!data)){
+    const {error:saveError}=await focusSupabase.from("profiles").upsert({
+      id:owner,display_name:ownUsername,updated_at:new Date().toISOString()
+    },{onConflict:"id"});
+    if(saveError)console.error("Could not initialize public creator name:",saveError);
+    else name=ownUsername;
+  }
+  name=name||ownUsername||"Focus creator";
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
