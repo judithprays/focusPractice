@@ -2585,3 +2585,9 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 [class*="eyebrow"] {
   text-transform: uppercase;
 }
+
+
+/* Keep the owner-only profile edit action visible at the top right. */
+.profile-page-actions { display:flex; justify-content:flex-end; align-items:center; width:100%; margin:0 0 12px; }
+.profile-page-actions .profile-edit-toggle { display:inline-flex!important; align-items:center; justify-content:center; width:auto!important; min-height:38px!important; padding:10px 16px!important; border:1px solid var(--light-gray)!important; border-radius:999px!important; background:white!important; color:var(--black)!important; font:600 13px Helvetica,Arial,sans-serif!important; letter-spacing:0!important; text-transform:none!important; cursor:pointer; }
+.profile-page-actions .profile-edit-toggle:hover { background:var(--paper)!important; border-color:var(--black)!important; text-decoration:none!important; }
