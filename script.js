@@ -593,11 +593,21 @@ async function renderFocusCreator() {
   const owner=currentFocus.owner_id;
   if(!owner){el.textContent="";return;}
   const own=Boolean(currentUser&&String(currentUser.id)===String(owner));
-  let name=own?(currentUser.email?.split("@")[0]||"you"):"";
-  const {data,error}=await focusSupabase.from("profiles").select("*").eq("id",owner).maybeSingle();
+  const ownUsername=own?(currentUser.email?.split("@")[0]||"you"):"";
+  let {data,error}=await focusSupabase.from("profiles").select("display_name").eq("id",owner).maybeSingle();
   if(error)console.error("Could not load public focus creator profile:",error);
-  // Public attribution must use public profile fields, never another user's private auth email.
-  name=data?.display_name?.trim()||data?.username?.trim()||data?.handle?.trim()||name||"Focus creator";
+  let name=data?.display_name?.trim()||"";
+  // Older accounts may not have a public profile row/name yet. Seed it from the
+  // owner's email prefix while authenticated so logged-out visitors can read it
+  // from the public profiles table; never expose another user's auth email.
+  if(own&&ownUsername&&(!name||!data)){
+    const {error:saveError}=await focusSupabase.from("profiles").upsert({
+      id:owner,display_name:ownUsername,updated_at:new Date().toISOString()
+    },{onConflict:"id"});
+    if(saveError)console.error("Could not initialize public creator name:",saveError);
+    else name=ownUsername;
+  }
+  name=name||ownUsername||"Focus creator";
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
