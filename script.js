@@ -525,7 +525,7 @@ async function showProfile(userId) {
   }
   const other = all.filter(f => f.id !== featured?.id);
   view.innerHTML =
-    (own ? '<button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">✎</button>' : '') +
+    (own ? '<div class="profile-page-actions"><button type="button" class="profile-edit-toggle" onclick="toggleProfileEdit()" aria-label="Edit profile" title="Edit profile">Edit profile</button></div>' : '') +
     (own ? '<form id="profileEditForm" class="profile-edit-form hidden" onsubmit="saveProfile(event)"><h2>Edit your profile</h2><label for="profileNameInput">Name</label><input id="profileNameInput" type="text" maxlength="80" value="' + escapeHtml(name) + '" required><label for="profileAvatarFile">Profile picture</label><input id="profileAvatarFile" class="profile-picture-upload" type="file" accept="image/*,.heic,.heif"><p class="form-hint">Choose an image from your device. JPG, PNG, WebP, and HEIC are supported.</p><button class="primary-button" type="submit">Save profile</button><p id="profileSaveStatus" class="save-status" role="status"></p></form>' : '') +
     '<section class="profile-current-focus"><p class="eyebrow profile-focus-eyebrow">' +
     (avatar ? '<img class="profile-eyebrow-avatar" src="' + escapeHtml(avatar) + '" alt="">' : '') +
