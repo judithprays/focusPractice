@@ -2214,13 +2214,18 @@ async function startFocusBoardPreview(board) {
   tagSlide.className = "focus-board-hover-tag";
   layer.append(first, second, tagSlide);
 
+  // Keep showing tags until every tag has appeared. If there are fewer
+  // images than needed, loop through the images again to make room for them.
+  const imageSlideCount = Math.max(loadedUrls.length, tags.length * 2);
   const slides = [];
-  loadedUrls.forEach((url, index) => {
-    slides.push({ type: "image", index });
-    if ((index + 1) % 2 === 0 && tags.length) {
-      slides.push({ type: "tag", index: Math.floor((index + 1) / 2) - 1 });
+  let tagIndex = 0;
+  for (let index = 0; index < imageSlideCount; index++) {
+    slides.push({ type: "image", index: index % loadedUrls.length });
+    if ((index + 1) % 2 === 0 && tagIndex < tags.length) {
+      slides.push({ type: "tag", index: tagIndex });
+      tagIndex++;
     }
-  });
+  }
 
   requestAnimationFrame(() => {
     if (board.isConnected && board.matches(":hover") && board.dataset.previewing === "true") {
