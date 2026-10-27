@@ -2585,3 +2585,125 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 [class*="eyebrow"] {
   text-transform: uppercase;
 }
+
+
+/* Focus board hover image preview. Keep the title legible over each image. */
+.focus-collection-board { position: relative; isolation: isolate; overflow: hidden; }
+.focus-collection-board > h2 { position: relative; z-index: 2; }
+.focus-board-hover-image { position: absolute; inset: 0; z-index: 1; opacity: 0; pointer-events: none; transition: opacity 180ms ease; background: #102c20; }
+.focus-board-hover-image.is-visible { opacity: 1; }
+.focus-board-hover-image img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.focus-board-hover-image::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.48)); }
+@media (prefers-reduced-motion: reduce) { .focus-board-hover-image { transition: none; } }
+
+/* Crossfade the two preloaded hover-preview images. */
+.focus-board-hover-image img { position: absolute; inset: 0; opacity: 0; transition: opacity 450ms ease; }
+.focus-board-hover-image img.is-current { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .focus-board-hover-image img { transition: none; } }
+
+
+/* Focus board hover preview: show the media at its natural proportions, outside the board frame. */
+.focus-collection-board:has(.focus-board-hover-image.is-visible),
+.explore-random .focus-collection-board:has(.focus-board-hover-image.is-visible) {
+  border: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  z-index: 20;
+}
+.focus-collection-board:has(.focus-board-hover-image.is-visible) > h2,
+.explore-random .focus-collection-board:has(.focus-board-hover-image.is-visible) > h2 {
+  opacity: 0;
+}
+.focus-board-hover-image {
+  inset: 50% auto auto 50% !important;
+  width: max-content;
+  height: max-content;
+  max-width: min(90vw, 700px);
+  max-height: 80vh;
+  overflow: visible;
+  transform: translate(-50%, -50%);
+  background: transparent !important;
+}
+.focus-board-hover-image img {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: auto;
+  height: auto;
+  max-width: min(90vw, 700px);
+  max-height: 80vh;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+}
+.focus-board-hover-image::after {
+  display: none;
+}
+
+
+/* Keep hover previews inside the original board footprint without cropping. */
+.focus-board-hover-image {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+.focus-board-hover-image img {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
+
+
+
+
+/* Hover-preview tags appear after every two images, in the focus-board letter style. */
+.focus-board-hover-image img {
+  filter: none !important;
+}
+.focus-board-hover-tag {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5%;
+  color: #000;
+  font: 900 clamp(60px, 9vw, 102px)/1.05 "Arial Black", Arial, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-shadow: 1px 2px 0 #b7b2a2, 2px 3px 0 rgba(0,0,0,.45);
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+.focus-board-hover-tag.is-current {
+  opacity: 1;
+}
+.focus-board-hover-image.showing-tag {
+  background: transparent !important;
+}
+.focus-board-hover-image.showing-tag img {
+  opacity: 0 !important;
+}
+
+
+/* Hover preview: switch instantly, with no fades or title-letter shadow. */
+.focus-board-hover-image,
+.focus-board-hover-image img,
+.focus-board-hover-tag {
+  transition: none !important;
+}
+.focus-board-hover-tag {
+  text-shadow: none !important;
+}

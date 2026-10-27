@@ -2128,3 +2128,166 @@ document.addEventListener("click", function(event) {
     if (card !== insideCard) card.removeAttribute("open");
   });
 });
+
+
+/* Hover preview: preload all images and crossfade through the full image set. */
+const focusBoardPreviewTimers = new WeakMap();
+const focusBoardPreviewCache = new Map();
+
+function getFocusBoardId(board) {
+  const match = String(board?.getAttribute("onclick") || "").match(/openFocus\(['"]([^'"]+)['"]\)/);
+  return match ? match[1] : "";
+}
+
+async function loadPreviewImages(urls) {
+  const results = await Promise.all(urls.map(url => new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => resolve(url);
+    image.onerror = () => resolve(null);
+    image.src = url;
+  })));
+  return results.filter(Boolean);
+}
+
+async function startFocusBoardPreview(board) {
+  if (!board || board.dataset.previewing === "true") return;
+  const focusId = getFocusBoardId(board);
+  if (!focusId) return;
+  board.dataset.previewing = "true";
+
+  let previewData = focusBoardPreviewCache.get(focusId);
+  if (!previewData) {
+    const { data, error } = await focusSupabase
+      .from("sessions")
+      .select("image_urls,session_date,body")
+      .eq("focus_id", focusId)
+      .order("session_date", { ascending: true });
+    if (error) {
+      console.error("Could not load focus board image preview:", error);
+      board.dataset.previewing = "false";
+      return;
+    }
+    const urls = [...new Set((data || []).flatMap(session =>
+      Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []
+    ))];
+    const tags = [...new Set((data || []).flatMap(session => {
+      const match = String(session.body || "").match(/(?:^|\n)\[focus-tags\]([\s\S]*?)\[\/focus-tags\]/i);
+      try {
+        const parsed = match ? JSON.parse(match[1]) : [];
+        return Array.isArray(parsed) ? parsed.map(tag => String(tag).trim().replace(/^#/, "")).filter(Boolean) : [];
+      } catch { return []; }
+    }))];
+    previewData = { urls, tags };
+    focusBoardPreviewCache.set(focusId, previewData);
+  }
+
+  const urls = Array.isArray(previewData) ? previewData : previewData.urls;
+  const tags = Array.isArray(previewData) ? [] : (previewData.tags || []);
+  if (!board.isConnected || !board.matches(":hover") || !urls.length) {
+    board.dataset.previewing = "false";
+    return;
+  }
+
+  const loadedUrls = await loadPreviewImages(urls);
+  if (!board.isConnected || !board.matches(":hover") || !loadedUrls.length) {
+    board.dataset.previewing = "false";
+    return;
+  }
+
+  let layer = board.querySelector(".focus-board-hover-image");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.className = "focus-board-hover-image";
+    layer.setAttribute("aria-hidden", "true");
+    board.prepend(layer);
+  }
+  layer.replaceChildren();
+
+  const first = document.createElement("img");
+  const second = document.createElement("img");
+  const tagSlide = document.createElement("span");
+  first.alt = "";
+  second.alt = "";
+  first.className = "is-current";
+  first.src = loadedUrls[0];
+  second.src = loadedUrls.length > 1 ? loadedUrls[1] : loadedUrls[0];
+  tagSlide.className = "focus-board-hover-tag";
+  layer.append(first, second, tagSlide);
+
+  // Keep showing tags until every tag has appeared. If there are fewer
+  // images than needed, loop through the images again to make room for them.
+  const imageSlideCount = Math.max(loadedUrls.length, tags.length * 2);
+  const slides = [];
+  let tagIndex = 0;
+  for (let index = 0; index < imageSlideCount; index++) {
+    slides.push({ type: "image", index: index % loadedUrls.length });
+    if ((index + 1) % 2 === 0 && tagIndex < tags.length) {
+      slides.push({ type: "tag", index: tagIndex });
+      tagIndex++;
+    }
+  }
+
+  requestAnimationFrame(() => {
+    if (board.isConnected && board.matches(":hover") && board.dataset.previewing === "true") {
+      layer.classList.add("is-visible");
+    }
+  });
+
+  if (slides.length > 1) {
+    let slideIndex = 0;
+    let current = first;
+    let next = second;
+    const advancePreview = () => {
+      if (!board.isConnected || !board.matches(":hover")) {
+        stopFocusBoardPreview(board);
+        return;
+      }
+      slideIndex = (slideIndex + 1) % slides.length;
+      const slide = slides[slideIndex];
+      if (slide.type === "tag") {
+        current.classList.remove("is-current");
+        next.classList.remove("is-current");
+        tagSlide.textContent = "#" + tags[slide.index % tags.length];
+        tagSlide.classList.add("is-current");
+        layer.classList.add("showing-tag");
+      } else {
+        layer.classList.remove("showing-tag");
+        tagSlide.classList.remove("is-current");
+        next.src = loadedUrls[slide.index];
+        next.classList.add("is-current");
+        current.classList.remove("is-current");
+        const previous = current;
+        current = next;
+        next = previous;
+      }
+      const duration = slide.type === "tag" ? 500 : 333;
+      focusBoardPreviewTimers.set(board, window.setTimeout(advancePreview, duration));
+    };
+    focusBoardPreviewTimers.set(board, window.setTimeout(advancePreview, 333));
+  }
+}
+function stopFocusBoardPreview(board) {
+  if (!board) return;
+  const timer = focusBoardPreviewTimers.get(board);
+  if (timer) window.clearInterval(timer);
+  focusBoardPreviewTimers.delete(board);
+  board.dataset.previewing = "false";
+  board.querySelector(".focus-board-hover-image")?.remove();
+}
+
+document.addEventListener("pointerover", event => {
+  const board = event.target.closest(".focus-collection-board");
+  if (board && !board.contains(event.relatedTarget)) startFocusBoardPreview(board);
+});
+document.addEventListener("pointerout", event => {
+  const board = event.target.closest(".focus-collection-board");
+  if (board && !board.contains(event.relatedTarget)) stopFocusBoardPreview(board);
+});
+document.addEventListener("focusin", event => {
+  const board = event.target.closest(".focus-collection-board");
+  if (board) startFocusBoardPreview(board);
+});
+document.addEventListener("focusout", event => {
+  const board = event.target.closest(".focus-collection-board");
+  if (board) stopFocusBoardPreview(board);
+});
