@@ -2232,7 +2232,7 @@ async function startFocusBoardPreview(board) {
     let slideIndex = 0;
     let current = first;
     let next = second;
-    focusBoardPreviewTimers.set(board, window.setInterval(() => {
+    const advancePreview = () => {
       if (!board.isConnected || !board.matches(":hover")) {
         stopFocusBoardPreview(board);
         return;
@@ -2255,7 +2255,10 @@ async function startFocusBoardPreview(board) {
         current = next;
         next = previous;
       }
-    }, 500));
+      const duration = slide.type === "tag" ? 500 : 333;
+      focusBoardPreviewTimers.set(board, window.setTimeout(advancePreview, duration));
+    };
+    focusBoardPreviewTimers.set(board, window.setTimeout(advancePreview, 333));
   }
 }
 function stopFocusBoardPreview(board) {
