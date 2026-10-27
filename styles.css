@@ -2662,7 +2662,37 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 }
 
 
-/* Hover previews cycle three times per second and use a monochrome treatment. */
+
+
+/* Hover-preview tags appear after every two images, in the focus-board letter style. */
 .focus-board-hover-image img {
-  filter: grayscale(100%);
+  filter: none !important;
+}
+.focus-board-hover-tag {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5%;
+  color: #000;
+  font-family: inherit;
+  font-size: 3em;
+  font-weight: 700;
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 100ms ease;
+}
+.focus-board-hover-tag.is-current {
+  opacity: 1;
+}
+.focus-board-hover-image.showing-tag {
+  background: transparent !important;
+}
+.focus-board-hover-image.showing-tag img {
+  opacity: 0 !important;
 }
