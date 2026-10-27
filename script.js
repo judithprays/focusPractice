@@ -2128,3 +2128,63 @@ document.addEventListener("click", function(event) {
     if (card !== insideCard) card.removeAttribute("open");
   });
 });
+
+
+/* Hover preview: cycle through a focus's session images, two seconds per image. */
+const focusBoardPreviewTimers = new WeakMap();
+const focusBoardPreviewCache = new Map();
+
+function getFocusBoardId(board) {
+  const match = String(board?.getAttribute('onclick') || '').match(/openFocus\(['"]([^'"]+)['"]\)/);
+  return match ? match[1] : '';
+}
+
+async function startFocusBoardPreview(board) {
+  if (!board || board.dataset.previewing === 'true') return;
+  const focusId = getFocusBoardId(board);
+  if (!focusId) return;
+  board.dataset.previewing = 'true';
+  let urls = focusBoardPreviewCache.get(focusId);
+  if (!urls) {
+    const { data, error } = await focusSupabase.from('sessions').select('image_urls,session_date').eq('focus_id', focusId).order('session_date', { ascending: true });
+    if (error) { console.error('Could not load focus board image preview:', error); board.dataset.previewing = 'false'; return; }
+    urls = (data || []).flatMap(session => Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []);
+    focusBoardPreviewCache.set(focusId, urls);
+  }
+  if (!board.isConnected || !board.matches(':hover') || !urls.length) { board.dataset.previewing = 'false'; return; }
+  let index = 0;
+  const showImage = () => {
+    let layer = board.querySelector('.focus-board-hover-image');
+    if (!layer) { layer = document.createElement('div'); layer.className = 'focus-board-hover-image'; layer.setAttribute('aria-hidden', 'true'); board.prepend(layer); }
+    layer.replaceChildren();
+    const image = document.createElement('img'); image.src = urls[index]; image.alt = ''; layer.append(image);
+    layer.classList.add('is-visible'); index = (index + 1) % urls.length;
+  };
+  showImage();
+  focusBoardPreviewTimers.set(board, window.setInterval(showImage, 2000));
+}
+
+function stopFocusBoardPreview(board) {
+  if (!board) return;
+  const timer = focusBoardPreviewTimers.get(board);
+  if (timer) window.clearInterval(timer);
+  focusBoardPreviewTimers.delete(board); board.dataset.previewing = 'false';
+  board.querySelector('.focus-board-hover-image')?.remove();
+}
+
+document.addEventListener('pointerover', event => {
+  const board = event.target.closest('.focus-collection-board');
+  if (board && !board.contains(event.relatedTarget)) startFocusBoardPreview(board);
+});
+document.addEventListener('pointerout', event => {
+  const board = event.target.closest('.focus-collection-board');
+  if (board && !board.contains(event.relatedTarget)) stopFocusBoardPreview(board);
+});
+document.addEventListener('focusin', event => {
+  const board = event.target.closest('.focus-collection-board');
+  if (board) startFocusBoardPreview(board);
+});
+document.addEventListener('focusout', event => {
+  const board = event.target.closest('.focus-collection-board');
+  if (board) stopFocusBoardPreview(board);
+});
