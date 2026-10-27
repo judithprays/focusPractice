@@ -2130,7 +2130,7 @@ document.addEventListener("click", function(event) {
 });
 
 
-/* Hover preview: preload every focus image, then cycle smoothly every two seconds. */
+/* Hover preview: preload all images and crossfade through the full image set. */
 const focusBoardPreviewTimers = new WeakMap();
 const focusBoardPreviewCache = new Map();
 
@@ -2140,20 +2140,22 @@ function getFocusBoardId(board) {
 }
 
 async function loadPreviewImages(urls) {
-  return Promise.all(urls.map(url => new Promise(resolve => {
+  const results = await Promise.all(urls.map(url => new Promise(resolve => {
     const image = new Image();
-    image.onload = () => resolve({ url, image });
+    image.onload = () => resolve(url);
     image.onerror = () => resolve(null);
     image.src = url;
-  }))).then(results => results.filter(Boolean));
+  })));
+  return results.filter(Boolean);
 }
 
 async function startFocusBoardPreview(board) {
   if (!board || board.dataset.previewing === "true") return;
   const focusId = getFocusBoardId(board);
   if (!focusId) return;
-
   board.dataset.previewing = "true";
+
+  // Reuse the list for this page view, but always include every URL from every session.
   let urls = focusBoardPreviewCache.get(focusId);
   if (!urls) {
     const { data, error } = await focusSupabase
@@ -2166,10 +2168,11 @@ async function startFocusBoardPreview(board) {
       board.dataset.previewing = "false";
       return;
     }
-    // Keep every image, in session-date order and then image order within each session.
     urls = (data || []).flatMap(session =>
       Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []
     );
+    // Remove duplicate URLs without dropping distinct images.
+    urls = [...new Set(urls)];
     focusBoardPreviewCache.set(focusId, urls);
   }
 
@@ -2178,10 +2181,8 @@ async function startFocusBoardPreview(board) {
     return;
   }
 
-  // Preload all images before revealing the overlay, so hover never flashes black
-  // and cycling doesn't show blank frames while the next image downloads.
-  const loadedImages = await loadPreviewImages(urls);
-  if (!board.isConnected || !board.matches(":hover") || !loadedImages.length) {
+  const loadedUrls = await loadPreviewImages(urls);
+  if (!board.isConnected || !board.matches(":hover") || !loadedUrls.length) {
     board.dataset.previewing = "false";
     return;
   }
@@ -2193,31 +2194,40 @@ async function startFocusBoardPreview(board) {
     layer.setAttribute("aria-hidden", "true");
     board.prepend(layer);
   }
+  layer.replaceChildren();
 
-  let image = layer.querySelector("img");
-  if (!image) {
-    image = document.createElement("img");
-    image.alt = "";
-    layer.append(image);
-  }
+  // Two stacked images allow a proper crossfade instead of changing one img in place.
+  const first = document.createElement("img");
+  const second = document.createElement("img");
+  first.alt = "";
+  second.alt = "";
+  first.className = "is-current";
+  first.src = loadedUrls[0];
+  second.src = loadedUrls.length > 1 ? loadedUrls[1] : loadedUrls[0];
+  layer.append(first, second);
 
-  let index = 0;
-  image.src = loadedImages[index].url;
-  // Reveal only after a successfully loaded image is ready to display.
   requestAnimationFrame(() => {
     if (board.isConnected && board.matches(":hover") && board.dataset.previewing === "true") {
       layer.classList.add("is-visible");
     }
   });
 
-  if (loadedImages.length > 1) {
+  if (loadedUrls.length > 1) {
+    let index = 1;
+    let current = first;
+    let next = second;
     focusBoardPreviewTimers.set(board, window.setInterval(() => {
       if (!board.isConnected || !board.matches(":hover")) {
         stopFocusBoardPreview(board);
         return;
       }
-      index = (index + 1) % loadedImages.length;
-      image.src = loadedImages[index].url;
+      index = (index + 1) % loadedUrls.length;
+      next.src = loadedUrls[index];
+      next.classList.add("is-current");
+      current.classList.remove("is-current");
+      const previous = current;
+      current = next;
+      next = previous;
     }, 2000));
   }
 }
