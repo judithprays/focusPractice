@@ -2660,3 +2660,9 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
   object-fit: contain !important;
   transform: none !important;
 }
+
+
+/* Hover previews cycle three times per second and use a monochrome treatment. */
+.focus-board-hover-image img {
+  filter: grayscale(100%);
+}
