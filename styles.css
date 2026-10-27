@@ -2677,10 +2677,10 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
   justify-content: center;
   padding: 5%;
   color: #000;
-  font-family: inherit;
-  font-size: 3em;
-  font-weight: 700;
-  line-height: 1.05;
+  font: 900 clamp(60px, 9vw, 102px)/1.05 "Arial Black", Arial, sans-serif;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-shadow: 1px 2px 0 #b7b2a2, 2px 3px 0 rgba(0,0,0,.45);
   text-align: center;
   overflow-wrap: anywhere;
   opacity: 0;
