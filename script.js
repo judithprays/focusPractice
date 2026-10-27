@@ -2255,7 +2255,7 @@ async function startFocusBoardPreview(board) {
         current = next;
         next = previous;
       }
-    }, 333));
+    }, 500));
   }
 }
 function stopFocusBoardPreview(board) {
