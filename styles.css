@@ -2639,3 +2639,24 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .focus-board-hover-image::after {
   display: none;
 }
+
+
+/* Keep hover previews inside the original board footprint without cropping. */
+.focus-board-hover-image {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  transform: none !important;
+  overflow: hidden !important;
+}
+.focus-board-hover-image img {
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  object-fit: contain !important;
+  transform: none !important;
+}
