@@ -2696,3 +2696,14 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .focus-board-hover-image.showing-tag img {
   opacity: 0 !important;
 }
+
+
+/* Hover preview: switch instantly, with no fades or title-letter shadow. */
+.focus-board-hover-image,
+.focus-board-hover-image img,
+.focus-board-hover-tag {
+  transition: none !important;
+}
+.focus-board-hover-tag {
+  text-shadow: none !important;
+}
