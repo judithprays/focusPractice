@@ -2228,7 +2228,7 @@ async function startFocusBoardPreview(board) {
       const previous = current;
       current = next;
       next = previous;
-    }, 2000));
+    }, 500));
   }
 }
 
