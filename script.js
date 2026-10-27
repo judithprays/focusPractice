@@ -2130,61 +2130,120 @@ document.addEventListener("click", function(event) {
 });
 
 
-/* Hover preview: cycle through a focus's session images, two seconds per image. */
+/* Hover preview: preload every focus image, then cycle smoothly every two seconds. */
 const focusBoardPreviewTimers = new WeakMap();
 const focusBoardPreviewCache = new Map();
 
 function getFocusBoardId(board) {
-  const match = String(board?.getAttribute('onclick') || '').match(/openFocus\(['"]([^'"]+)['"]\)/);
-  return match ? match[1] : '';
+  const match = String(board?.getAttribute("onclick") || "").match(/openFocus\(['"]([^'"]+)['"]\)/);
+  return match ? match[1] : "";
+}
+
+async function loadPreviewImages(urls) {
+  return Promise.all(urls.map(url => new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => resolve({ url, image });
+    image.onerror = () => resolve(null);
+    image.src = url;
+  }))).then(results => results.filter(Boolean));
 }
 
 async function startFocusBoardPreview(board) {
-  if (!board || board.dataset.previewing === 'true') return;
+  if (!board || board.dataset.previewing === "true") return;
   const focusId = getFocusBoardId(board);
   if (!focusId) return;
-  board.dataset.previewing = 'true';
+
+  board.dataset.previewing = "true";
   let urls = focusBoardPreviewCache.get(focusId);
   if (!urls) {
-    const { data, error } = await focusSupabase.from('sessions').select('image_urls,session_date').eq('focus_id', focusId).order('session_date', { ascending: true });
-    if (error) { console.error('Could not load focus board image preview:', error); board.dataset.previewing = 'false'; return; }
-    urls = (data || []).flatMap(session => Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []);
+    const { data, error } = await focusSupabase
+      .from("sessions")
+      .select("image_urls,session_date")
+      .eq("focus_id", focusId)
+      .order("session_date", { ascending: true });
+    if (error) {
+      console.error("Could not load focus board image preview:", error);
+      board.dataset.previewing = "false";
+      return;
+    }
+    // Keep every image, in session-date order and then image order within each session.
+    urls = (data || []).flatMap(session =>
+      Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []
+    );
     focusBoardPreviewCache.set(focusId, urls);
   }
-  if (!board.isConnected || !board.matches(':hover') || !urls.length) { board.dataset.previewing = 'false'; return; }
+
+  if (!board.isConnected || !board.matches(":hover") || !urls.length) {
+    board.dataset.previewing = "false";
+    return;
+  }
+
+  // Preload all images before revealing the overlay, so hover never flashes black
+  // and cycling doesn't show blank frames while the next image downloads.
+  const loadedImages = await loadPreviewImages(urls);
+  if (!board.isConnected || !board.matches(":hover") || !loadedImages.length) {
+    board.dataset.previewing = "false";
+    return;
+  }
+
+  let layer = board.querySelector(".focus-board-hover-image");
+  if (!layer) {
+    layer = document.createElement("div");
+    layer.className = "focus-board-hover-image";
+    layer.setAttribute("aria-hidden", "true");
+    board.prepend(layer);
+  }
+
+  let image = layer.querySelector("img");
+  if (!image) {
+    image = document.createElement("img");
+    image.alt = "";
+    layer.append(image);
+  }
+
   let index = 0;
-  const showImage = () => {
-    let layer = board.querySelector('.focus-board-hover-image');
-    if (!layer) { layer = document.createElement('div'); layer.className = 'focus-board-hover-image'; layer.setAttribute('aria-hidden', 'true'); board.prepend(layer); }
-    layer.replaceChildren();
-    const image = document.createElement('img'); image.src = urls[index]; image.alt = ''; layer.append(image);
-    layer.classList.add('is-visible'); index = (index + 1) % urls.length;
-  };
-  showImage();
-  focusBoardPreviewTimers.set(board, window.setInterval(showImage, 2000));
+  image.src = loadedImages[index].url;
+  // Reveal only after a successfully loaded image is ready to display.
+  requestAnimationFrame(() => {
+    if (board.isConnected && board.matches(":hover") && board.dataset.previewing === "true") {
+      layer.classList.add("is-visible");
+    }
+  });
+
+  if (loadedImages.length > 1) {
+    focusBoardPreviewTimers.set(board, window.setInterval(() => {
+      if (!board.isConnected || !board.matches(":hover")) {
+        stopFocusBoardPreview(board);
+        return;
+      }
+      index = (index + 1) % loadedImages.length;
+      image.src = loadedImages[index].url;
+    }, 2000));
+  }
 }
 
 function stopFocusBoardPreview(board) {
   if (!board) return;
   const timer = focusBoardPreviewTimers.get(board);
   if (timer) window.clearInterval(timer);
-  focusBoardPreviewTimers.delete(board); board.dataset.previewing = 'false';
-  board.querySelector('.focus-board-hover-image')?.remove();
+  focusBoardPreviewTimers.delete(board);
+  board.dataset.previewing = "false";
+  board.querySelector(".focus-board-hover-image")?.remove();
 }
 
-document.addEventListener('pointerover', event => {
-  const board = event.target.closest('.focus-collection-board');
+document.addEventListener("pointerover", event => {
+  const board = event.target.closest(".focus-collection-board");
   if (board && !board.contains(event.relatedTarget)) startFocusBoardPreview(board);
 });
-document.addEventListener('pointerout', event => {
-  const board = event.target.closest('.focus-collection-board');
+document.addEventListener("pointerout", event => {
+  const board = event.target.closest(".focus-collection-board");
   if (board && !board.contains(event.relatedTarget)) stopFocusBoardPreview(board);
 });
-document.addEventListener('focusin', event => {
-  const board = event.target.closest('.focus-collection-board');
+document.addEventListener("focusin", event => {
+  const board = event.target.closest(".focus-collection-board");
   if (board) startFocusBoardPreview(board);
 });
-document.addEventListener('focusout', event => {
-  const board = event.target.closest('.focus-collection-board');
+document.addEventListener("focusout", event => {
+  const board = event.target.closest(".focus-collection-board");
   if (board) stopFocusBoardPreview(board);
 });
