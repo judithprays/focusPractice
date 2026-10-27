@@ -2155,12 +2155,11 @@ async function startFocusBoardPreview(board) {
   if (!focusId) return;
   board.dataset.previewing = "true";
 
-  // Reuse the list for this page view, but always include every URL from every session.
-  let urls = focusBoardPreviewCache.get(focusId);
-  if (!urls) {
+  let previewData = focusBoardPreviewCache.get(focusId);
+  if (!previewData) {
     const { data, error } = await focusSupabase
       .from("sessions")
-      .select("image_urls,session_date")
+      .select("image_urls,session_date,body")
       .eq("focus_id", focusId)
       .order("session_date", { ascending: true });
     if (error) {
@@ -2168,14 +2167,22 @@ async function startFocusBoardPreview(board) {
       board.dataset.previewing = "false";
       return;
     }
-    urls = (data || []).flatMap(session =>
+    const urls = [...new Set((data || []).flatMap(session =>
       Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : []
-    );
-    // Remove duplicate URLs without dropping distinct images.
-    urls = [...new Set(urls)];
-    focusBoardPreviewCache.set(focusId, urls);
+    ))];
+    const tags = [...new Set((data || []).flatMap(session => {
+      const match = String(session.body || "").match(/(?:^|\n)\[focus-tags\]([\s\S]*?)\[\/focus-tags\]/i);
+      try {
+        const parsed = match ? JSON.parse(match[1]) : [];
+        return Array.isArray(parsed) ? parsed.map(tag => String(tag).trim().replace(/^#/, "")).filter(Boolean) : [];
+      } catch { return []; }
+    }))];
+    previewData = { urls, tags };
+    focusBoardPreviewCache.set(focusId, previewData);
   }
 
+  const urls = Array.isArray(previewData) ? previewData : previewData.urls;
+  const tags = Array.isArray(previewData) ? [] : (previewData.tags || []);
   if (!board.isConnected || !board.matches(":hover") || !urls.length) {
     board.dataset.previewing = "false";
     return;
@@ -2196,15 +2203,24 @@ async function startFocusBoardPreview(board) {
   }
   layer.replaceChildren();
 
-  // Two stacked images allow a proper crossfade instead of changing one img in place.
   const first = document.createElement("img");
   const second = document.createElement("img");
+  const tagSlide = document.createElement("span");
   first.alt = "";
   second.alt = "";
   first.className = "is-current";
   first.src = loadedUrls[0];
   second.src = loadedUrls.length > 1 ? loadedUrls[1] : loadedUrls[0];
-  layer.append(first, second);
+  tagSlide.className = "focus-board-hover-tag";
+  layer.append(first, second, tagSlide);
+
+  const slides = [];
+  loadedUrls.forEach((url, index) => {
+    slides.push({ type: "image", index });
+    if ((index + 1) % 2 === 0 && tags.length) {
+      slides.push({ type: "tag", index: Math.floor((index + 1) / 2) - 1 });
+    }
+  });
 
   requestAnimationFrame(() => {
     if (board.isConnected && board.matches(":hover") && board.dataset.previewing === "true") {
@@ -2212,8 +2228,8 @@ async function startFocusBoardPreview(board) {
     }
   });
 
-  if (loadedUrls.length > 1) {
-    let index = 1;
+  if (slides.length > 1) {
+    let slideIndex = 0;
     let current = first;
     let next = second;
     focusBoardPreviewTimers.set(board, window.setInterval(() => {
@@ -2221,17 +2237,27 @@ async function startFocusBoardPreview(board) {
         stopFocusBoardPreview(board);
         return;
       }
-      index = (index + 1) % loadedUrls.length;
-      next.src = loadedUrls[index];
-      next.classList.add("is-current");
-      current.classList.remove("is-current");
-      const previous = current;
-      current = next;
-      next = previous;
+      slideIndex = (slideIndex + 1) % slides.length;
+      const slide = slides[slideIndex];
+      if (slide.type === "tag") {
+        current.classList.remove("is-current");
+        next.classList.remove("is-current");
+        tagSlide.textContent = "#" + tags[slide.index % tags.length];
+        tagSlide.classList.add("is-current");
+        layer.classList.add("showing-tag");
+      } else {
+        layer.classList.remove("showing-tag");
+        tagSlide.classList.remove("is-current");
+        next.src = loadedUrls[slide.index];
+        next.classList.add("is-current");
+        current.classList.remove("is-current");
+        const previous = current;
+        current = next;
+        next = previous;
+      }
     }, 333));
   }
 }
-
 function stopFocusBoardPreview(board) {
   if (!board) return;
   const timer = focusBoardPreviewTimers.get(board);
