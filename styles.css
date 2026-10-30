@@ -2786,20 +2786,20 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   font-family: inherit;
   font-size: 100px;
   font-weight: 400;
-  line-height: 1.04;
+  line-height: .9;
   letter-spacing: -.055em;
 }
 
 .about-message .about-lead-small {
-  font-size: 17px;
-  line-height: 1.28;
+  font-size: 23px;
+  line-height: 1;
   letter-spacing: -.025em;
 }
 
 .about-message .about-lead-main {
   display: inline-block;
   font-size: 1em;
-  line-height: 1.04;
+  line-height: .9;
   letter-spacing: -.06em;
 }
 
@@ -2849,8 +2849,8 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   }
 
   .about-message .about-lead-small {
-    font-size: 16px;
-    line-height: 1.28;
+    font-size: 23px;
+    line-height: 1;
   }
 
   .about-message p {
