@@ -95,6 +95,16 @@
 
         <div id="focusCoverBanner" class="focus-cover-banner hidden" aria-label="Current focus board">
           <h1 id="focusTitleDisplay" class="focus-board-title"></h1>
+          <button id="focusTitleEditButton" type="button" class="focus-title-edit-button hidden" onclick="editFocusTitle()">Edit title</button>
+        </div>
+        <div id="focusTitleEditor" class="focus-title-editor hidden">
+          <label for="focusTitleEdit">Focus title</label>
+          <input id="focusTitleEdit" type="text" maxlength="80" placeholder="Give this focus a name">
+          <div class="form-actions">
+            <button type="button" class="secondary-button" onclick="saveFocusTitle()">Save title</button>
+            <button type="button" class="text-button" onclick="cancelEditFocusTitle()">Cancel</button>
+            <span id="focusTitleSaveStatus" class="save-status" aria-live="polite"></span>
+          </div>
         </div>
         <div class="focus-header">
           <p class="eyebrow focus-goal-label hidden" id="focusStatusLabel">MY CURRENT FOCUS</p>
