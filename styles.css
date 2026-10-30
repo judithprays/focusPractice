@@ -2784,20 +2784,23 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .about-message .about-lead {
   margin: 0 0 clamp(24px, 4vw, 40px);
   font-family: inherit;
-  font-size: 60px;
+  font-size: 100px;
   font-weight: 400;
-  line-height: 1.08;
-  letter-spacing: -.04em;
+  line-height: 1.04;
+  letter-spacing: -.055em;
 }
 
 .about-message .about-lead-small {
-  font-size: .72em;
-  letter-spacing: -.035em;
+  font-size: 17px;
+  line-height: 1.28;
+  letter-spacing: -.025em;
 }
 
 .about-message .about-lead-main {
+  display: inline-block;
   font-size: 1em;
-  letter-spacing: -.055em;
+  line-height: 1.04;
+  letter-spacing: -.06em;
 }
 
 .about-lines {
@@ -2841,8 +2844,13 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 
   .about-message .about-lead {
     margin-bottom: 28px;
-    font-size: 20px;
-    line-height: 1.08;
+    font-size: 48px;
+    line-height: 1.06;
+  }
+
+  .about-message .about-lead-small {
+    font-size: 16px;
+    line-height: 1.28;
   }
 
   .about-message p {
