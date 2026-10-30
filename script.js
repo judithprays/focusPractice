@@ -13,6 +13,7 @@ const focusSupabase = window.supabase.createClient(
 let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
+let sessionPollResults = {};
 let forceReadOnlyFocusView = false;
 let currentUser = null;
 let authMode = "login";
@@ -210,16 +211,60 @@ function attachSessionPoll() {
   $("sessionText").dataset.poll = JSON.stringify({ question, options });
   $("sessionPollStatus").textContent = "Poll attached. Save this step to publish it.";
 }
-function renderSessionPoll(session) {
-  const match = String(session.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
-  let poll; try { poll = match ? JSON.parse(match[1]) : null; } catch {}
-  if (!poll || !poll.question || !Array.isArray(poll.options)) return "";
-  const votes = (() => { try { return JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch { return {}; } })();
-  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + poll.options.map((option, i) => '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" ' + (votes[String(session.id)] === i ? "checked" : "") + ' onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\',' + i + ')"> ' + escapeHtml(option) + '</label>').join("") + '</div>';
+function getSessionPoll(session) {
+  const match = String(session?.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
+  try { const poll = match ? JSON.parse(match[1]) : null; return poll && poll.question && Array.isArray(poll.options) ? poll : null; } catch { return null; }
 }
-function voteInSessionPoll(sessionId, option) { let votes = {}; try { votes = JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch {} votes[String(sessionId)] = option; try { localStorage.setItem("focusPractice.pollVotes", JSON.stringify(votes)); } catch {} }
+function getPollVoterKey() {
+  let key = "";
+  try { key = localStorage.getItem("focusPractice.pollVoterKey") || ""; } catch {}
+  if (!/^[0-9a-f-]{36}$/i.test(key)) {
+    key = window.crypto?.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); });
+    try { localStorage.setItem("focusPractice.pollVoterKey", key); } catch {}
+  }
+  return key;
+}
+function renderSessionPollEditor(session) {
+  const poll = getSessionPoll(session);
+  if (!poll || !isCurrentUserOwner()) return "";
+  const id = escapeHtml(session.id);
+  return '<div class="session-poll-editor"><label for="pollQuestionEdit-' + id + '">Poll question</label><input id="pollQuestionEdit-' + id + '" maxlength="180" value="' + escapeHtml(poll.question) + '"><label for="pollOptionsEdit-' + id + '">Options (one per line)</label><textarea id="pollOptionsEdit-' + id + '" rows="3">' + escapeHtml(poll.options.join("\n")) + '</textarea><button type="button" class="text-button" onclick="saveSessionPoll(\'' + id + '\')">Save poll</button><span id="pollEditStatus-' + id + '" class="save-status" aria-live="polite"></span></div>';
+}
+function renderSessionPoll(session) {
+  const poll = getSessionPoll(session);
+  if (!poll) return "";
+  const result = sessionPollResults[String(session.id)] || { show_results: false, option_counts: [], total_votes: 0, my_vote: null };
+  const showResults = Boolean(result.show_results);
+  const total = Number(result.total_votes) || 0;
+  const counts = Array.isArray(result.option_counts) ? result.option_counts : [];
+  const options = poll.options.map((option, i) => {
+    if (!showResults) return '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\', ' + i + ')"> <span>' + escapeHtml(option) + '</span></label>';
+    const count = Number(counts[i]) || 0;
+    const percent = total ? Math.round(count / total * 100) : 0;
+    return '<div class="session-poll-result' + (result.my_vote === i ? ' is-my-vote' : '') + '"><div class="session-poll-result-label"><span>' + escapeHtml(option) + '</span><strong>' + percent + '%</strong></div><div class="session-poll-result-track"><span style="width:' + percent + '%"></span></div><small>' + count + ' ' + (count === 1 ? 'vote' : 'votes') + '</small></div>';
+  }).join("");
+  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + options + (showResults ? '<p class="session-poll-total">' + total + ' ' + (total === 1 ? 'response' : 'responses') + '</p>' : '<p class="session-poll-hint">Choose an option to see results</p>') + '</div>';
+}
+async function voteInSessionPoll(sessionId, option) {
+  const { data, error } = await focusSupabase.rpc("cast_session_poll_vote", { p_session_id: String(sessionId), p_option_index: option, p_voter_key: getPollVoterKey() });
+  if (error) { console.error("Poll vote error:", error); alert("Could not save your vote. Please try again."); return; }
+  sessionPollResults[String(sessionId)] = data;
+  renderSessions();
+}
+async function saveSessionPoll(sessionId) {
+  if (!isCurrentUserOwner()) return;
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  const status = $("pollEditStatus-" + sessionId);
+  const question = $("pollQuestionEdit-" + sessionId)?.value.trim() || "";
+  const options = ($("pollOptionsEdit-" + sessionId)?.value || "").split("\n").map(value => value.trim()).filter(Boolean);
+  if (!session || !question || options.length < 2) { if (status) status.textContent = "Add a question and at least two options."; return; }
+  if (status) status.textContent = "Saving…";
+  const { error } = await focusSupabase.rpc("update_session_poll", { p_session_id: String(sessionId), p_question: question, p_options: options });
+  if (error) { console.error("Poll update error:", error); if (status) status.textContent = "Could not save. Try again."; return; }
+  await loadSessions();
+}
 
-function renderSessionCardVisual(session) {
+function renderSessionCardVisual(session, dateLabel = "", showDate = false, fullWidth = false) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
   const image = urls[0];
@@ -232,6 +277,7 @@ function renderSessionCardVisual(session) {
     visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""} ${((readSessionCardStyles()[String(session.id)] || {}).imageFrame === "polaroid") ? "image-frame-polaroid" : ""}">
       <img class="${flipClass}" src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
       ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
+      ${style.imageFrame === "polaroid" && fullWidth && showDate ? `<p class="session-image-date">${escapeHtml(dateLabel || "Date not set")}</p>` : ""}
     </div>`);
   }
 
@@ -938,6 +984,55 @@ async function openFocus(focusId, readOnly = false) {
 }
 
 
+async function saveFocusTitle() {
+  if (!currentFocusId || !currentFocus || !isCurrentUserOwner()) return;
+  const input = $("focusTitleEdit");
+  const title = input?.value.trim();
+  if (!title) { $("focusTitleSaveStatus").textContent = "Add a title before saving."; return; }
+  $("focusTitleSaveStatus").textContent = "Saving…";
+  const { data, error } = await focusSupabase.from("focuses").update({ title }).eq("id", currentFocusId).select().single();
+  if (error) {
+    console.error("Focus title update error:", error);
+    $("focusTitleSaveStatus").textContent = "Could not save. Try again.";
+    return;
+  }
+  const previousTitle = String(currentFocus.title || "").trim();
+  if (previousTitle && previousTitle !== title) {
+    const historyKey = "focusPractice.titleHistory." + String(currentFocusId);
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(historyKey) || "[]"); } catch {}
+    if (!history.includes(previousTitle)) history.unshift(previousTitle);
+    try { localStorage.setItem(historyKey, JSON.stringify(history)); } catch {}
+  }
+  currentFocus = data;
+  renderPreviousFocusTitles();
+  $("focusTitleDisplay").textContent = data.title || "";
+  $("focusTitleEdit").value = data.title || "";
+  $("focusTitleEditor").classList.add("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+}
+
+function renderPreviousFocusTitles() {
+  const container = $("focusTitleHistory");
+  if (!container || !currentFocusId) return;
+  let titles = [];
+  try { titles = JSON.parse(localStorage.getItem("focusPractice.titleHistory." + String(currentFocusId)) || "[]"); } catch {}
+  container.innerHTML = titles.map(title => '<span class="previous-focus-title">' + escapeHtml(title) + '</span>').join("");
+  container.classList.toggle("hidden", titles.length === 0);
+}
+
+function editFocusTitle() {
+  if (!isCurrentUserOwner()) return;
+  $("focusTitleEdit").value = currentFocus?.title || "";
+  $("focusTitleEditor").classList.remove("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+  $("focusTitleEdit").focus();
+}
+
+function cancelEditFocusTitle() {
+  $("focusTitleEditor").classList.add("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+}
 async function saveFocusGoal() {
   if (!currentFocusId || !currentFocus || !isCurrentUserOwner()) return;
   const goal = $("focusGoalEdit").value.trim() || null;
@@ -1057,7 +1152,13 @@ function renderFocusState() {
   const canEdit=isCurrentUserOwner();
   document.body.classList.toggle("editing-own-focus",canEdit);
 
-  $("focusTitleDisplay").textContent = currentFocus.title;
+  $("focusTitleDisplay").textContent = currentFocus.title || "";
+  $("focusTitleEdit").value = currentFocus.title || "";
+  $("focusTitleEditor")?.classList.add("hidden");
+  $("focusCoverBanner").tabIndex = canEdit ? 0 : -1;
+  $("focusCoverBanner").setAttribute("role", canEdit ? "button" : "img");
+  $("focusCoverBanner").setAttribute("aria-label", canEdit ? "Click to edit focus title" : "Focus title");
+  $("focusCoverBanner").onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editFocusTitle(); } };
   updateFocusCoverBanner();
   const boardTitle = $("focusTitleDisplay");
   if (boardTitle) {
@@ -1066,9 +1167,17 @@ function renderFocusState() {
     boardTitle.style.setProperty("--board-angle", angle);
   }
 
-  $("focusStarted").textContent = currentFocus.started_at
+  const startedLabel = currentFocus.started_at
     ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
     : "";
+  const endingDate = currentFocus.status === "completed" ? currentFocus.completed_at : currentFocus.status === "abandoned" ? currentFocus.abandoned_at : null;
+  const endingLabel = currentFocus.status === "completed"
+    ? `Finished${endingDate ? " " + formatDate(endingDate.split("T")[0]) : ""}`
+    : currentFocus.status === "abandoned"
+      ? `Abandoned${endingDate ? " " + formatDate(endingDate.split("T")[0]) : ""}`
+      : "";
+  $("focusStarted").innerHTML = (startedLabel ? '<span class="focus-started-date">' + escapeHtml(startedLabel) + '</span>' : "") + (endingLabel ? '<span class="focus-ending-date">' + escapeHtml(endingLabel) + '</span>' : "");
+  renderPreviousFocusTitles();
   renderFocusCreator();
 
   $("focusGoalEdit").value = currentFocus.goal || "";
@@ -1083,10 +1192,10 @@ function renderFocusState() {
   $("focusStatusLabel").textContent = statusLabel;
 
   const isActive = currentFocus.status === "active";
-  const canAddSteps = canEdit && (isActive || currentFocus.status === "completed");
+  const canAddSteps = canEdit && ["active", "completed", "abandoned"].includes(currentFocus.status);
   $("addSessionButton").classList.toggle("hidden", !canAddSteps);
   $("focusEndingSection").classList.toggle("hidden", !canEdit || !isActive);
-  $("focusStepActions")?.classList.toggle("hidden", !canEdit || !isActive);
+  $("focusStepActions")?.classList.toggle("hidden", !canEdit || currentFocus.status !== "active");
   $("deleteFocusButton")?.classList.toggle("hidden", !canEdit);
   $("focusGoalDisplay")?.classList.toggle("goal-click-to-edit",canEdit);
   if ($("focusGoalDisplay")) $("focusGoalDisplay").disabled = !canEdit;
@@ -1225,6 +1334,14 @@ async function loadSessions() {
 
 
   currentSessions = data || [];
+  const voterKey = getPollVoterKey();
+  const pollSessions = currentSessions.filter(session => getSessionPoll(session));
+  const pollResults = await Promise.all(pollSessions.map(async session => {
+    const { data: result, error: pollError } = await focusSupabase.rpc("get_session_poll_results", { p_session_id: String(session.id), p_voter_key: voterKey });
+    if (pollError) { console.error("Poll results error:", pollError); return [String(session.id), null]; }
+    return [String(session.id), result];
+  }));
+  sessionPollResults = Object.fromEntries(pollResults.filter(([, result]) => result));
 
   updateFocusCoverBanner();
   renderSessions();
@@ -1273,15 +1390,17 @@ function renderSessions() {
     const dateLabel = formatDate(session.session_date);
     const dayLabel = formatWeekday(session.session_date);
     const timeSpent = (session.time_spent || "").trim();
-    const visual = renderSessionCardVisual(session);
     const size = getSessionCardSize(session, index);
     const safeId = escapeHtml(session.id);
     const canEdit = isCurrentUserOwner();
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
+    const fullWidthPolaroid = size >= 95 && cardStyle.imageFrame === "polaroid";
+    const visual = renderSessionCardVisual(session, dateLabel, Boolean(cardStyle.showDate), fullWidthPolaroid);
     const cardAngle = getSessionCardAngle(session.id);
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual && !linkUrl && !videoUrl;
+    const showDate = isTextCard ? cardStyle.showDate !== false : Boolean(cardStyle.showDate) && !fullWidthPolaroid;
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
@@ -1293,7 +1412,7 @@ function renderSessions() {
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
-            ${cardStyle.showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
+            ${showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
             ${visual}
             ${videoUrl ? renderSessionVideo(session) : ""}
             ${linkUrl ? renderSessionLink(session) : ""}
@@ -1303,8 +1422,9 @@ function renderSessions() {
           <div class="session-expanded-content">
             <div class="session-edit-controls${canEdit ? "" : " read-only-hidden"}">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
+              ${renderSessionPollEditor(session)}
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
-              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${cardStyle.showDate ? "" : "selected"}>Hidden</option><option value="on" ${cardStyle.showDate ? "selected" : ""}>Show date</option></select>
+              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${showDate ? "" : "selected"}>Hidden</option><option value="on" ${showDate ? "selected" : ""}>Show date</option></select>
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
@@ -1334,7 +1454,7 @@ function renderSessions() {
   if (focusStepActions) actionStack.appendChild(focusStepActions);
   if (composer && composer.parentElement !== list) list.appendChild(composer);
   if (composer) list.appendChild(composer);
-  if (addButton) addButton.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active" || !composer.classList.contains("hidden"));
+  if (addButton) addButton.classList.toggle("hidden", !currentFocus || !isCurrentUserOwner() || !["active", "completed", "abandoned"].includes(currentFocus.status) || !composer.classList.contains("hidden"));
   if (focusStepActions) focusStepActions.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active");
 }
 function renderCaptionDisplayControl(sessionId, style) {

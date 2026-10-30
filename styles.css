@@ -2707,3 +2707,166 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .focus-board-hover-tag {
   text-shadow: none !important;
 }
+
+
+/* Focus log refinements: editable title, readable text steps, and default text dates. */
+#focusCoverBanner { position: relative; }
+body.editing-own-focus #focusCoverBanner { cursor: pointer; }
+body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
+.focus-title-editor { max-width:520px; margin:0 auto 24px; padding:16px; background:#fffefa; border:1px solid var(--light-gray); }
+.focus-title-editor label { display:block; margin-bottom:7px; font-size:13px; font-weight:700; }
+.focus-title-editor input { width:100%; padding:12px; border:1px solid var(--light-gray); background:white; }
+.focus-title-editor .form-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
+.text-card-preview, .text-card-preview *, .session-body-content, .session-body-content[contenteditable="true"] { text-align:left !important; }
+
+
+/* Polls sit to the right of the session card and reveal shared results after voting. */
+.session-card-item > .session-poll-card { width:min(100%, 360px); margin:14px 0 0 auto; text-align:left; }
+.session-card-item > .session-poll-card > strong { text-align:left; }
+.session-card-item > .session-poll-card .session-poll-option { justify-content:flex-start; text-align:left; }
+.session-poll-result { margin:12px 0; }
+.session-poll-result-label { display:flex; justify-content:space-between; gap:12px; margin-bottom:5px; }
+.session-poll-result-track { height:7px; overflow:hidden; background:#e9e3d9; border-radius:8px; }
+.session-poll-result-track span { display:block; height:100%; background:#66816d; border-radius:8px; }
+.session-poll-result small, .session-poll-total, .session-poll-hint { display:block; margin:4px 0 0; color:#777; font-size:12px; }
+.session-poll-result.is-my-vote .session-poll-result-label { font-weight:700; }
+.session-poll-editor { margin:10px 0 14px; padding:12px; background:#f6f2eb; }
+.session-poll-editor label { display:block; margin:8px 0 4px; }
+.session-poll-editor input, .session-poll-editor textarea { display:block; width:100%; box-sizing:border-box; }
+
+
+/* Previous focus titles and two-line status metadata. */
+.focus-title-history { display:flex; flex-direction:column; align-items:center; gap:2px; margin:10px 0 18px; font:11px/1.35 "Courier New",Courier,monospace; color:var(--gray); }
+.previous-focus-title { text-decoration:line-through; }
+.focus-started { display:flex; flex-direction:column; align-items:center; gap:3px; }
+.focus-ending-date { display:block; }
+.focus-step-actions.hidden { display:none!important; }
+
+
+/* Full-width Polaroids: tuck the date into the paper margin instead of above the photo. */
+.session-card-visual.image-frame-polaroid .session-image-date {
+  margin: 0;
+  padding: 0 6px 5%;
+  color: #77716a;
+  background: #fffefa;
+  text-align: right;
+  font: 10px/1.2 "Courier New", Courier, monospace;
+  letter-spacing: .04em;
+}
+
+
+/* About page: Swiss-inspired, restrained typography and generous negative space. */
+.about-page {
+  padding: clamp(56px, 10vw, 120px) 24px 88px;
+}
+
+.about-content {
+  width: min(100%, 680px);
+  margin: 0 auto;
+  padding: 0;
+}
+
+.about-message {
+  margin: 0 0 clamp(72px, 12vw, 132px);
+  color: var(--black);
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+.about-message p {
+  margin: 0;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: -.025em;
+}
+
+.about-message .about-lead {
+  margin: 0 0 clamp(24px, 4vw, 40px);
+  font-family: inherit;
+  font-size: 100px;
+  font-weight: 400;
+  line-height: .9;
+  letter-spacing: -.055em;
+}
+
+.about-message .about-lead-small {
+  font-size: 23px;
+  line-height: 1;
+  letter-spacing: -.025em;
+}
+
+.about-message .about-lead-main {
+  display: inline-block;
+  font-size: 1em;
+  line-height: .9;
+  letter-spacing: -.06em;
+}
+
+.about-lines {
+  margin-top: 24px;
+  padding: 0;
+  border: 0;
+}
+
+.about-lines p {
+  margin: 0;
+  font-family: inherit;
+  font-size: clamp(19px, 2.5vw, 23px);
+  font-weight: 400;
+  line-height: 1.22;
+  letter-spacing: -.035em;
+}
+
+.about-note {
+  max-width: 560px;
+  margin: 0;
+  color: var(--gray);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.65;
+}
+
+.about-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .about-page {
+    padding: 42px 22px 64px;
+  }
+
+  .about-message {
+    margin-bottom: 76px;
+  }
+
+  .about-message .about-lead {
+    margin-bottom: 28px;
+    font-size: 48px;
+    line-height: 1.06;
+  }
+
+  .about-message .about-lead-small {
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  .about-message p {
+    font-size: 16px;
+  }
+
+  .about-message .about-lead-main {
+    font-size: 1em;
+  }
+
+  .about-lines {
+    margin-top: 22px;
+  }
+
+  .about-lines p {
+    font-size: 20px;
+    line-height: 1.2;
+  }
+}
