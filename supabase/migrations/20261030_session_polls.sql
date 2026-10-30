@@ -99,12 +99,12 @@ begin
   if auth.uid() is null then raise exception 'Sign in to edit this poll'; end if;
   if nullif(trim(p_question), '') is null or length(p_question) > 180 then raise exception 'Enter a valid poll question'; end if;
   if jsonb_typeof(p_options) <> 'array' or jsonb_array_length(p_options) < 2 or jsonb_array_length(p_options) > 12 then raise exception 'A poll needs between 2 and 12 options'; end if;
-  if exists (select 1 from jsonb_array_elements_text(p_options) option_text where nullif(trim(option_text), '') is null or length(option_text) > 180) then raise exception 'Each option must contain 1 to 180 characters'; end if;
+  if exists (select 1 from jsonb_array_elements_text(p_options) as opts(value) where nullif(trim(opts.value), '') is null or length(opts.value) > 180) then raise exception 'Each option must contain 1 to 180 characters'; end if;
 
   select s.body, f.owner_id into v_body, v_owner_id
   from public.sessions s join public.focuses f on f.id = s.focus_id
   where s.id::text = p_session_id;
-  if not found or v_owner_id <> auth.uid() then raise exception 'You cannot edit this poll'; end if;
+  if not found or v_owner_id is distinct from auth.uid() then raise exception 'You cannot edit this poll'; end if;
 
   v_start := strpos(coalesce(v_body, ''), v_open_tag);
   v_end := strpos(coalesce(v_body, ''), v_close_tag);
