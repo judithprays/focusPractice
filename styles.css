@@ -2741,3 +2741,15 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .focus-started { display:flex; flex-direction:column; align-items:center; gap:3px; }
 .focus-ending-date { display:block; }
 .focus-step-actions.hidden { display:none!important; }
+
+
+/* Full-width Polaroids: tuck the date into the paper margin instead of above the photo. */
+.session-card-visual.image-frame-polaroid .session-image-date {
+  margin: 0;
+  padding: 0 6px 5%;
+  color: #77716a;
+  background: #fffefa;
+  text-align: right;
+  font: 10px/1.2 "Courier New", Courier, monospace;
+  letter-spacing: .04em;
+}
