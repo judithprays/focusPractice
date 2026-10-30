@@ -593,9 +593,11 @@ async function renderFocusCreator() {
   const owner=currentFocus.owner_id;
   if(!owner){el.textContent="";return;}
   const own=Boolean(currentUser&&String(currentUser.id)===String(owner));
-  let name=own?(currentUser.email?.split("@")[0]||"you"):"the creator";
-  const {data}=await focusSupabase.from("profiles").select("display_name").eq("id",owner).maybeSingle();
-  if(data?.display_name)name=data.display_name;
+  let name=own?(currentUser.email?.split("@")[0]||"you"):"";
+  const {data,error}=await focusSupabase.from("profiles").select("*").eq("id",owner).maybeSingle();
+  if(error)console.error("Could not load public focus creator profile:",error);
+  // Public attribution must use public profile fields, never another user's private auth email.
+  name=data?.display_name?.trim()||data?.username?.trim()||data?.handle?.trim()||name||"Focus creator";
   el.innerHTML='<a href="#" onclick="showProfile(\''+escapeHtml(owner)+'\');return false;">By '+escapeHtml(name)+'</a>';
 }
 
