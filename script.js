@@ -1094,6 +1094,7 @@ function renderFocusState() {
   $("focusCoverBanner").tabIndex = canEdit ? 0 : -1;
   $("focusCoverBanner").setAttribute("role", canEdit ? "button" : "img");
   $("focusCoverBanner").setAttribute("aria-label", canEdit ? "Click to edit focus title" : "Focus title");
+  $("focusCoverBanner").onkeydown = event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); editFocusTitle(); } };
   updateFocusCoverBanner();
   const boardTitle = $("focusTitleDisplay");
   if (boardTitle) {
