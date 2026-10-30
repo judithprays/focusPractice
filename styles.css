@@ -2718,3 +2718,18 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .focus-title-editor input { width:100%; padding:12px; border:1px solid var(--light-gray); background:white; }
 .focus-title-editor .form-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
 .text-card-preview, .text-card-preview *, .session-body-content, .session-body-content[contenteditable="true"] { text-align:left !important; }
+
+
+/* Polls sit to the right of the session card and reveal shared results after voting. */
+.session-card-item > .session-poll-card { width:min(100%, 360px); margin:14px 0 0 auto; text-align:left; }
+.session-card-item > .session-poll-card > strong { text-align:left; }
+.session-card-item > .session-poll-card .session-poll-option { justify-content:flex-start; text-align:left; }
+.session-poll-result { margin:12px 0; }
+.session-poll-result-label { display:flex; justify-content:space-between; gap:12px; margin-bottom:5px; }
+.session-poll-result-track { height:7px; overflow:hidden; background:#e9e3d9; border-radius:8px; }
+.session-poll-result-track span { display:block; height:100%; background:#66816d; border-radius:8px; }
+.session-poll-result small, .session-poll-total, .session-poll-hint { display:block; margin:4px 0 0; color:#777; font-size:12px; }
+.session-poll-result.is-my-vote .session-poll-result-label { font-weight:700; }
+.session-poll-editor { margin:10px 0 14px; padding:12px; background:#f6f2eb; }
+.session-poll-editor label { display:block; margin:8px 0 4px; }
+.session-poll-editor input, .session-poll-editor textarea { display:block; width:100%; box-sizing:border-box; }
