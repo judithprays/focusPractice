@@ -2716,4 +2716,4 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 .focus-title-editor label { display:block; margin-bottom:7px; font-size:13px; font-weight:700; }
 .focus-title-editor input { width:100%; padding:12px; border:1px solid var(--light-gray); background:white; }
 .focus-title-editor .form-actions { display:flex; align-items:center; gap:12px; margin-top:12px; }
-.text-card-preview, .text-card-preview *, .session-body-content { text-align:left !important; }
+.text-card-preview, .text-card-preview *, .session-body-content, .session-body-content[contenteditable="true"] { text-align:left !important; }
