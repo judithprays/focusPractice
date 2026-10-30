@@ -2783,11 +2783,21 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 
 .about-message .about-lead {
   max-width: 650px;
-  margin: 0 0 clamp(48px, 8vw, 88px);
+  margin: 0 0 clamp(24px, 4vw, 40px);
   font-family: inherit;
-  font-size: clamp(38px, 6vw, 64px);
+  font-size: clamp(20px, 3vw, 30px);
   font-weight: 400;
-  line-height: 1.02;
+  line-height: 1.08;
+  letter-spacing: -.04em;
+}
+
+.about-message .about-lead-small {
+  font-size: .72em;
+  letter-spacing: -.035em;
+}
+
+.about-message .about-lead-main {
+  font-size: 1.85em;
   letter-spacing: -.055em;
 }
 
@@ -2831,13 +2841,17 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   }
 
   .about-message .about-lead {
-    margin-bottom: 52px;
-    font-size: clamp(36px, 10vw, 48px);
-    line-height: 1.04;
+    margin-bottom: 28px;
+    font-size: 20px;
+    line-height: 1.08;
   }
 
   .about-message p {
     font-size: 16px;
+  }
+
+  .about-message .about-lead-main {
+    font-size: 1.85em;
   }
 
   .about-lines {
