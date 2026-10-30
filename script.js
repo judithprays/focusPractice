@@ -416,6 +416,7 @@ function clearFocusUrl() {
 -------------------------------- */
 
 function updateNavigation() {
+  $("exploreNavLink")?.classList.toggle("hidden", !currentUser);
   $("authNavLink")?.classList.toggle("hidden", Boolean(currentUser));
   $("myFocusesNavLink")?.classList.toggle("hidden", !currentUser);
   $("profileNavWrap")?.classList.toggle("hidden", !currentUser);

@@ -2870,3 +2870,21 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
     line-height: 1.2;
   }
 }
+
+
+/* Home board polish: match the focus-log board dimensions and restore soft letter depth. */
+.current-focus-card h1 {
+  width: clamp(230px, 36vw, 390px) !important;
+  max-width: 90% !important;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .48) !important;
+}
+
+#focusCoverBanner .focus-board-title {
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .48) !important;
+}
+
+@media (max-width: 700px) {
+  .current-focus-card h1 {
+    width: min(78vw, 300px) !important;
+  }
+}
