@@ -2753,3 +2753,62 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   font: 10px/1.2 "Courier New", Courier, monospace;
   letter-spacing: .04em;
 }
+
+
+/* About page: simple statement with a quiet note underneath. */
+.about-page {
+  padding-top: 50px;
+}
+
+.about-content {
+  max-width: 720px;
+  padding: 50px 0 10px;
+}
+
+.about-message {
+  margin-bottom: 54px;
+}
+
+.about-message p {
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+.about-message .about-lead {
+  margin-bottom: 34px;
+  font-size: 30px;
+  line-height: 1.3;
+}
+
+.about-lines {
+  margin-top: 28px;
+}
+
+.about-lines p {
+  margin-bottom: 9px;
+}
+
+.about-note {
+  max-width: 650px;
+  margin: 0;
+  color: var(--gray);
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.65;
+}
+
+.about-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .about-content {
+    padding-top: 20px;
+  }
+
+  .about-message .about-lead {
+    font-size: 25px;
+  }
+}
