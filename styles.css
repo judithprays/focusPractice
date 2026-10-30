@@ -2784,7 +2784,6 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   max-width: 620px;
   margin: 0 0 clamp(42px, 7vw, 68px);
   font-family: inherit;
-  font-size: clamp(32px, 5.2vw,  fiftypx);
   font-size: clamp(32px, 5.2vw, 50px);
   font-weight: 400;
   line-height: 1.18;
