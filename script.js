@@ -1192,7 +1192,7 @@ function renderFocusState() {
   $("focusStatusLabel").textContent = statusLabel;
 
   const isActive = currentFocus.status === "active";
-  const canAddSteps = canEdit && (isActive || currentFocus.status === "completed");
+  const canAddSteps = canEdit && ["active", "completed", "abandoned"].includes(currentFocus.status);
   $("addSessionButton").classList.toggle("hidden", !canAddSteps);
   $("focusEndingSection").classList.toggle("hidden", !canEdit || !isActive);
   $("focusStepActions")?.classList.toggle("hidden", !canEdit || currentFocus.status !== "active");
@@ -1454,7 +1454,7 @@ function renderSessions() {
   if (focusStepActions) actionStack.appendChild(focusStepActions);
   if (composer && composer.parentElement !== list) list.appendChild(composer);
   if (composer) list.appendChild(composer);
-  if (addButton) addButton.classList.toggle("hidden", !currentFocus || !isCurrentUserOwner() || !["active", "completed"].includes(currentFocus.status) || !composer.classList.contains("hidden"));
+  if (addButton) addButton.classList.toggle("hidden", !currentFocus || !isCurrentUserOwner() || !["active", "completed", "abandoned"].includes(currentFocus.status) || !composer.classList.contains("hidden"));
   if (focusStepActions) focusStepActions.classList.toggle("hidden", !currentFocus || currentFocus.status !== "active");
 }
 function renderCaptionDisplayControl(sessionId, style) {
