@@ -938,6 +938,37 @@ async function openFocus(focusId, readOnly = false) {
 }
 
 
+async function saveFocusTitle() {
+  if (!currentFocusId || !currentFocus || !isCurrentUserOwner()) return;
+  const input = $("focusTitleEdit");
+  const title = input?.value.trim();
+  if (!title) { $("focusTitleSaveStatus").textContent = "Add a title before saving."; return; }
+  $("focusTitleSaveStatus").textContent = "Saving…";
+  const { data, error } = await focusSupabase.from("focuses").update({ title }).eq("id", currentFocusId).select().single();
+  if (error) {
+    console.error("Focus title update error:", error);
+    $("focusTitleSaveStatus").textContent = "Could not save. Try again.";
+    return;
+  }
+  currentFocus = data;
+  $("focusTitleDisplay").textContent = data.title || "";
+  $("focusTitleEdit").value = data.title || "";
+  $("focusTitleEditor").classList.add("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+}
+
+function editFocusTitle() {
+  if (!isCurrentUserOwner()) return;
+  $("focusTitleEdit").value = currentFocus?.title || "";
+  $("focusTitleEditor").classList.remove("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+  $("focusTitleEdit").focus();
+}
+
+function cancelEditFocusTitle() {
+  $("focusTitleEditor").classList.add("hidden");
+  $("focusTitleSaveStatus").textContent = "";
+}
 async function saveFocusGoal() {
   if (!currentFocusId || !currentFocus || !isCurrentUserOwner()) return;
   const goal = $("focusGoalEdit").value.trim() || null;
@@ -1057,7 +1088,10 @@ function renderFocusState() {
   const canEdit=isCurrentUserOwner();
   document.body.classList.toggle("editing-own-focus",canEdit);
 
-  $("focusTitleDisplay").textContent = currentFocus.title;
+  $("focusTitleDisplay").textContent = currentFocus.title || "";
+  $("focusTitleEditButton")?.classList.toggle("hidden", !canEdit);
+  $("focusTitleEdit").value = currentFocus.title || "";
+  $("focusTitleEditor")?.classList.add("hidden");
   updateFocusCoverBanner();
   const boardTitle = $("focusTitleDisplay");
   if (boardTitle) {
@@ -1066,9 +1100,16 @@ function renderFocusState() {
     boardTitle.style.setProperty("--board-angle", angle);
   }
 
-  $("focusStarted").textContent = currentFocus.started_at
+  const startedLabel = currentFocus.started_at
     ? `Started ${formatDate(currentFocus.started_at.split("T")[0])}`
     : "";
+  const endingDate = currentFocus.status === "completed" ? currentFocus.completed_at : currentFocus.status === "abandoned" ? currentFocus.abandoned_at : null;
+  const endingLabel = currentFocus.status === "completed"
+    ? `Finished${endingDate ? " " + formatDate(endingDate.split("T")[0]) : ""}`
+    : currentFocus.status === "abandoned"
+      ? `Abandoned${endingDate ? " " + formatDate(endingDate.split("T")[0]) : ""}`
+      : "";
+  $("focusStarted").textContent = [startedLabel, endingLabel].filter(Boolean).join(" · ");
   renderFocusCreator();
 
   $("focusGoalEdit").value = currentFocus.goal || "";
@@ -1282,6 +1323,7 @@ function renderSessions() {
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual && !linkUrl && !videoUrl;
+    const showDate = isTextCard ? cardStyle.showDate !== false : Boolean(cardStyle.showDate);
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
@@ -1293,7 +1335,7 @@ function renderSessions() {
       <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
-            ${cardStyle.showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
+            ${showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
             ${visual}
             ${videoUrl ? renderSessionVideo(session) : ""}
             ${linkUrl ? renderSessionLink(session) : ""}
@@ -1304,7 +1346,7 @@ function renderSessions() {
             <div class="session-edit-controls${canEdit ? "" : " read-only-hidden"}">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
-              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${cardStyle.showDate ? "" : "selected"}>Hidden</option><option value="on" ${cardStyle.showDate ? "selected" : ""}>Show date</option></select>
+              <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${showDate ? "" : "selected"}>Hidden</option><option value="on" ${showDate ? "selected" : ""}>Show date</option></select>
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
               <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
