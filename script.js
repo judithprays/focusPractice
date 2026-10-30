@@ -264,7 +264,7 @@ async function saveSessionPoll(sessionId) {
   await loadSessions();
 }
 
-function renderSessionCardVisual(session) {
+function renderSessionCardVisual(session, dateLabel = "", showDate = false, fullWidth = false) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
   const visuals = [];
   const image = urls[0];
@@ -277,6 +277,7 @@ function renderSessionCardVisual(session) {
     visuals.push(`<div class="session-card-visual ${isDrawing ? "session-card-visual-drawing" : ""} ${((readSessionCardStyles()[String(session.id)] || {}).imageFrame === "polaroid") ? "image-frame-polaroid" : ""}">
       <img class="${flipClass}" src="${escapeHtml(image)}" alt="${isDrawing ? "Drawing from this session" : "Visual added to this session"}" loading="lazy">
       ${caption ? `<p class="session-image-caption caption-${captionMode}">${escapeHtml(caption)}</p>` : ""}
+      ${style.imageFrame === "polaroid" && fullWidth && showDate ? `<p class="session-image-date">${escapeHtml(dateLabel || "Date not set")}</p>` : ""}
     </div>`);
   }
 
@@ -1389,16 +1390,17 @@ function renderSessions() {
     const dateLabel = formatDate(session.session_date);
     const dayLabel = formatWeekday(session.session_date);
     const timeSpent = (session.time_spent || "").trim();
-    const visual = renderSessionCardVisual(session);
     const size = getSessionCardSize(session, index);
     const safeId = escapeHtml(session.id);
     const canEdit = isCurrentUserOwner();
     const cardStyle = readSessionCardStyles()[String(session.id)] || {};
+    const fullWidthPolaroid = size >= 95 && cardStyle.imageFrame === "polaroid";
+    const visual = renderSessionCardVisual(session, dateLabel, Boolean(cardStyle.showDate), fullWidthPolaroid);
     const cardAngle = getSessionCardAngle(session.id);
     const cardTiltStyle = `--session-card-tilt:${cardAngle}deg`;
     const hasText = Boolean(bodyWithoutVideo.trim());
     const isTextCard = !visual && !linkUrl && !videoUrl;
-    const showDate = isTextCard ? cardStyle.showDate !== false : Boolean(cardStyle.showDate);
+    const showDate = isTextCard ? cardStyle.showDate !== false : Boolean(cardStyle.showDate) && !fullWidthPolaroid;
     const textStyle = `--text-card-font-size:${Math.max(14, Math.min(48, Number(cardStyle.fontSize) || 22))}px;--text-card-font-family:${escapeHtml(cardStyle.fontFamily || "'Courier New', monospace")}`;
     const timeMarkup = timeSpent ? `<span class="session-time">${escapeHtml(timeSpent)}</span>` : "";
     const visualSummary = `${emoji ? `<span class="session-tldr-emoji">${escapeHtml(emoji)}</span>` : ""}${summaryPreview ? `<span class="session-tldr-text">${escapeHtml(summaryPreview)}</span>` : ""}`;
