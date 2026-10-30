@@ -13,6 +13,7 @@ const focusSupabase = window.supabase.createClient(
 let currentFocusId = null;
 let currentFocus = null;
 let currentSessions = [];
+let sessionPollResults = {};
 let forceReadOnlyFocusView = false;
 let currentUser = null;
 let authMode = "login";
@@ -210,14 +211,61 @@ function attachSessionPoll() {
   $("sessionText").dataset.poll = JSON.stringify({ question, options });
   $("sessionPollStatus").textContent = "Poll attached. Save this step to publish it.";
 }
-function renderSessionPoll(session) {
-  const match = String(session.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
-  let poll; try { poll = match ? JSON.parse(match[1]) : null; } catch {}
-  if (!poll || !poll.question || !Array.isArray(poll.options)) return "";
-  const votes = (() => { try { return JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch { return {}; } })();
-  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + poll.options.map((option, i) => '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" ' + (votes[String(session.id)] === i ? "checked" : "") + ' onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\',' + i + ')"> ' + escapeHtml(option) + '</label>').join("") + '</div>';
+function getSessionPoll(session) {
+  const match = String(session?.body || "").match(/(?:^|\n)\[focus-poll\]([\s\S]*?)\[\/focus-poll\]/);
+  try { const poll = match ? JSON.parse(match[1]) : null; return poll && poll.question && Array.isArray(poll.options) ? poll : null; } catch { return null; }
 }
-function voteInSessionPoll(sessionId, option) { let votes = {}; try { votes = JSON.parse(localStorage.getItem("focusPractice.pollVotes") || "{}") || {}; } catch {} votes[String(sessionId)] = option; try { localStorage.setItem("focusPractice.pollVotes", JSON.stringify(votes)); } catch {} }
+function getPollVoterKey() {
+  let key = "";
+  try { key = localStorage.getItem("focusPractice.pollVoterKey") || ""; } catch {}
+  if (!/^[0-9a-f-]{36}$/i.test(key)) {
+    key = window.crypto?.randomUUID ? window.crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); });
+    try { localStorage.setItem("focusPractice.pollVoterKey", key); } catch {}
+  }
+  return key;
+}
+function renderSessionPollEditor(session) {
+  const poll = getSessionPoll(session);
+  if (!poll || !isCurrentUserOwner()) return "";
+  const id = escapeHtml(session.id);
+  return '<div class="session-poll-editor"><label for="pollQuestionEdit-' + id + '">Poll question</label><input id="pollQuestionEdit-' + id + '" maxlength="180" value="' + escapeHtml(poll.question) + '"><label for="pollOptionsEdit-' + id + '">Options (one per line)</label><textarea id="pollOptionsEdit-' + id + '" rows="3">' + escapeHtml(poll.options.join("\n")) + '</textarea><button type="button" class="text-button" onclick="saveSessionPoll(\'' + id + '\')">Save poll</button><span id="pollEditStatus-' + id + '" class="save-status" aria-live="polite"></span></div>';
+}
+function renderSessionPoll(session) {
+  const poll = getSessionPoll(session);
+  if (!poll) return "";
+  const result = sessionPollResults[String(session.id)] || { show_results: false, option_counts: [], total_votes: 0, my_vote: null };
+  const showResults = Boolean(result.show_results);
+  const total = Number(result.total_votes) || 0;
+  const counts = Array.isArray(result.option_counts) ? result.option_counts : [];
+  const options = poll.options.map((option, i) => {
+    if (!showResults) return '<label class="session-poll-option"><input type="radio" name="poll-' + escapeHtml(session.id) + '" value="' + i + '" onchange="voteInSessionPoll(\'' + escapeHtml(session.id) + '\', ' + i + ')"> <span>' + escapeHtml(option) + '</span></label>';
+    const count = Number(counts[i]) || 0;
+    const percent = total ? Math.round(count / total * 100) : 0;
+    return '<div class="session-poll-result' + (result.my_vote === i ? ' is-my-vote' : '') + '"><div class="session-poll-result-label"><span>' + escapeHtml(option) + '</span><strong>' + percent + '%</strong></div><div class="session-poll-result-track"><span style="width:' + percent + '%"></span></div><small>' + count + ' ' + (count === 1 ? 'vote' : 'votes') + '</small></div>';
+  }).join("");
+  return '<div class="session-poll-card"><strong>' + escapeHtml(poll.question) + '</strong>' + options + (showResults ? '<p class="session-poll-total">' + total + ' ' + (total === 1 ? 'response' : 'responses') + '</p>' : '<p class="session-poll-hint">Choose an option to see results</p>') + '</div>';
+}
+async function voteInSessionPoll(sessionId, option) {
+  const { data, error } = await focusSupabase.rpc("cast_session_poll_vote", { p_session_id: String(sessionId), p_option_index: option, p_voter_key: getPollVoterKey() });
+  if (error) { console.error("Poll vote error:", error); alert("Could not save your vote. Please try again."); return; }
+  sessionPollResults[String(sessionId)] = data;
+  renderSessions();
+}
+async function saveSessionPoll(sessionId) {
+  if (!isCurrentUserOwner()) return;
+  const session = currentSessions.find(item => String(item.id) === String(sessionId));
+  const status = $("pollEditStatus-" + sessionId);
+  const question = $("pollQuestionEdit-" + sessionId)?.value.trim() || "";
+  const options = ($("pollOptionsEdit-" + sessionId)?.value || "").split("\n").map(value => value.trim()).filter(Boolean);
+  if (!session || !question || options.length < 2) { if (status) status.textContent = "Add a question and at least two options."; return; }
+  const match = String(session.body || "").match(/\[focus-poll\][\s\S]*?\[\/focus-poll\]/);
+  if (!match) return;
+  const body = String(session.body).replace(match[0], "[focus-poll]" + JSON.stringify({ question, options }) + "[/focus-poll]");
+  if (status) status.textContent = "Saving…";
+  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
+  if (error) { console.error("Poll update error:", error); if (status) status.textContent = "Could not save. Try again."; return; }
+  await loadSessions();
+}
 
 function renderSessionCardVisual(session) {
   const urls = Array.isArray(session.image_urls) ? session.image_urls.filter(isSafeImageUrl) : [];
@@ -1269,6 +1317,14 @@ async function loadSessions() {
 
 
   currentSessions = data || [];
+  const voterKey = getPollVoterKey();
+  const pollSessions = currentSessions.filter(session => getSessionPoll(session));
+  const pollResults = await Promise.all(pollSessions.map(async session => {
+    const { data: result, error: pollError } = await focusSupabase.rpc("get_session_poll_results", { p_session_id: String(session.id), p_voter_key: voterKey });
+    if (pollError) { console.error("Poll results error:", pollError); return [String(session.id), null]; }
+    return [String(session.id), result];
+  }));
+  sessionPollResults = Object.fromEntries(pollResults.filter(([, result]) => result));
 
   updateFocusCoverBanner();
   renderSessions();
@@ -1348,6 +1404,7 @@ function renderSessions() {
           <div class="session-expanded-content">
             <div class="session-edit-controls${canEdit ? "" : " read-only-hidden"}">
               <label for="sessionDateEdit-${safeId}">Session date</label><input id="sessionDateEdit-${safeId}" type="date" value="${escapeHtml(session.session_date || "")}" onchange="saveSessionDate(\'${safeId}\', this.value)">
+              ${renderSessionPollEditor(session)}
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
               <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${showDate ? "" : "selected"}>Hidden</option><option value="on" ${showDate ? "selected" : ""}>Show date</option></select>
               <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
