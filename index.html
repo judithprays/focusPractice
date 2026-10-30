@@ -13,7 +13,7 @@
   <header class="site-header">
     <a href="#" class="logo" onclick="showHome(); return false;">Focus Practice</a>
     <nav>
-      <a href="#" onclick="showCollection(); return false;">Explore</a>
+      <a href="#" id="exploreNavLink" onclick="showCollection(); return false;">Explore</a>
       <a href="#" onclick="showAbout(); return false;">About</a>
       <a href="#" id="authNavLink" onclick="showAuth(); return false;">Log in</a>
       <div id="profileNavWrap" class="profile-nav-wrap hidden"><button id="profileNavButton" class="profile-nav-button" type="button" onclick="toggleProfileMenu()" aria-label="Open profile menu"><img id="profileNavAvatar" alt="" class="profile-nav-avatar hidden"><span id="profileNavInitials">J</span></button><div id="profileNavMenu" class="profile-nav-menu hidden"><button type="button" onclick="showMyProfile()">Go to profile</button><button type="button" onclick="signOut()">Log out</button></div></div>
