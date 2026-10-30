@@ -995,11 +995,29 @@ async function saveFocusTitle() {
     $("focusTitleSaveStatus").textContent = "Could not save. Try again.";
     return;
   }
+  const previousTitle = String(currentFocus.title || "").trim();
+  if (previousTitle && previousTitle !== title) {
+    const historyKey = "focusPractice.titleHistory." + String(currentFocusId);
+    let history = [];
+    try { history = JSON.parse(localStorage.getItem(historyKey) || "[]"); } catch {}
+    if (!history.includes(previousTitle)) history.unshift(previousTitle);
+    try { localStorage.setItem(historyKey, JSON.stringify(history)); } catch {}
+  }
   currentFocus = data;
+  renderPreviousFocusTitles();
   $("focusTitleDisplay").textContent = data.title || "";
   $("focusTitleEdit").value = data.title || "";
   $("focusTitleEditor").classList.add("hidden");
   $("focusTitleSaveStatus").textContent = "";
+}
+
+function renderPreviousFocusTitles() {
+  const container = $("focusTitleHistory");
+  if (!container || !currentFocusId) return;
+  let titles = [];
+  try { titles = JSON.parse(localStorage.getItem("focusPractice.titleHistory." + String(currentFocusId)) || "[]"); } catch {}
+  container.innerHTML = titles.map(title => '<span class="previous-focus-title">' + escapeHtml(title) + '</span>').join("");
+  container.classList.toggle("hidden", titles.length === 0);
 }
 
 function editFocusTitle() {
@@ -1157,7 +1175,8 @@ function renderFocusState() {
     : currentFocus.status === "abandoned"
       ? `Abandoned${endingDate ? " " + formatDate(endingDate.split("T")[0]) : ""}`
       : "";
-  $("focusStarted").textContent = [startedLabel, endingLabel].filter(Boolean).join(" · ");
+  $("focusStarted").innerHTML = (startedLabel ? '<span class="focus-started-date">' + escapeHtml(startedLabel) + '</span>' : "") + (endingLabel ? '<span class="focus-ending-date">' + escapeHtml(endingLabel) + '</span>' : "");
+  renderPreviousFocusTitles();
   renderFocusCreator();
 
   $("focusGoalEdit").value = currentFocus.goal || "";
@@ -1175,7 +1194,7 @@ function renderFocusState() {
   const canAddSteps = canEdit && (isActive || currentFocus.status === "completed");
   $("addSessionButton").classList.toggle("hidden", !canAddSteps);
   $("focusEndingSection").classList.toggle("hidden", !canEdit || !isActive);
-  $("focusStepActions")?.classList.toggle("hidden", !canEdit || !isActive);
+  $("focusStepActions")?.classList.toggle("hidden", !canEdit || currentFocus.status !== "active");
   $("deleteFocusButton")?.classList.toggle("hidden", !canEdit);
   $("focusGoalDisplay")?.classList.toggle("goal-click-to-edit",canEdit);
   if ($("focusGoalDisplay")) $("focusGoalDisplay").disabled = !canEdit;
