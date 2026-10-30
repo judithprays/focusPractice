@@ -2711,7 +2711,8 @@ body:not(.editing-own-focus) .focus-goal-display{appearance:none;border:0;backgr
 
 /* Focus log refinements: editable title, readable text steps, and default text dates. */
 #focusCoverBanner { position: relative; }
-.focus-title-edit-button { position:absolute; z-index:5; top:12px; right:12px; padding:8px 12px; border:1px solid rgba(255,255,255,.65); border-radius:3px; background:rgba(20,19,17,.72); color:#fff; font:12px/1.2 "Courier New",monospace; cursor:pointer; }
+body.editing-own-focus #focusCoverBanner { cursor: pointer; }
+body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .focus-title-editor { max-width:520px; margin:0 auto 24px; padding:16px; background:#fffefa; border:1px solid var(--light-gray); }
 .focus-title-editor label { display:block; margin-bottom:7px; font-size:13px; font-weight:700; }
 .focus-title-editor input { width:100%; padding:12px; border:1px solid var(--light-gray); background:white; }
