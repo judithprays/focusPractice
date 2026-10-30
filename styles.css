@@ -2755,62 +2755,63 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 }
 
 
-/* About page: a quiet, editorial reading layout. Main copy is typewriter; footer note stays as-is. */
+/* About page: Swiss-inspired, restrained typography and generous negative space. */
 .about-page {
-  padding-top: clamp(42px, 8vw, 88px);
-  padding-bottom: 80px;
+  padding: clamp(56px, 10vw, 120px) 24px 88px;
 }
 
 .about-content {
-  width: min(100%, 650px);
+  width: min(100%, 680px);
   margin: 0 auto;
-  padding: 24px 0 10px;
+  padding: 0;
 }
 
 .about-message {
-  margin-bottom: clamp(64px, 10vw, 104px);
-  font-family: "Courier New", Courier, monospace;
+  margin: 0 0 clamp(72px, 12vw, 132px);
   color: var(--black);
+  font-family: Helvetica, Arial, sans-serif;
 }
 
 .about-message p {
   margin: 0;
   font-family: inherit;
   font-size: 17px;
-  line-height: 1.65;
+  font-weight: 400;
+  line-height: 1.28;
+  letter-spacing: -.025em;
 }
 
 .about-message .about-lead {
-  max-width: 620px;
-  margin: 0 0 clamp(42px, 7vw, 68px);
+  max-width: 650px;
+  margin: 0 0 clamp(48px, 8vw, 88px);
   font-family: inherit;
-  font-size: clamp(32px, 5.2vw, 50px);
+  font-size: clamp(38px, 6vw, 64px);
   font-weight: 400;
-  line-height: 1.18;
+  line-height: 1.02;
   letter-spacing: -.055em;
 }
 
 .about-lines {
-  margin-top: clamp(30px, 5vw, 48px);
-  padding-left: clamp(18px, 3vw, 30px);
-  border-left: 1px solid var(--light-gray);
+  margin-top: 24px;
+  padding: 0;
+  border: 0;
 }
 
 .about-lines p {
-  margin: 0 0 7px;
+  margin: 0;
   font-family: inherit;
-  font-size: clamp(18px, 2.3vw, 21px);
-  line-height: 1.5;
-  letter-spacing: -.025em;
+  font-size: clamp(19px, 2.5vw, 23px);
+  font-weight: 400;
+  line-height: 1.22;
+  letter-spacing: -.035em;
 }
 
 .about-lines p:last-child {
-  margin-top: 22px;
-  margin-bottom: 0;
+  margin-top: 18px;
 }
 
 .about-note {
-  max-width: 650px;
+  max-width: 560px;
   margin: 0;
   color: var(--gray);
   font-size: 13px;
@@ -2826,23 +2827,29 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 
 @media (max-width: 700px) {
   .about-page {
-    padding-top: 28px;
-    padding-bottom: 56px;
+    padding: 42px 22px 64px;
   }
 
-  .about-content {
-    padding-top: 16px;
+  .about-message {
+    margin-bottom: 76px;
   }
 
   .about-message .about-lead {
-    font-size: clamp(30px, 8vw, 40px);
+    margin-bottom: 52px;
+    font-size: clamp(36px, 10vw, 48px);
+    line-height: 1.04;
   }
 
   .about-message p {
-    font-size: 15px;
+    font-size: 16px;
+  }
+
+  .about-lines {
+    margin-top: 22px;
   }
 
   .about-lines p {
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1.2;
   }
 }
