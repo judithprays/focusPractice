@@ -105,12 +105,13 @@
             <span id="focusTitleSaveStatus" class="save-status" aria-live="polite"></span>
           </div>
         </div>
+        <div id="focusTitleHistory" class="focus-title-history hidden" aria-label="Previous focus titles"></div>
         <div class="focus-header">
           <p class="eyebrow focus-goal-label hidden" id="focusStatusLabel">MY CURRENT FOCUS</p>
           <div class="focus-goal-display-row">
             <button id="focusGoalDisplay" type="button" class="focus-started focus-goal-display goal-click-to-edit hidden" onclick="editFocusGoal()" aria-label="Edit goal"></button>
           </div>
-          <p id="focusStarted" class="focus-started"></p><p id="focusCreator" class="focus-creator"></p>
+          <div id="focusStarted" class="focus-started"></div><p id="focusCreator" class="focus-creator"></p>
           <div class="focus-goal-editor">
             <label for="focusGoalEdit">Goal of project</label>
             <textarea id="focusGoalEdit" rows="3" maxlength="2000" placeholder="What are you hoping to do, make, or discover?"></textarea>
