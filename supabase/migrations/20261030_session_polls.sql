@@ -76,3 +76,44 @@ $$;
 
 grant execute on function public.get_session_poll_results(text, uuid) to anon, authenticated;
 grant execute on function public.cast_session_poll_vote(text, integer, uuid) to anon, authenticated;
+
+
+-- Update poll content and clear old responses atomically so results never refer
+-- to answer choices that have since changed.
+create or replace function public.update_session_poll(p_session_id text, p_question text, p_options jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_body text;
+  v_owner_id uuid;
+  v_open_tag text := '[focus-poll]';
+  v_close_tag text := '[/focus-poll]';
+  v_start integer;
+  v_end integer;
+  v_poll_text text;
+  v_new_body text;
+begin
+  if auth.uid() is null then raise exception 'Sign in to edit this poll'; end if;
+  if nullif(trim(p_question), '') is null or length(p_question) > 180 then raise exception 'Enter a valid poll question'; end if;
+  if jsonb_typeof(p_options) <> 'array' or jsonb_array_length(p_options) < 2 or jsonb_array_length(p_options) > 12 then raise exception 'A poll needs between 2 and 12 options'; end if;
+  if exists (select 1 from jsonb_array_elements_text(p_options) option_text where nullif(trim(option_text), '') is null or length(option_text) > 180) then raise exception 'Each option must contain 1 to 180 characters'; end if;
+
+  select s.body, f.owner_id into v_body, v_owner_id
+  from public.sessions s join public.focuses f on f.id = s.focus_id
+  where s.id::text = p_session_id;
+  if not found or v_owner_id <> auth.uid() then raise exception 'You cannot edit this poll'; end if;
+
+  v_start := strpos(coalesce(v_body, ''), v_open_tag);
+  v_end := strpos(coalesce(v_body, ''), v_close_tag);
+  if v_start = 0 or v_end < v_start then raise exception 'Poll not found'; end if;
+  v_poll_text := '[focus-poll]' || jsonb_build_object('question', trim(p_question), 'options', p_options)::text || '[/focus-poll]';
+  v_new_body := substr(v_body, 1, v_start - 1) || v_poll_text || substr(v_body, v_end + length(v_close_tag));
+  update public.sessions set body = v_new_body where id::text = p_session_id;
+  delete from public.session_poll_votes where session_id = p_session_id;
+end;
+$$;
+
+grant execute on function public.update_session_poll(text, text, jsonb) to authenticated;
