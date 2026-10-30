@@ -258,11 +258,8 @@ async function saveSessionPoll(sessionId) {
   const question = $("pollQuestionEdit-" + sessionId)?.value.trim() || "";
   const options = ($("pollOptionsEdit-" + sessionId)?.value || "").split("\n").map(value => value.trim()).filter(Boolean);
   if (!session || !question || options.length < 2) { if (status) status.textContent = "Add a question and at least two options."; return; }
-  const match = String(session.body || "").match(/\[focus-poll\][\s\S]*?\[\/focus-poll\]/);
-  if (!match) return;
-  const body = String(session.body).replace(match[0], "[focus-poll]" + JSON.stringify({ question, options }) + "[/focus-poll]");
   if (status) status.textContent = "Saving…";
-  const { error } = await focusSupabase.from("sessions").update({ body }).eq("id", sessionId);
+  const { error } = await focusSupabase.rpc("update_session_poll", { p_session_id: String(sessionId), p_question: question, p_options: options });
   if (error) { console.error("Poll update error:", error); if (status) status.textContent = "Could not save. Try again."; return; }
   await loadSessions();
 }
