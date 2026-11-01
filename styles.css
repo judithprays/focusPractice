@@ -2988,3 +2988,44 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .focus-page .session-images .session-image-item:nth-child(even) {
   margin-left: 0;
 }
+
+
+/* Hard enforce the editorial log's single-column reading flow.
+   This overrides older scrapbook flex/column rules earlier in this file. */
+.focus-page #sessionsList {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+}
+.focus-page #sessionsList > .session-card-item {
+  display: grid !important;
+  grid-template-columns: 92px minmax(0, 1fr) !important;
+  flex: 0 0 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+.focus-page .session-images {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  width: 100% !important;
+}
+.focus-page .session-images > .session-image-item {
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: min(100%, 620px) !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+}
+.focus-page .session-images > .session-image-item:nth-child(even) {
+  margin-left: 0 !important;
+}
+@media (max-width: 700px) {
+  .focus-page #sessionsList > .session-card-item {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+  }
+}
