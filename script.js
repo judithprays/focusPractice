@@ -1409,7 +1409,8 @@ function renderSessions() {
     const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : (pollQuestion ? "" : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(timeSpent ? "⏱ " + timeSpent : "Add a note")}</div>`);
     return `
-      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
+      <article class="session-card-item editorial-entry ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
+        <div class="editorial-entry-index" aria-hidden="true"><span>${String(index + 1).padStart(2, "0")}</span><time>${escapeHtml(dateLabel || "UNDATED")}</time></div>
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
@@ -1446,7 +1447,7 @@ function renderSessions() {
           </div>
         </details>
         ${renderSessionPoll(session)}
-      </div>`;
+      </article>`;
   }).join("");
   renderSessionTagCloud();
   if (actionStack.parentElement !== list) list.appendChild(actionStack);
