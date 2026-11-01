@@ -1409,13 +1409,8 @@ function renderSessions() {
     const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : (pollQuestion ? "" : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(timeSpent ? "⏱ " + timeSpent : "Add a note")}</div>`);
     return `
-      <article class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}">
-        <div class="session-timeline-date">
-          <span class="session-timeline-day">${escapeHtml(session.session_date ? new Date(session.session_date + "T12:00:00").toLocaleDateString("en-US", { day: "numeric" }) : "—")}</span>
-          <span class="session-timeline-month">${escapeHtml(session.session_date ? new Date(session.session_date + "T12:00:00").toLocaleDateString("en-US", { month: "short" }) : "UNDATED")}</span>
-          <span class="session-timeline-weekday">${escapeHtml(dayLabel || "")}</span>
-        </div>
-        <div class="session-timeline-content">
+      <article class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="${cardTiltStyle};--session-card-width:${size}%">
+
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
@@ -1451,7 +1446,6 @@ function renderSessions() {
           </div>
         </details>
         ${renderSessionPoll(session)}
-        </div>
       </article>`;
   }).join("");
   renderSessionTagCloud();
