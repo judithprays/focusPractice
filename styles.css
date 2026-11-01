@@ -2971,3 +2971,20 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
   .focus-page .focus-action-stack { margin-left: 44px; }
   .focus-page .session-image-item:nth-child(even) { margin-left: 12px; }
 }
+
+/* Every uploaded asset gets its own full-width row — never a side-by-side gallery. */
+.focus-page .session-images {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+  width: 100%;
+}
+.focus-page .session-images .session-image-item {
+  grid-column: 1 / -1;
+  width: min(100%, 620px);
+  max-width: 100%;
+  margin: 0;
+}
+.focus-page .session-images .session-image-item:nth-child(even) {
+  margin-left: 0;
+}
