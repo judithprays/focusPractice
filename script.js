@@ -1409,7 +1409,13 @@ function renderSessions() {
     const emptyPreview = pollQuestion ? "📊 " + pollQuestion : (timeSpent ? "⏱ " + timeSpent : "Add a note");
     const textSummary = hasText ? `<div class="text-card-preview" style="${textStyle}">${formatSessionBody(bodyWithoutVideo)}</div>` : (pollQuestion ? "" : `<div class="text-card-preview text-card-empty" style="${textStyle}">${escapeHtml(timeSpent ? "⏱ " + timeSpent : "Add a note")}</div>`);
     return `
-      <div class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}" style="--session-card-width:${size}%;${cardTiltStyle}">
+      <article class="session-card-item ${isTextCard ? "text-card-item" : "visual-card-item"}" data-session-id="${safeId}">
+        <div class="session-timeline-date">
+          <span class="session-timeline-day">${escapeHtml(session.session_date ? new Date(session.session_date + "T12:00:00").toLocaleDateString("en-US", { day: "numeric" }) : "—")}</span>
+          <span class="session-timeline-month">${escapeHtml(session.session_date ? new Date(session.session_date + "T12:00:00").toLocaleDateString("en-US", { month: "short" }) : "UNDATED")}</span>
+          <span class="session-timeline-weekday">${escapeHtml(dayLabel || "")}</span>
+        </div>
+        <div class="session-timeline-content">
         <details class="session-card ${visual ? "has-session-visual" : "text-only-step"}">
           <summary class="session-collapsed-header">
             ${showDate ? `<span class="session-card-date">${escapeHtml(dateLabel || "Date not set")}</span>` : ""}
@@ -1425,8 +1431,7 @@ function renderSessions() {
               ${renderSessionPollEditor(session)}
               <label for="sessionTagsEdit-${safeId}">Tags</label><div class="session-edit-tags">${getSessionTags(session).map(tag => '<span class="session-tag">#' + escapeHtml(tag) + '</span>').join("")}</div><input id="sessionTagsEdit-${safeId}" class="session-tags-input" type="text" value="${escapeHtml(getSessionTags(session).join(", "))}" onchange="saveSessionTags(\'${safeId}\', this.value)" placeholder="Add tags, separated by commas">
               <label for="sessionDateDisplay-${safeId}">Display date on card</label><select id="sessionDateDisplay-${safeId}" onchange="updateSessionDateDisplay('${safeId}', this.value)"><option value="off" ${showDate ? "" : "selected"}>Hidden</option><option value="on" ${showDate ? "selected" : ""}>Show date</option></select>
-              <label for="sessionCardSize-${safeId}">Width <output class="session-card-size-value">${size}%</output></label>
-              <input id="sessionCardSize-${safeId}" type="range" min="25" max="100" step="1" value="${size}" aria-label="Adjust width" oninput="updateSessionCardSize('${safeId}', this.value)">
+
               ${isTextCard ? `<label for="textCardHeight-${safeId}">Text card height <output>${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}px</output></label><input id="textCardHeight-${safeId}" type="range" min="80" max="420" step="10" value="${Math.max(80,Math.min(420,Number(cardStyle.height)||150))}" oninput="updateTextCardStyle('${safeId}','height',this.value)"><label for="textCardFont-${safeId}">Font</label><select id="textCardFont-${safeId}" onchange="updateTextCardStyle('${safeId}','fontFamily',this.value)"><option value="Georgia, serif" ${cardStyle.fontFamily==="Georgia, serif"?"selected":""}>Editorial serif</option><option value="Helvetica, Arial, sans-serif" ${cardStyle.fontFamily==="Helvetica, Arial, sans-serif"?"selected":""}>Clean sans-serif</option><option value="'Courier New', monospace" ${(!cardStyle.fontFamily||cardStyle.fontFamily==="'Courier New', monospace")?"selected":""}>Typewriter</option><option value="Arial, sans-serif" ${cardStyle.fontFamily==="Arial, sans-serif"?"selected":""}>Bold simple</option></select><label for="textCardFontSize-${safeId}">Text size <output>${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}px</output></label><input id="textCardFontSize-${safeId}" type="range" min="14" max="48" step="1" value="${Math.max(14,Math.min(48,Number(cardStyle.fontSize)||22))}" oninput="updateTextCardStyle('${safeId}','fontSize',this.value)">` : ""}
               ${!isTextCard ? renderCaptionDisplayControl(safeId, cardStyle) : ""}
               ${(Array.isArray(session.image_urls) && session.image_urls.some(isSafeImageUrl)) ? '<label for="sessionImageCaptionEdit-' + safeId + '">Caption</label><input id="sessionImageCaptionEdit-' + safeId + '" class="session-image-caption-edit" type="text" maxlength="300" value="' + escapeHtml(getSessionImageCaption(session.body)) + '" placeholder="Add a caption (optional)" onchange="saveSessionImageCaption(this.id.replace(\'sessionImageCaptionEdit-\', \'\'), this.value)">' : ""}
@@ -1446,7 +1451,8 @@ function renderSessions() {
           </div>
         </details>
         ${renderSessionPoll(session)}
-      </div>`;
+        </div>
+      </article>`;
   }).join("");
   renderSessionTagCloud();
   if (actionStack.parentElement !== list) list.appendChild(actionStack);
