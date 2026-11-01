@@ -3228,8 +3228,8 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 }
 
 /* Loose composition: no timeline rail, with size-led emphasis. */
-.focus-page #sessionsList { display:flex!important; flex-direction:row!important; flex-wrap:wrap!important; align-items:flex-start!important; justify-content:flex-start!important; gap:42px 34px!important; padding:12px 0 24px!important; }
-.focus-page #sessionsList > .session-card-item { display:block!important; position:relative!important; flex:0 0 var(--session-card-width,48%)!important; width:var(--session-card-width,48%)!important; max-width:100%!important; min-width:0!important; margin:0!important; padding:0!important; transform:rotate(var(--session-card-tilt,0deg)); background:transparent!important; }
+.focus-page #sessionsList { display:flex!important; flex-direction:column!important; flex-wrap:nowrap!important; align-items:stretch!important; justify-content:flex-start!important; gap:42px!important; padding:12px 0 24px!important; }
+.focus-page #sessionsList > .session-card-item { display:block!important; position:relative!important; flex:0 0 100%!important; width:100%!important; max-width:100%!important; min-width:0!important; margin:0!important; padding:0!important; transform:rotate(var(--session-card-tilt,0deg)); background:transparent!important; }
 .focus-page .sessions-list::before,.focus-page .session-card-item::before,.focus-page .session-timeline-date { display:none!important; }
 .focus-page .session-timeline-content { width:100%!important; min-width:0!important; }
 .focus-page .session-card-item .session-card { width:100%!important; max-width:none!important; margin:0!important; border:0!important; border-radius:0!important; background:transparent!important; box-shadow:none!important; }
@@ -3241,4 +3241,4 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
 .focus-page .session-images > .session-image-item { display:block!important; flex:0 0 auto!important; width:min(100%,620px)!important; max-width:100%!important; margin:0!important; }
 .focus-page .session-images > .session-image-item:nth-child(even) { margin-left:0!important; }
 .focus-page .session-image-item img { display:block!important; width:100%!important; height:auto!important; }
-@media(max-width:700px) { .focus-page #sessionsList { gap:32px 0!important; } .focus-page #sessionsList > .session-card-item { flex-basis:100%!important; width:100%!important; } }
+@media(max-width:700px) { .focus-page #sessionsList { gap:32px!important; } .focus-page #sessionsList > .session-card-item { flex-basis:100%!important; width:100%!important; } }
