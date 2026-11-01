@@ -3029,3 +3029,200 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
     grid-template-columns: 28px minmax(0, 1fr) !important;
   }
 }
+
+
+/* Editorial reset: the log should read like a process journal, not a social feed. */
+.focus-page #sessionsList {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+  padding-top: 8px !important;
+}
+.focus-page #sessionsList > .session-card-item {
+  display: grid !important;
+  grid-template-columns: 92px minmax(0, 1fr) !important;
+  flex: 0 0 auto !important;
+  width: 100% !important;
+  max-width: none !important;
+  gap: 32px !important;
+  padding: 0 0 48px !important;
+  margin: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.focus-page .sessions-list::before {
+  left: 108px !important;
+  background: #e4e0d7 !important;
+}
+.focus-page .session-card-item::before {
+  left: 103px !important;
+  top: 3px !important;
+  width: 9px !important;
+  height: 9px !important;
+  border: 1px solid #b9b5aa !important;
+  border-radius: 50% !important;
+  background: var(--paper, #f7f5ef) !important;
+  box-shadow: none !important;
+}
+.focus-page .session-timeline-date {
+  padding-top: 0 !important;
+  color: #77736b !important;
+}
+.focus-page .session-timeline-day {
+  color: #35332e !important;
+  font-size: 25px !important;
+  font-weight: 400 !important;
+}
+.focus-page .session-timeline-month {
+  font-size: 10px !important;
+  letter-spacing: .08em !important;
+}
+.focus-page .session-timeline-weekday { display: none !important; }
+
+.focus-page .session-card,
+.focus-page .session-card-item .session-card {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.focus-page .session-collapsed-header {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 12px !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+.focus-page .session-card-visual,
+.focus-page .session-card-visual.image-frame-polaroid {
+  display: block !important;
+  width: min(100%, 560px) !important;
+  max-width: 560px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.focus-page .session-card-visual img,
+.focus-page .session-card-visual video {
+  display: block !important;
+  width: 100% !important;
+  max-height: 560px !important;
+  object-fit: contain !important;
+  background: transparent !important;
+}
+.focus-page .session-card-visual .session-image-caption {
+  margin: 9px 0 0 !important;
+  color: #77736b !important;
+  font-family: "Courier New", monospace !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+.focus-page .session-collapsed-header > .session-tldr,
+.focus-page .session-collapsed-header > .text-card-preview {
+  max-width: 620px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+.focus-page .session-card.text-only-step .text-card-preview {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(19px, 2vw, 25px) !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #393630 !important;
+}
+.focus-page .session-expanded-content {
+  padding: 18px 0 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+.focus-page .session-expanded-content .session-main {
+  max-width: 620px !important;
+}
+.focus-page .session-expanded-content .session-main p {
+  margin: 0 0 14px !important;
+  color: #393630 !important;
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: 18px !important;
+  line-height: 1.65 !important;
+}
+.focus-page .session-images {
+  display: flex !important;
+  flex-direction: column !important;
+  flex-wrap: nowrap !important;
+  align-items: flex-start !important;
+  gap: 28px !important;
+  width: 100% !important;
+  margin-top: 22px !important;
+}
+.focus-page .session-images > .session-image-item {
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: min(100%, 560px) !important;
+  max-width: 560px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.focus-page .session-images > .session-image-item:nth-child(even) { margin-left: 0 !important; }
+.focus-page .session-image-item img {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.focus-page .session-image-item figcaption { margin-top: 6px !important; }
+.focus-page .session-tag-cloud {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px 12px !important;
+  margin-top: 18px !important;
+}
+.focus-page .session-tag-cloud .session-tag {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: #77736b !important;
+  font-family: "Courier New", monospace !important;
+  font-size: 10px !important;
+  box-shadow: none !important;
+}
+.focus-page .focus-action-stack { margin: 8px 0 48px 124px !important; }
+
+@media (max-width: 700px) {
+  .focus-page #sessionsList > .session-card-item {
+    grid-template-columns: 28px minmax(0, 1fr) !important;
+    gap: 16px !important;
+    padding-bottom: 38px !important;
+  }
+  .focus-page .sessions-list::before { left: 13px !important; }
+  .focus-page .session-card-item::before { left: 9px !important; }
+  .focus-page .session-timeline-date {
+    align-items: flex-start !important;
+    padding-top: 0 !important;
+    text-align: left !important;
+  }
+  .focus-page .session-timeline-day { display: none !important; }
+  .focus-page .session-timeline-month {
+    writing-mode: vertical-rl !important;
+    font-size: 9px !important;
+  }
+  .focus-page .focus-action-stack { margin-left: 44px !important; }
+}
