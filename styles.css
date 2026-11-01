@@ -2870,3 +2870,104 @@ body.editing-own-focus #focusCoverBanner:hover { filter: brightness(1.04); }
     line-height: 1.2;
   }
 }
+
+/* FOCUS LOG — a single-column editorial timeline */
+.focus-page .focus-header { padding: 26px 0 42px; }
+.focus-page .focus-goal-display {
+  max-width: 700px; font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(24px, 3.2vw, 34px); font-weight: 400;
+  line-height: 1.28; letter-spacing: -0.025em;
+}
+.focus-page .focus-started {
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+  font-family: "Courier New", monospace; font-size: 12px;
+  letter-spacing: .035em; text-transform: uppercase;
+}
+.focus-page .session-log { padding-top: 0; }
+.focus-page .sessions-list {
+  position: relative; display: flex; flex-direction: column; gap: 0;
+  border: 0; padding: 12px 0 24px;
+}
+.focus-page .sessions-list::before {
+  content: ""; position: absolute; left: 116px; top: 12px; bottom: 24px;
+  width: 1px; background: #d9d5cc;
+}
+.focus-page .session-card-item {
+  position: relative; display: grid; grid-template-columns: 92px minmax(0, 1fr);
+  gap: 48px; width: 100%; min-width: 0; padding: 0 0 54px;
+  margin: 0; align-items: start;
+}
+.focus-page .session-card-item::before {
+  content: ""; position: absolute; left: 110px; top: 7px; width: 13px; height: 13px;
+  border: 2px solid var(--paper); border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 1px #b8c2b5; z-index: 1;
+}
+.session-timeline-date {
+  display: flex; flex-direction: column; align-items: flex-end; padding-top: 1px;
+  color: var(--gray); font-family: "Courier New", monospace; text-align: right;
+  text-transform: uppercase;
+}
+.session-timeline-day {
+  color: var(--black); font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px; line-height: 1;
+}
+.session-timeline-month { margin-top: 4px; font-size: 11px; letter-spacing: .1em; }
+.session-timeline-weekday { margin-top: 5px; font-size: 9px; letter-spacing: .07em; }
+.session-timeline-content { min-width: 0; width: 100%; }
+.focus-page .session-card-item .session-card {
+  width: 100%; max-width: none; margin: 0; overflow: visible; border: 0;
+  border-radius: 0; background: transparent; box-shadow: none;
+}
+.focus-page .session-collapsed-header { padding: 0; }
+.focus-page .session-card-date { display: none; }
+.focus-page .session-card-visual {
+  width: 100%; max-width: 100%; margin: 0; border-radius: 2px;
+}
+.focus-page .session-card-visual img,
+.focus-page .session-card-visual video {
+  max-height: 620px; aspect-ratio: auto; object-fit: contain; background: #f0eee8;
+}
+.focus-page .session-card-visual.image-frame-polaroid {
+  width: fit-content; max-width: min(100%, 560px); padding: 12px 12px 18px;
+  background: #fffefa; box-shadow: 0 3px 14px rgba(38, 34, 26, .10);
+}
+.focus-page .session-card-visual.image-frame-polaroid img { max-width: 100%; }
+.focus-page .session-card-visual .session-image-caption { margin: 12px 0 0; }
+.focus-page .session-collapsed-header > .session-tldr,
+.focus-page .session-collapsed-header > .text-card-preview {
+  max-width: 650px; padding: 8px 0 12px;
+}
+.focus-page .session-card.text-only-step .session-collapsed-header { min-height: 0; }
+.focus-page .session-card.text-only-step .text-card-preview {
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(20px, 2.4vw, 28px) !important;
+  line-height: 1.38; color: #33302b;
+}
+.focus-page .session-expanded-content { padding: 22px 0 10px; }
+.focus-page .session-expanded-content .session-main { max-width: 680px; }
+.focus-page .session-expanded-content .session-main p {
+  font-family: Georgia, "Times New Roman", serif; font-size: 19px; line-height: 1.65;
+}
+.focus-page .session-images {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 24px; margin-top: 28px;
+}
+.focus-page .session-image-item { width: min(100%, 620px); margin: 0; }
+.focus-page .session-image-item img { display: block; width: 100%; height: auto; object-fit: contain; }
+.focus-page .session-image-item:nth-child(even) { margin-left: min(5vw, 34px); }
+.focus-page .session-tag-cloud { margin-top: 18px; }
+.focus-page .focus-action-stack { margin: 12px 0 55px 140px; }
+.focus-page .focus-ending { margin-top: 20px; padding: 56px 0; }
+.focus-page .focus-delete-bottom { margin-top: 48px; }
+@media (max-width: 700px) {
+  .focus-page .focus-header { padding: 20px 0 30px; }
+  .focus-page .sessions-list::before { left: 13px; }
+  .focus-page .session-card-item {
+    grid-template-columns: 28px minmax(0, 1fr); gap: 16px; padding-bottom: 42px;
+  }
+  .focus-page .session-card-item::before { left: 7px; top: 3px; width: 12px; height: 12px; }
+  .session-timeline-date { align-items: flex-start; padding-top: 25px; text-align: left; }
+  .session-timeline-day, .session-timeline-weekday { display: none; }
+  .session-timeline-month { font-size: 9px; writing-mode: vertical-rl; letter-spacing: .08em; }
+  .focus-page .focus-action-stack { margin-left: 44px; }
+  .focus-page .session-image-item:nth-child(even) { margin-left: 12px; }
+}
